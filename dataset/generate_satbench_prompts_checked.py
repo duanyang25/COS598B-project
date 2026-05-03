@@ -45,14 +45,14 @@ answer as the assistant output but should not leak the answer in the user prompt
 Example
 -------
 
-    python generate_satbench_prompts.py \
+    python generate_satbench_prompts_checked.py \
       --dataset satbench_with_certificates_full.jsonl \
       --output satbench_teacher_prompts.jsonl \
       --expected_rows 2100
 
 To inspect the first generated prompt without writing all rows:
 
-    python generate_satbench_prompts.py \
+    python generate_satbench_prompts_checked.py \
       --dataset satbench_with_certificates_full.jsonl \
       --output /tmp/prompts.jsonl \
       --limit 1 \
