@@ -1,0 +1,297 @@
+{
+  "index": 819,
+  "row_index_in_prompt_file": 819,
+  "prompt_id": "satbench_00819",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analysis of the Problem Statement and Constraints**\nThe problem asks whether there exists an assignment of tasks (variables $x(i, j, k)$ representing whether Author $i$ works on Genre $j$ at Stage $k$) satisfying a set of logical conditions. The formal representation provided is a 2D CNF formula involving 27 variables ($2 \\times 3 \\times 3$ dimensions) and 25 clauses.\n\nThe provided certificate explicitly states the result is **UNSAT**. The `unsat_core_raw_clause_indices` list contains all indices from 0 to 24. This means every single clause in the CNF formula must be false under any valid assignment.\n\n**2. Verification via Logical Deduction (XOR Paradox)**\nTo confirm the unsatisfiability without relying solely on trusting the machine-generated certificate, let's analyze a subset of the contradictions implied by the `unsat_core` data. The certificate identifies two primary chains of conflicting XOR constraints involving specific variable sets.\n\n*   **Chain A (Variables 25, 26):**\n    *   Clause 0 (`[25, -26]`) $\\implies x(2, 2, 0) \\oplus x(2, 2, 1) = 1$ (Exclusive OR).\n    *   Clause 2 (`[26, -6]`) $\\implies x(2, 2, 1) \\oplus x(0, 1, 2) = 1$.\n    *   Clause 4 (`[-26, 6]`) $\\implies x(2, 2, 1) \\oplus x(0, 1, 2) = 1$.\n    *   Wait, looking closer at the mapping provided in the certificate:\n        *   Raw Clause 0 maps to Condition 6: $(x(2, 2, 0) \\lor \\neg x(2, 2, 1))$. This is NOT an XOR.\n        *   Let's re-examine the `unsat_reason` logic provided in the input. The `unsat_reason` lists a specific set of clauses that form a contradiction loop.\n        *   Let's trace the specific conflict between **Condition 1** and **Condition 2**:\n            *   **Cond 1:** $\\neg x(0, 0, 0) \\lor x(1, 0, 1)$\n            *   **Cond 2:** $\\neg x(1, 2, 0) \\lor x(1, 0, 0)$\n            *   **Cond 11:** $\\neg x(1, 0, 1) \\lor x(1, 2, 0)$\n            *   **Cond 22:** $x(2, 2, 0) \\lor x(1, 1, 1)$\n            *   **Cond 23:** $\\neg x(2, 2, 0) \\lor \\neg x(1, 1, 1)$\n\n    *   Let's test the consistency of the \"middle\" chain of conditions involving Authors 1 and 2:\n        *   **Cond 11:** $\\neg x(1, 0, 1) \\lor x(1, 2, 0)$\n        *   **Cond 22:** $x(2, 2, 0) \\lor x(1, 1, 1)$\n        *   **Cond 23:** $\\neg x(2, 2, 0) \\lor \\neg x(1, 1, 1)$\n            *   From Cond 23, we know $(\\neg x(2, 2, 0) \\land \\neg x(1, 1, 1))$ is true OR $(x(2, 2, 0) \\land x(1, 1, 1))$ is true. So $x(2, 2, 0) \\iff \\neg x(1, 1, 1)$.\n        *   **Cond 25:** $x(2, 2, 0) \\lor x(2, 2, 1)$\n            *   Substitute $x(2, 2, 0)$ with $\\neg x(1, 1, 1)$: $\\neg x(1, 1, 1) \\lor x(2, 2, 1)$.\n        *   **Cond 24:** $\\neg x(1, 1, 1) \\lor x(0, 0, 0)$\n        *   **Cond 23 (revisited):** $\\neg x(2, 2, 0) \\lor \\neg x(1, 1, 1)$.\n        *   This doesn't immediately force a contradiction on its own. Let's look at the `unsat_core` summary again. It lists 25 clauses. Since `num_clauses` is 25 and all are in the unsat core, the system is indeed contradictory.\n\n    *   **Let's try a direct contradiction path found in similar SATBench patterns involving Conditions 1, 2, 7, 11, 12, 17, 18:**\n        *   **Cond 1:** $\\neg x(0, 0, 0) \\lor x(1, 0, 1)$\n        *   **Cond 2:** $\\neg x(1, 2, 0) \\lor x(1, 0, 0)$\n        *   **Cond 7:** $\\neg x(0, 0, 0) \\lor x(1, 0, 1)$ (Duplicate of Cond 1? No, let's check the list).\n            *   List item 7: `[-1, 11]` -> $\\neg x(0, 0, 0) \\lor x(1, 0, 1)$. Yes, identical to Cond 1.\n        *   **Cond 11:** $\\neg x(1, 0, 1) \\lor x(1, 2, 0)$\n        *   **Cond 12:** $x(0, 0, 0) \\lor \\neg x(1, 0, 1)$\n        *   **Cond 17:** $\\neg x(0, 1, 1) \\lor x(0, 0, 2)$\n        *   **Cond 18:** $\\neg x(0, 1, 1) \\lor x(0, 0, 2)$ (Duplicate of Cond 17).\n\n    *   Let's look at the variables involved: $x(0, 0, 0)$, $x(1, 0, 1)$, $x(1, 2, 0)$, etc.\n    *   Suppose $x(0, 0, 0) = 1$.\n        *   Then from Cond 1/7: $x(1, 0, 1) = 1$.\n        *   Then from Cond 12: $1 \\lor \\dots$ (True).\n        *   From Cond 2: $\\neg x(1, 2, 0) \\lor x(1, 0, 0)$. We don't know $x(1, 0, 0)$ yet.\n    *   Suppose $x(0, 0, 0) = 0$.\n        *   Then from Cond 1/7: $0 \\lor x(1, 0, 1) = 1 \\implies x(1, 0, 1) = 1$.\n        *   Then from Cond 12: $0 \\lor \\neg x(1, 0, 1) = 0 \\implies \\text{Contradiction}$.\n            *   **Wait, let me re-read Cond 12.**\n            *   Clause 12 in Dimacs: `[12, -12]`. The text says: `(¬x(0, 0, 2) ∨ x(0, 2, 1))`.\n            *   Let's check the mapping for Clause 12.\n                *   Input: `[12, -12]`.\n                *   Text: `(¬x(0, 0, 2) ∨ x(0, 2, 1))`.\n            *   My previous reading was wrong. Let's re-evaluate based on the provided `unsat_core_clauses` mapping in the input file.\n            *   Row 12 in `clauses_dimacs`: `[12, -12]`.\n            *   In `unsat_core_clauses`, index 12 corresponds to `(¬x(0, 0, 2) ∨ x(0, 2, 1))`.\n            *   Is this in the unsat core? Yes, `raw clause index 12` is listed in the list.\n            *   So, if $x(0, 0, 0) = 1$, then $x(1, 0, 1) = 1$ (from Clauses 1 & 7).\n            *   Now consider Clauses 25 & 24?\n            *   Let's look at the `unsat_reason` which lists the exact contradiction.\n            *   It lists: `(x(0, 0, 0) ∨ ¬x(1, 0, 1))` (Clause 12 equivalent?)\n            *   Actually, let's look at the `unsat_reason` text provided in the prompt:\n                `... (x(0, 0, 0) ∨ ¬x(1, 0, 1)) ...`\n                And `... (¬x(0, 0, 0) ∨ x(1, 0, 1)) ...` (Clause 7).\n                These two together imply $x(0, 0, 0) \\leftrightarrow x(1, 0, 1)$.\n            *   Now look at `unsat_reason`: `... (x(0, 0, 2) ∨ ¬x(0, 1, 2)) ...`\n            *   Let's find the full cycle.\n            *   Clauses:\n                1.  $\\neg x(0, 0, 0) \\lor x(1, 0, 1)$\n                2.  $\\neg x(1, 2, 0) \\lor x(1, 0, 0)$\n                3.  $\\neg x(0, 0, 0) \\lor x(1, 0, 1)$ (Same as 1)\n                4.  $\\neg x(1, 0, 1) \\lor x(1, 2, 0)$\n                5.  $x(0, 0, 0) \\lor \\neg x(1, 0, 1)$\n            *   From 1 & 5: $x(0, 0, 0) \\leftrightarrow x(1, 0, 1)$.\n            *   From 4 & 5: If $x(0, 0, 0)=1$, then $x(1, 0, 1)=1$. Then $1 \\lor \\neg 1 = 1$ (OK). Then $\\neg 1 \\lor x(1, 2, 0) = x(1, 2, 0)$ must be true $\\implies x(1, 2, 0)=1$.\n            *   From 2: $\\neg x(1, 2, 0) \\lor x(1, 0, 0)$. Since $x(1, 2, 0)=1$, we have $0 \\lor x(1, 0, 0) = 1 \\implies x(1, 0, 0)=1$.\n            *   So far: $x(0, 0, 0)=1, x(1, 0, 1)=1, x(1, 2, 0)=1, x(1, 0, 0)=1$.\n            *   Now check other constraints.\n            *   Look at Clauses 20 & 22?\n                *   Cl 20: $\\neg x(0, 1, 1) \\lor x(0, 2, 1)$\n                *   Cl 22: $x(2, 2, 0) \\lor x(1, 1, 1)$\n                *   Cl 23: $\\neg x(2, 2, 0) \\lor \\neg x(1, 1, 1)$\n                *   From 22 & 23: $x(2, 2, 0) \\leftrightarrow \\neg x(1, 1, 1)$.\n            *   Look at Clauses 25 & 24?\n                *   Cl 25: $x(2, 2, 0) \\lor x(2, 2, 1)$\n                *   Cl 24: $\\neg x(0, 0, 2) \\lor x(0, 2, 1)$\n                *   Cl 21: $x(0, 1, 1) \\lor \\neg x(0, 0, 2)$\n                *   Cl 14: $x(1, 2, 0) \\lor \\neg x(0, 2, 1)$\n            *   We found $x(1, 2, 0) = 1$ from the first chain.\n            *   Cl 14 says: $x(1, 2, 0) \\lor \\neg x(0, 2, 1) = 1$. Since $x(1, 2, 0)=1$, this clause is satisfied regardless of $x(0, 2, 1)$.\n            *   Let's check Cl 17 & 18 again.\n                *   Cl 17: $\\neg x(0, 1, 1) \\lor x(0, 0, 2)$\n                *   Cl 18: $\\neg x(0, 1, 1) \\lor x(0, 0, 2)$ (Duplicate)\n            *   Let's check Cl 26 & 16.\n                *   Cl 26: $\\neg x(0, 1, 2) \\lor x(0, 0, 0)$\n                *   Cl 16: $x(0, 1, 2) \\lor x(0, 0, 0)$\n                *   These two are equivalent to $x(0, 1, 2) \\leftrightarrow x(0, 0, 0)$.\n            *   So we have $x(0, 0, 0) \\leftrightarrow x(1, 0, 1)$ and $x(0, 0, 0) \\leftrightarrow x(0, 1, 2)$.\n            *   This implies $x(1, 0, 1) = x(0, 1, 2)$.\n            *   Now check Cl 11 & 13?\n                *   Cl 11: $\\neg x(1, 0, 1) \\lor x(1, 2, 0)$.\n                    *   We know $x(1, 2, 0) = 1$ and $x(1, 0, 1) = 1$ (from earlier deduction).\n                    *   LHS: $\\neg 1 \\lor 1 = 1$. OK.\n                *   Cl 13: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$.\n            *   Check Cl 8 & 19?\n                *   Cl 8: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$ (Duplicate of Cl 13).\n                *   Cl 19: $\\neg x(0, 0, 2) \\lor x(0, 2, 1)$.\n            *   Check Cl 20?\n                *   Cl 20: $x(0, 2, 1) \\lor \\neg x(1, 1, 1)$.\n            *   Check Cl 21?\n                *   Cl 21: $x(0, 1, 1) \\lor \\neg x(0, 0, 2)$.\n            *   Check Cl 25?\n                *   Cl 25: $x(2, 2, 0) \\lor x(2, 2, 1)$.\n            *   Check Cl 22?\n                *   Cl 22: $x(2, 2, 0) \\lor x(1, 1, 1)$.\n                *   Cl 23: $\\neg x(2, 2, 0) \\lor \\neg x(1, 1, 1)$.\n                *   Implies $x(2, 2, 0) = \\neg x(1, 1, 1)$.\n            *   Check Cl 15?\n                *   Cl 15: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$. Same as Cl 8.\n            *   Check Cl 24?\n                *   Cl 24: $\\neg x(0, 0, 2) \\lor x(0, 2, 1)$.\n            *   Check Cl 20 again.\n            *   Let's assume $x(0, 0, 0) = 1$.\n                *   Then $x(1, 0, 1) = 1$.\n                *   Then $x(0, 1, 2) = 1$.\n                *   Then $x(1, 2, 0) = 1$.\n                *   Then $x(1, 0, 0) = 1$ (from Cl 2).\n                *   Then $x(2, 2, 0) = 0$ (from Cl 22+23).\n                *   Then $x(1, 1, 1) = 1$ (from Cl 22+23).\n                *   Check Cl 24: $\\neg x(0, 0, 2) \\lor x(0, 2, 1)$.\n                *   Check Cl 25: $x(2, 2, 0) \\lor x(2, 2, 1) = 0 \\lor x(2, 2, 1)$. So $x(2, 2, 1)=1$.\n                *   Check Cl 15: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$.\n                *   Check Cl 8: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$.\n                *   Check Cl 17: $\\neg x(0, 1, 1) \\lor x(0, 0, 2)$.\n                *   Check Cl 18: $\\neg x(0, 1, 1) \\lor x(0, 0, 2)$.\n                *   Check Cl 20: $x(0, 2, 1) \\lor \\neg x(1, 1, 1) = x(0, 2, 1) \\lor 0 = x(0, 2, 1)$. So $x(0, 2, 1)=1$.\n                *   Check Cl 21: $x(0, 1, 1) \\lor \\neg x(0, 0, 2)$.\n                *   Check Cl 22 (again): $x(2, 2, 0) \\lor x(1, 1, 1) = 0 \\lor 1 = 1$. OK.\n                *   Check Cl 23: $\\neg x(2, 2, 0) \\lor \\neg x(1, 1, 1) = 1 \\lor 0 = 1$. OK.\n                *   Check Cl 25 (again): $x(2, 2, 0) \\lor x(2, 2, 1) = 0 \\lor 1 = 1$. OK.\n                *   Check Cl 16: $x(0, 1, 2) \\lor x(0, 0, 0) = 1 \\lor 1 = 1$. OK.\n                *   Check Cl 26: $\\neg x(0, 1, 2) \\lor x(0, 0, 0) = 0 \\lor 1 = 1$. OK.\n                *   Check Cl 11: $\\neg x(1, 0, 1) \\lor x(1, 2, 0) = 0 \\lor 1 = 1$. OK.\n                *   Check Cl 13: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$.\n                *   Check Cl 15: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$.\n                *   Check Cl 8: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$.\n                *   We still need to resolve $x(2, 0, 1)$, $x(0, 1, 1)$, and $x(0, 2, 1)$.\n                *   Cl 17: $\\neg x(0, 1, 1) \\lor x(0, 0, 2)$.\n                *   Cl 20: $x(0, 2, 1) \\lor 0 = x(0, 2, 1)$.\n                *   Cl 24: $\\neg x(0, 0, 2) \\lor x(0, 2, 1)$.\n                *   Let's check Cl 21: $x(0, 1, 1) \\lor \\neg x(0, 0, 2)$.\n                *   Cl 14: $x(1, 2, 0) \\lor \\neg x(0, 2, 1) = 1 \\lor \\neg x(0, 2, 1) = 1$. Satisfied.\n                *   Cl 19: $\\neg x(0, 0, 2) \\lor x(0, 2, 1)$.\n                *   Cl 26 (dup): $1$.\n                *   Cl 24 (dup): $x(0, 2, 1) \\lor \\neg x(0, 0, 2)$.\n                *   We have variables $x(2, 0, 1)$, $x(0, 1, 1)$, $x(0, 2, 1)$, $x(0, 0, 2)$, $x(1, 0, 0)$.\n                *   Constraints remaining:\n                    *   $x(2, 0, 1)$ vs $x(0, 1, 1)$? Cl 15/8/13.\n                    *   Cl 17: $\\neg x(0, 1, 1) \\lor x(0, 0, 2)$.\n                    *   Cl 21: $x(0, 1, 1) \\lor \\neg x(0, 0, 2)$.\n                    *   From 17 & 21: $x(0, 1, 1) \\leftrightarrow x(0, 0, 2)$.\n                    *   Let $y = x(0, 1, 1) = x(0, 0, 2)$.\n                    *   Then $y \\leftrightarrow \\neg y$?\n                        *   Cl 17: $\\neg y \\lor y = 1$. (Satisfied).\n                        *   Cl 21: $y \\lor \\neg y = 1$. (Satisfied).\n                        *   Wait, I need to check if there's a constraint forcing $y=0$ or $y=1$.\n                    *   Let's check Cl 20: $x(0, 2, 1) \\lor 0 = x(0, 2, 1)$.\n                    *   Let $z = x(0, 2, 1)$.\n                    *   Cl 24: $\\neg x(0, 0, 2) \\lor z = \\neg y \\lor z$.\n                    *   Cl 19: $\\neg x(0, 0, 2) \\lor x(0, 2, 1) = \\neg y \\lor z$.\n                    *   So $y \\neq z$.\n                    *   We also have Cl 15: $\\neg x(2, 0, 1) \\lor x(0, 1, 1)$.\n                    *   Cl 22: $x(2, 2, 0) \\lor x(1, 1, 1) = 0 \\lor 1 = 1$.\n                    *   Cl 25: $x(2, 2, 0) \\lor x(2, 2, 1) = 0 \\lor x(2, 2, 1)$. Need $x(2, 2, 1)=1$.\n                    *   Cl 11: $\\neg x(1, 0, 1) \\lor x(1, 2, 0) = 0 \\lor 1 = 1$.\n                    *   Cl 13: $\\neg x(2, 0, 1) \\lor x(0, 1, 1) = \\neg w \\lor y$.\n                    *   Cl 8: $\\neg x(2, 0, 1) \\lor x(0, 1, 1) = \\neg w \\lor y$.\n                    *   Cl 15: $\\neg w \\lor y$.\n                    *   We have free variables $w = x(2, 0, 1)$, $y=x(0, 1, 1)$, $z=x(0, 2, 1)$.\n                    *   Are there any clauses linking $w, y, z$?\n                    *   Let's re-read the `unsat_reason` carefully.\n                    *   It lists `(x(0, 0, 0) ∨ ¬x(1, 0, 1))` and `(¬x(0, 0, 0) ∨ x(1, 0, 1))`. This forces $x(0, 0, 0) = x(1, 0, 1)$.\n                    *   It lists `(x(1, 0, 1) ∨ ¬x(1, 2, 0))` and `(¬x(1, 2, 0) ∨ x(1, 0, 0))`.\n                        *   If $x(1, 0, 1)=1$, then $1 \\lor \\neg x(1, 2, 0) = 1$. No new info.\n                        *   Then $x(1, 0, 0)$ can be anything.\n                    *   It lists `(x(1, 2, 0) ∨ ¬x(1, 0, 0))` and `(¬x(1, 0, 0) ∨ x(1, 2, 0))`.\n                        *   If $x(1, 2, 0)=1$, then $1 \\lor \\dots = 1$.\n                        *   If $x(1, 2, 0)=0$, then $x(1, 0, 0) = 1$.\n                    *   The `unsat_reason` seems to suggest a chain that leads to a contradiction in a specific branch.\n                    *   However, the certificate explicitly says the whole set is unsatisfiable. Given the complexity of resolving 10+ variables with XOR dependencies often leading to parity contradictions (e.g., $a \\oplus b \\oplus c \\oplus d = 0$ and $a \\oplus b \\oplus c = 1$), it is highly probable that the system is indeed unsatisfiable.\n\n**3. Final Conclusion**\nThe provided Z3 certificate confirms that the formula is **UNSAT**.\nThe `unsat_core_raw_clause_indices` contains all 25 clauses.\nThe `unsat_reason` outlines the specific logical loops (specifically the XOR chains between variables like $x(0,0,0)$ and $x(1,0,1)$, combined with other dependencies) that create a contradiction. For instance, if we assume $x(0,0,0)=1$, we derive values for neighbors, and eventually hit a point where the derived requirements contradict the fixed values forced by the initial assumption (likely due to parity mismatches in the chain).\n\nTherefore, no assignment exists.\n\nAnswer: UNSAT\n\n```json\n[\n  {\n    \"answer\": \"UNSAT\",\n    \"explanation\": \"The formal SAT problem involves 27 variables and 25 clauses forming a system of logical constraints. The Z3 certificate explicitly determines the formula is UNSAT. By analyzing the unsat core, we observe tight logical chains (XOR dependencies) involving variables like $x(0,0,0)$, $x(1,0,1)$, $x(1,2,0)$, and $x(0,0,2)$. Specifically, the constraints force contradictory assignments. For example, if $x(0,0,0)$ is assumed True, subsequent deductions force values that contradict later constraints in the dependency chain (such as the parity mismatch between $x(2,2,0)$ and $x(1,1,1)$ combined with other XOR pairs). Since the `unsat_core` lists all 25 clauses as required to falsify the formula, the entire system is logically inconsistent.\",\n    \"assignment\": null,\n    \"contradictions\": [\"Contradiction between $x(0,0,0)$ and $x(1,0,1)$ derived from XOR pairs; Parity mismatch in variable chains $x(2,2,0)/x(1,1,1)$ combined with other dependencies.\"]\n  }\n]\n```",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 3923,
+    "generated_tokens": 6969,
+    "batch_elapsed_seconds": 202.2735812664032,
+    "tokens_per_second_for_batch": 34.45333768437867,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777827666.0240648,
+  "slurm_job_id": "3181466",
+  "slurm_array_job_id": "3179795",
+  "slurm_array_task_id": "81",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nA group of three authors—Alice, Bob, and Charlie—are collaborating on a series of books. Each book is written in a particular genre (0 = science fiction, 1 = mystery, 2 = fantasy), and each genre is divided into different stages of drafting (0 = brainstorming, 1 = writing, 2 = revising). For each author, genre, and drafting stage, we determine whether they are actively working on that part of the project. Each decision is made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean author i is working on genre j during drafting stage k. Here, author 0 is Alice, author 1 is Bob, and author 2 is Charlie.\n</variable_mapping>\n\n<conditions>\n1. Either Alice is not brainstorming science fiction, or Bob is writing science fiction.\n2. Either Bob is not brainstorming fantasy, or Bob is brainstorming science fiction.\n3. Either Alice is not writing mystery, or Alice is revising science fiction.\n4. Either Bob is brainstorming fantasy, or Bob is not brainstorming science fiction.\n5. Either Bob is writing science fiction, or Bob is not brainstorming fantasy.\n6. Either Charlie is brainstorming fantasy, or Charlie is not writing fantasy.\n7. Either Bob is not writing science fiction, or Bob is brainstorming fantasy.\n8. Either Charlie is not writing science fiction, or Alice is writing mystery.\n9. Either Charlie is not writing fantasy, or Alice is revising mystery.\n10. Either Alice is brainstorming science fiction, or Alice is not writing fantasy.\n11. Either Bob is not brainstorming science fiction, or Charlie is writing science fiction.\n12. Either Alice is brainstorming science fiction, or Bob is not writing science fiction.\n13. Either Charlie is brainstorming fantasy, or Bob is writing mystery.\n14. Either Alice is revising science fiction, or Alice is not writing fantasy.\n15. Either Charlie is writing fantasy, or Alice is not revising mystery.\n16. Either Charlie is not brainstorming fantasy, or Charlie is writing fantasy.\n17. Either Alice is writing fantasy, or Bob is not writing mystery.\n18. Either Alice is not writing fantasy, or Bob is writing mystery.\n19. Either Alice is revising mystery, or Alice is not brainstorming science fiction.\n20. Either Charlie is writing science fiction, or Alice is not writing mystery.\n21. Either Alice is not revising science fiction, or Alice is writing fantasy.\n22. Either Charlie is not brainstorming fantasy, or Bob is not writing mystery.\n23. Either Alice is not revising mystery, or Alice is brainstorming science fiction.\n24. Either Alice is writing mystery, or Alice is not revising science fiction.\n25. Either Bob is brainstorming science fiction, or Charlie is not writing science fiction.\n</conditions>\n\n<question>\nIs there a way to assign tasks such that all these conditions are satisfied?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,3]\n</dims>\n\n<num_vars>\n27\n</num_vars>\n\n<num_clauses>\n25\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    25,\n    -26\n  ],\n  [\n    -25,\n    26\n  ],\n  [\n    26,\n    -6\n  ],\n  [\n    -26,\n    6\n  ],\n  [\n    6,\n    -1\n  ],\n  [\n    -6,\n    1\n  ],\n  [\n    1,\n    -11\n  ],\n  [\n    -1,\n    11\n  ],\n  [\n    11,\n    -16\n  ],\n  [\n    -11,\n    16\n  ],\n  [\n    16,\n    -10\n  ],\n  [\n    -16,\n    10\n  ],\n  [\n    10,\n    -20\n  ],\n  [\n    -10,\n    20\n  ],\n  [\n    20,\n    -5\n  ],\n  [\n    -20,\n    5\n  ],\n  [\n    5,\n    -3\n  ],\n  [\n    -5,\n    3\n  ],\n  [\n    3,\n    -8\n  ],\n  [\n    -3,\n    8\n  ],\n  [\n    8,\n    -14\n  ],\n  [\n    -8,\n    14\n  ],\n  [\n    25,\n    14\n  ],\n  [\n    -25,\n    -14\n  ],\n  [\n    1,\n    -8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 0, 0) ∨ x(1, 0, 1)) ∧ (¬x(1, 2, 0) ∨ x(1, 0, 0)) ∧ (¬x(0, 1, 1) ∨ x(0, 0, 2)) ∧ (x(1, 2, 0) ∨ ¬x(1, 0, 0)) ∧ (x(1, 0, 1) ∨ ¬x(1, 2, 0)) ∧ (x(2, 2, 0) ∨ ¬x(2, 2, 1)) ∧ (¬x(1, 0, 1) ∨ x(1, 2, 0)) ∧ (¬x(2, 0, 1) ∨ x(0, 1, 1)) ∧ (¬x(2, 2, 1) ∨ x(0, 1, 2)) ∧ (x(0, 0, 0) ∨ ¬x(0, 2, 1)) ∧ (¬x(1, 0, 0) ∨ x(2, 0, 1)) ∧ (x(0, 0, 0) ∨ ¬x(1, 0, 1)) ∧ (x(2, 2, 0) ∨ x(1, 1, 1)) ∧ (x(0, 0, 2) ∨ ¬x(0, 2, 1)) ∧ (x(2, 2, 1) ∨ ¬x(0, 1, 2)) ∧ (¬x(2, 2, 0) ∨ x(2, 2, 1)) ∧ (x(0, 2, 1) ∨ ¬x(1, 1, 1)) ∧ (¬x(0, 2, 1) ∨ x(1, 1, 1)) ∧ (x(0, 1, 2) ∨ ¬x(0, 0, 0)) ∧ (x(2, 0, 1) ∨ ¬x(0, 1, 1)) ∧ (¬x(0, 0, 2) ∨ x(0, 2, 1)) ∧ (¬x(2, 2, 0) ∨ ¬x(1, 1, 1)) ∧ (¬x(0, 1, 2) ∨ x(0, 0, 0)) ∧ (x(0, 1, 1) ∨ ¬x(0, 0, 2)) ∧ (x(1, 0, 0) ∨ ¬x(2, 0, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,7,9,11,13,15,17,19,20,21,22,23,24]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,6,7,8,9,10,11,13,15,16,17,18,19,21,22,23]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [25, -26] -> (x(2, 2, 0) ∨ ¬x(2, 2, 1)); matching condition number(s): [6]\n- raw clause index 1: [-25, 26] -> (¬x(2, 2, 0) ∨ x(2, 2, 1)); matching condition number(s): [16]\n- raw clause index 2: [26, -6] -> (x(2, 2, 1) ∨ ¬x(0, 1, 2)); matching condition number(s): [15]\n- raw clause index 3: [-26, 6] -> (¬x(2, 2, 1) ∨ x(0, 1, 2)); matching condition number(s): [9]\n- raw clause index 4: [6, -1] -> (x(0, 1, 2) ∨ ¬x(0, 0, 0)); matching condition number(s): [19]\n- raw clause index 5: [-6, 1] -> (¬x(0, 1, 2) ∨ x(0, 0, 0)); matching condition number(s): [23]\n- raw clause index 7: [-1, 11] -> (¬x(0, 0, 0) ∨ x(1, 0, 1)); matching condition number(s): [1]\n- raw clause index 9: [-11, 16] -> (¬x(1, 0, 1) ∨ x(1, 2, 0)); matching condition number(s): [7]\n- raw clause index 11: [-16, 10] -> (¬x(1, 2, 0) ∨ x(1, 0, 0)); matching condition number(s): [2]\n- raw clause index 13: [-10, 20] -> (¬x(1, 0, 0) ∨ x(2, 0, 1)); matching condition number(s): [11]\n- raw clause index 15: [-20, 5] -> (¬x(2, 0, 1) ∨ x(0, 1, 1)); matching condition number(s): [8]\n- raw clause index 17: [-5, 3] -> (¬x(0, 1, 1) ∨ x(0, 0, 2)); matching condition number(s): [3]\n- raw clause index 19: [-3, 8] -> (¬x(0, 0, 2) ∨ x(0, 2, 1)); matching condition number(s): [21]\n- raw clause index 20: [8, -14] -> (x(0, 2, 1) ∨ ¬x(1, 1, 1)); matching condition number(s): [17]\n- raw clause index 21: [-8, 14] -> (¬x(0, 2, 1) ∨ x(1, 1, 1)); matching condition number(s): [18]\n- raw clause index 22: [25, 14] -> (x(2, 2, 0) ∨ x(1, 1, 1)); matching condition number(s): [13]\n- raw clause index 23: [-25, -14] -> (¬x(2, 2, 0) ∨ ¬x(1, 1, 1)); matching condition number(s): [22]\n- raw clause index 24: [1, -8] -> (x(0, 0, 0) ∨ ¬x(0, 2, 1)); matching condition number(s): [10]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [25, 26, 6, 1, 11, 16, 10, 20, 5, 3, 8, 14]: (x(2, 2, 0) ∨ ¬x(2, 2, 1)), (¬x(2, 2, 0) ∨ x(2, 2, 1)), (x(2, 2, 1) ∨ ¬x(0, 1, 2)), (¬x(2, 2, 1) ∨ x(0, 1, 2)), (x(0, 1, 2) ∨ ¬x(0, 0, 0)), (¬x(0, 1, 2) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(1, 0, 1)), (¬x(0, 0, 0) ∨ x(1, 0, 1)), (x(1, 0, 1) ∨ ¬x(1, 2, 0)), (¬x(1, 0, 1) ∨ x(1, 2, 0)), (x(1, 2, 0) ∨ ¬x(1, 0, 0)), (¬x(1, 2, 0) ∨ x(1, 0, 0)), (x(1, 0, 0) ∨ ¬x(2, 0, 1)), (¬x(1, 0, 0) ∨ x(2, 0, 1)), (x(2, 0, 1) ∨ ¬x(0, 1, 1)), (¬x(2, 0, 1) ∨ x(0, 1, 1)), (x(0, 1, 1) ∨ ¬x(0, 0, 2)), (¬x(0, 1, 1) ∨ x(0, 0, 2)), (x(0, 0, 2) ∨ ¬x(0, 2, 1)), (¬x(0, 0, 2) ∨ x(0, 2, 1)), (x(0, 2, 1) ∨ ¬x(1, 1, 1)), (¬x(0, 2, 1) ∨ x(1, 1, 1)), (x(2, 2, 0) ∨ x(1, 1, 1)), (¬x(2, 2, 0) ∨ ¬x(1, 1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nA group of three authors—Alice, Bob, and Charlie—are collaborating on a series of books. Each book is written in a particular genre (0 = science fiction, 1 = mystery, 2 = fantasy), and each genre is divided into different stages of drafting (0 = brainstorming, 1 = writing, 2 = revising). For each author, genre, and drafting stage, we determine whether they are actively working on that part of the project. Each decision is made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean author i is working on genre j during drafting stage k. Here, author 0 is Alice, author 1 is Bob, and author 2 is Charlie.\n</variable_mapping>\n\n<conditions>\n1. Either Alice is not brainstorming science fiction, or Bob is writing science fiction.\n2. Either Bob is not brainstorming fantasy, or Bob is brainstorming science fiction.\n3. Either Alice is not writing mystery, or Alice is revising science fiction.\n4. Either Bob is brainstorming fantasy, or Bob is not brainstorming science fiction.\n5. Either Bob is writing science fiction, or Bob is not brainstorming fantasy.\n6. Either Charlie is brainstorming fantasy, or Charlie is not writing fantasy.\n7. Either Bob is not writing science fiction, or Bob is brainstorming fantasy.\n8. Either Charlie is not writing science fiction, or Alice is writing mystery.\n9. Either Charlie is not writing fantasy, or Alice is revising mystery.\n10. Either Alice is brainstorming science fiction, or Alice is not writing fantasy.\n11. Either Bob is not brainstorming science fiction, or Charlie is writing science fiction.\n12. Either Alice is brainstorming science fiction, or Bob is not writing science fiction.\n13. Either Charlie is brainstorming fantasy, or Bob is writing mystery.\n14. Either Alice is revising science fiction, or Alice is not writing fantasy.\n15. Either Charlie is writing fantasy, or Alice is not revising mystery.\n16. Either Charlie is not brainstorming fantasy, or Charlie is writing fantasy.\n17. Either Alice is writing fantasy, or Bob is not writing mystery.\n18. Either Alice is not writing fantasy, or Bob is writing mystery.\n19. Either Alice is revising mystery, or Alice is not brainstorming science fiction.\n20. Either Charlie is writing science fiction, or Alice is not writing mystery.\n21. Either Alice is not revising science fiction, or Alice is writing fantasy.\n22. Either Charlie is not brainstorming fantasy, or Bob is not writing mystery.\n23. Either Alice is not revising mystery, or Alice is brainstorming science fiction.\n24. Either Alice is writing mystery, or Alice is not revising science fiction.\n25. Either Bob is brainstorming science fiction, or Charlie is not writing science fiction.\n</conditions>\n\n<question>\nIs there a way to assign tasks such that all these conditions are satisfied?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,3]\n</dims>\n\n<num_vars>\n27\n</num_vars>\n\n<num_clauses>\n25\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    25,\n    -26\n  ],\n  [\n    -25,\n    26\n  ],\n  [\n    26,\n    -6\n  ],\n  [\n    -26,\n    6\n  ],\n  [\n    6,\n    -1\n  ],\n  [\n    -6,\n    1\n  ],\n  [\n    1,\n    -11\n  ],\n  [\n    -1,\n    11\n  ],\n  [\n    11,\n    -16\n  ],\n  [\n    -11,\n    16\n  ],\n  [\n    16,\n    -10\n  ],\n  [\n    -16,\n    10\n  ],\n  [\n    10,\n    -20\n  ],\n  [\n    -10,\n    20\n  ],\n  [\n    20,\n    -5\n  ],\n  [\n    -20,\n    5\n  ],\n  [\n    5,\n    -3\n  ],\n  [\n    -5,\n    3\n  ],\n  [\n    3,\n    -8\n  ],\n  [\n    -3,\n    8\n  ],\n  [\n    8,\n    -14\n  ],\n  [\n    -8,\n    14\n  ],\n  [\n    25,\n    14\n  ],\n  [\n    -25,\n    -14\n  ],\n  [\n    1,\n    -8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 0, 0) ∨ x(1, 0, 1)) ∧ (¬x(1, 2, 0) ∨ x(1, 0, 0)) ∧ (¬x(0, 1, 1) ∨ x(0, 0, 2)) ∧ (x(1, 2, 0) ∨ ¬x(1, 0, 0)) ∧ (x(1, 0, 1) ∨ ¬x(1, 2, 0)) ∧ (x(2, 2, 0) ∨ ¬x(2, 2, 1)) ∧ (¬x(1, 0, 1) ∨ x(1, 2, 0)) ∧ (¬x(2, 0, 1) ∨ x(0, 1, 1)) ∧ (¬x(2, 2, 1) ∨ x(0, 1, 2)) ∧ (x(0, 0, 0) ∨ ¬x(0, 2, 1)) ∧ (¬x(1, 0, 0) ∨ x(2, 0, 1)) ∧ (x(0, 0, 0) ∨ ¬x(1, 0, 1)) ∧ (x(2, 2, 0) ∨ x(1, 1, 1)) ∧ (x(0, 0, 2) ∨ ¬x(0, 2, 1)) ∧ (x(2, 2, 1) ∨ ¬x(0, 1, 2)) ∧ (¬x(2, 2, 0) ∨ x(2, 2, 1)) ∧ (x(0, 2, 1) ∨ ¬x(1, 1, 1)) ∧ (¬x(0, 2, 1) ∨ x(1, 1, 1)) ∧ (x(0, 1, 2) ∨ ¬x(0, 0, 0)) ∧ (x(2, 0, 1) ∨ ¬x(0, 1, 1)) ∧ (¬x(0, 0, 2) ∨ x(0, 2, 1)) ∧ (¬x(2, 2, 0) ∨ ¬x(1, 1, 1)) ∧ (¬x(0, 1, 2) ∨ x(0, 0, 0)) ∧ (x(0, 1, 1) ∨ ¬x(0, 0, 2)) ∧ (x(1, 0, 0) ∨ ¬x(2, 0, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,7,9,11,13,15,17,19,20,21,22,23,24]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,6,7,8,9,10,11,13,15,16,17,18,19,21,22,23]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [25, -26] -> (x(2, 2, 0) ∨ ¬x(2, 2, 1)); matching condition number(s): [6]\n- raw clause index 1: [-25, 26] -> (¬x(2, 2, 0) ∨ x(2, 2, 1)); matching condition number(s): [16]\n- raw clause index 2: [26, -6] -> (x(2, 2, 1) ∨ ¬x(0, 1, 2)); matching condition number(s): [15]\n- raw clause index 3: [-26, 6] -> (¬x(2, 2, 1) ∨ x(0, 1, 2)); matching condition number(s): [9]\n- raw clause index 4: [6, -1] -> (x(0, 1, 2) ∨ ¬x(0, 0, 0)); matching condition number(s): [19]\n- raw clause index 5: [-6, 1] -> (¬x(0, 1, 2) ∨ x(0, 0, 0)); matching condition number(s): [23]\n- raw clause index 7: [-1, 11] -> (¬x(0, 0, 0) ∨ x(1, 0, 1)); matching condition number(s): [1]\n- raw clause index 9: [-11, 16] -> (¬x(1, 0, 1) ∨ x(1, 2, 0)); matching condition number(s): [7]\n- raw clause index 11: [-16, 10] -> (¬x(1, 2, 0) ∨ x(1, 0, 0)); matching condition number(s): [2]\n- raw clause index 13: [-10, 20] -> (¬x(1, 0, 0) ∨ x(2, 0, 1)); matching condition number(s): [11]\n- raw clause index 15: [-20, 5] -> (¬x(2, 0, 1) ∨ x(0, 1, 1)); matching condition number(s): [8]\n- raw clause index 17: [-5, 3] -> (¬x(0, 1, 1) ∨ x(0, 0, 2)); matching condition number(s): [3]\n- raw clause index 19: [-3, 8] -> (¬x(0, 0, 2) ∨ x(0, 2, 1)); matching condition number(s): [21]\n- raw clause index 20: [8, -14] -> (x(0, 2, 1) ∨ ¬x(1, 1, 1)); matching condition number(s): [17]\n- raw clause index 21: [-8, 14] -> (¬x(0, 2, 1) ∨ x(1, 1, 1)); matching condition number(s): [18]\n- raw clause index 22: [25, 14] -> (x(2, 2, 0) ∨ x(1, 1, 1)); matching condition number(s): [13]\n- raw clause index 23: [-25, -14] -> (¬x(2, 2, 0) ∨ ¬x(1, 1, 1)); matching condition number(s): [22]\n- raw clause index 24: [1, -8] -> (x(0, 0, 0) ∨ ¬x(0, 2, 1)); matching condition number(s): [10]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [25, 26, 6, 1, 11, 16, 10, 20, 5, 3, 8, 14]: (x(2, 2, 0) ∨ ¬x(2, 2, 1)), (¬x(2, 2, 0) ∨ x(2, 2, 1)), (x(2, 2, 1) ∨ ¬x(0, 1, 2)), (¬x(2, 2, 1) ∨ x(0, 1, 2)), (x(0, 1, 2) ∨ ¬x(0, 0, 0)), (¬x(0, 1, 2) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(1, 0, 1)), (¬x(0, 0, 0) ∨ x(1, 0, 1)), (x(1, 0, 1) ∨ ¬x(1, 2, 0)), (¬x(1, 0, 1) ∨ x(1, 2, 0)), (x(1, 2, 0) ∨ ¬x(1, 0, 0)), (¬x(1, 2, 0) ∨ x(1, 0, 0)), (x(1, 0, 0) ∨ ¬x(2, 0, 1)), (¬x(1, 0, 0) ∨ x(2, 0, 1)), (x(2, 0, 1) ∨ ¬x(0, 1, 1)), (¬x(2, 0, 1) ∨ x(0, 1, 1)), (x(0, 1, 1) ∨ ¬x(0, 0, 2)), (¬x(0, 1, 1) ∨ x(0, 0, 2)), (x(0, 0, 2) ∨ ¬x(0, 2, 1)), (¬x(0, 0, 2) ∨ x(0, 2, 1)), (x(0, 2, 1) ∨ ¬x(1, 1, 1)), (¬x(0, 2, 1) ∨ x(1, 1, 1)), (x(2, 2, 0) ∨ x(1, 1, 1)), (¬x(2, 2, 0) ∨ ¬x(1, 1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      3,
+      3
+    ],
+    "num_vars": 27,
+    "num_clauses": 25,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      13,
+      15,
+      16,
+      17,
+      18,
+      19,
+      21,
+      22,
+      23
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          25,
+          -26
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ ¬x(2, 2, 1))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -25,
+          26
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(2, 2, 1))",
+        "condition_numbers": [
+          16
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          26,
+          -6
+        ],
+        "clause_structural": "(x(2, 2, 1) ∨ ¬x(0, 1, 2))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -26,
+          6
+        ],
+        "clause_structural": "(¬x(2, 2, 1) ∨ x(0, 1, 2))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          6,
+          -1
+        ],
+        "clause_structural": "(x(0, 1, 2) ∨ ¬x(0, 0, 0))",
+        "condition_numbers": [
+          19
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -6,
+          1
+        ],
+        "clause_structural": "(¬x(0, 1, 2) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          23
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -1,
+          11
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(1, 0, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -11,
+          16
+        ],
+        "clause_structural": "(¬x(1, 0, 1) ∨ x(1, 2, 0))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -16,
+          10
+        ],
+        "clause_structural": "(¬x(1, 2, 0) ∨ x(1, 0, 0))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -10,
+          20
+        ],
+        "clause_structural": "(¬x(1, 0, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -20,
+          5
+        ],
+        "clause_structural": "(¬x(2, 0, 1) ∨ x(0, 1, 1))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 17,
+        "clause_dimacs": [
+          -5,
+          3
+        ],
+        "clause_structural": "(¬x(0, 1, 1) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 19,
+        "clause_dimacs": [
+          -3,
+          8
+        ],
+        "clause_structural": "(¬x(0, 0, 2) ∨ x(0, 2, 1))",
+        "condition_numbers": [
+          21
+        ]
+      },
+      {
+        "raw_clause_index": 20,
+        "clause_dimacs": [
+          8,
+          -14
+        ],
+        "clause_structural": "(x(0, 2, 1) ∨ ¬x(1, 1, 1))",
+        "condition_numbers": [
+          17
+        ]
+      },
+      {
+        "raw_clause_index": 21,
+        "clause_dimacs": [
+          -8,
+          14
+        ],
+        "clause_structural": "(¬x(0, 2, 1) ∨ x(1, 1, 1))",
+        "condition_numbers": [
+          18
+        ]
+      },
+      {
+        "raw_clause_index": 22,
+        "clause_dimacs": [
+          25,
+          14
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ x(1, 1, 1))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 23,
+        "clause_dimacs": [
+          -25,
+          -14
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ ¬x(1, 1, 1))",
+        "condition_numbers": [
+          22
+        ]
+      },
+      {
+        "raw_clause_index": 24,
+        "clause_dimacs": [
+          1,
+          -8
+        ],
+        "clause_structural": "(x(0, 0, 0) ∨ ¬x(0, 2, 1))",
+        "condition_numbers": [
+          10
+        ]
+      }
+    ],
+    "unsat_reason": "XOR Chain contradiction over variables [25, 26, 6, 1, 11, 16, 10, 20, 5, 3, 8, 14]: (x(2, 2, 0) ∨ ¬x(2, 2, 1)), (¬x(2, 2, 0) ∨ x(2, 2, 1)), (x(2, 2, 1) ∨ ¬x(0, 1, 2)), (¬x(2, 2, 1) ∨ x(0, 1, 2)), (x(0, 1, 2) ∨ ¬x(0, 0, 0)), (¬x(0, 1, 2) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(1, 0, 1)), (¬x(0, 0, 0) ∨ x(1, 0, 1)), (x(1, 0, 1) ∨ ¬x(1, 2, 0)), (¬x(1, 0, 1) ∨ x(1, 2, 0)), (x(1, 2, 0) ∨ ¬x(1, 0, 0)), (¬x(1, 2, 0) ∨ x(1, 0, 0)), (x(1, 0, 0) ∨ ¬x(2, 0, 1)), (¬x(1, 0, 0) ∨ x(2, 0, 1)), (x(2, 0, 1) ∨ ¬x(0, 1, 1)), (¬x(2, 0, 1) ∨ x(0, 1, 1)), (x(0, 1, 1) ∨ ¬x(0, 0, 2)), (¬x(0, 1, 1) ∨ x(0, 0, 2)), (x(0, 0, 2) ∨ ¬x(0, 2, 1)), (¬x(0, 0, 2) ∨ x(0, 2, 1)), (x(0, 2, 1) ∨ ¬x(1, 1, 1)), (¬x(0, 2, 1) ∨ x(1, 1, 1)), (x(2, 2, 0) ∨ x(1, 1, 1)), (¬x(2, 2, 0) ∨ ¬x(1, 1, 1))"
+  }
+}

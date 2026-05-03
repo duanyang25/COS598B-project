@@ -1,0 +1,141 @@
+{
+  "index": 299,
+  "row_index_in_prompt_file": 299,
+  "prompt_id": "satbench_00299",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analyze the Problem Structure**\n*   **Variables**: We have 6 variables representing the interaction between two explorers (Amy=0, Ben=1), two tasks (Navigate=0, Communicate=1), and two conditions (Day=0, Night=1).\n    *   $x(1, j, k)$: Ben performs task $j$ under condition $k$.\n    *   $x(0, j, k)$: Amy performs task $j$ under condition $k$.\n*   **Clauses**: The system provides 6 logical clauses derived from the natural language conditions.\n    *   C1: $(x(1, 1, 1) \\lor \\neg x(0, 0, 0))$ OR ($\\neg x(1, 1, 1) \\lor \\neg x(0, 1, 1)$) -> \"Either Ben comms at night OR Amy doesn't nav day\".\n    *   C2: $(\\neg x(1, 1, 1) \\lor \\neg x(0, 1, 1)) \\lor (x(0, 0, 0) \\lor \\neg x(0, 1, 1))$ -> \"Either Ben doesn't comms at night OR Amy doesn't comms at night\".\n    *   C3: $(x(0, 0, 0) \\lor \\neg x(0, 1, 1)) \\lor (\\neg x(0, 0, 0) \\lor x(0, 1, 1))$ -> \"Either Amy navs day OR Amy doesn't comms night\".\n    *   C4: $(\\neg x(0, 0, 0) \\lor x(0, 1, 1)) \\lor (\\neg x(0, 0, 0) \\lor x(0, 1, 1))$ -> Wait, let's re-read the text carefully.\n        *   Text C4: \"Either Amy doesn't navigate during the day, or Amy communicates at night.\"\n        *   Formal C4 provided: $\\neg x(0, 0, 0) \\lor x(0, 1, 1)$. This matches perfectly.\n    *   C5: \"Either Ben communicates at night, or Amy communicates at night.\"\n        *   Formal C5: $x(1, 1, 1) \\lor x(0, 1, 1)$. Matches.\n    *   C6: \"Either Ben doesn't communicate at night, or Amy navigates during the day.\"\n        *   Formal C6: $\\neg x(1, 1, 1) \\lor x(0, 0, 0)$. Matches.\n\n**2. Analyze the Certificates and Logic**\nThe provided Z3 certificate and readable CNF indicate the formula is **UNSAT**.\n*   **Core Clauses**: The unsat core consists of indices [0, 1, 2, 3, 4, 5].\n*   **Mapping**:\n    *   Clause 0: $x(1, 1, 1) \\lor \\neg x(0, 0, 0)$ (Matches Condition 1)\n    *   Clause 1: $\\neg x(1, 1, 1) \\lor x(0, 0, 0)$ (Wait, let's check the variable mapping again).\n        *   Variable definition: $x(i, j, k)$.\n        *   Clause 1 in readable CNF: `(-10, 1)` corresponds to `¬x(1, 1, 1) ∨ x(0, 0, 0)`.\n        *   However, looking at the problem statement text vs the CNF:\n            *   Text Condition 1: \"Ben communicates at night\" ($x(1,1,1)$) OR \"Amy doesn't navigate day\" ($\\neg x(0,0,0)$). -> Matches Readable Clause 0.\n            *   Text Condition 6: \"Ben doesn't communicate at night\" ($\\neg x(1,1,1)$) OR \"Amy navigates day\" ($x(0,0,0)$). -> Matches Readable Clause 1.\n            *   Text Condition 2: \"Ben doesn't communicate at night\" ($\\neg x(1,1,1)$) OR \"Amy doesn't communicate night\" ($\\neg x(0,1,1)$). -> Matches Readable Clause 5? No.\n            *   Let's re-map the Z3 raw clauses to the specific conditions listed in the `<conditions>` section of the prompt.\n\n**Re-mapping based on Prompt Conditions:**\n1.  **Cond 1**: Ben comm. night ($x(1,1,1)$) $\\lor$ Amy no nav day ($\\neg x(0,0,0)$).\n    *   Z3 Clause 0: `x(1,1,1) ∨ ¬x(0,0,0)`. **(Match)**\n2.  **Cond 2**: Ben no comm night ($\\neg x(1,1,1)$) $\\lor$ Amy no comm night ($\\neg x(0,1,1)$).\n    *   Z3 Clause 5: `¬x(1,1,1) ∨ ¬x(0,1,1)`. **(Match)**\n3.  **Cond 3**: Amy nav day ($x(0,0,0)$) $\\lor$ Amy no comm night ($\\neg x(0,1,1)$).\n    *   Z3 Clause 2: `x(0,0,0) ∨ ¬x(0,1,1)`. **(Match)**\n4.  **Cond 4**: Amy no nav day ($\\neg x(0,0,0)$) $\\lor$ Amy comm night ($x(0,1,1)$).\n    *   Z3 Clause 3: `¬x(0,0,0) ∨ x(0,1,1)`. **(Match)**\n5.  **Cond 5**: Ben comm night ($x(1,1,1)$) $\\lor$ Amy comm night ($x(0,1,1)$).\n    *   Z3 Clause 4: `x(1,1,1) ∨ x(0,1,1)`. **(Match)**\n6.  **Cond 6**: Ben no comm night ($\\neg x(1,1,1)$) $\\lor$ Amy nav day ($x(0,0,0)$).\n    *   Z3 Clause 1: `¬x(1,1,1) ∨ x(0,0,0)`. **(Match)**\n\n**3. Logical Deduction (Unsat Proof)**\nLet's look at the interaction between the variables involved in the \"Chain\":\n*   Variables involved in the tightest loop: $x(1,1,1)$ (Ben/Night), $x(0,0,0)$ (Amy/Day), $x(0,1,1)$ (Amy/Night).\n*   Let $A = x(1,1,1)$ (Ben Commites Night), $B = x(0,0,0)$ (Amy Navigates Day), $C = x(0,1,1)$ (Amy Commutes Night).\n*   The remaining variables (Ben Day, Amy Day, Ben Day?) don't seem to constrain the conflict directly if we focus on the core loop, but let's check the full set.\n\n**Contradiction Analysis:**\nFrom the clauses:\n1.  $A \\lor \\neg B$ (C1)\n2.  $\\neg A \\lor C$ (C2) -- Wait, C2 is \"Ben no comm OR Amy no comm\". So $\\neg A \\lor \\neg C$.\n    *   Let's re-read Cond 2: \"Either Ben doesn't communicate at night, or Amy doesn't communicate at night.\"\n    *   Formal: $\\neg x(1,1,1) \\lor \\neg x(0,1,1)$.\n    *   So: $\\neg A \\lor \\neg C$.\n3.  $B \\lor \\neg C$ (C3) -- Cond 3: \"Amy nav day OR Amy no comm night\".\n    *   Formal: $B \\lor \\neg C$.\n4.  $\\neg B \\lor C$ (C4) -- Cond 4: \"Amy no nav day OR Amy comm night\".\n    *   Formal: $\\neg B \\lor C$.\n5.  $A \\lor C$ (C5) -- Cond 5: \"Ben comm night OR Amy comm night\".\n    *   Formal: $A \\lor C$.\n6.  $\\neg A \\lor B$ (C6) -- Cond 6: \"Ben no comm night OR Amy nav day\".\n    *   Formal: $\\neg A \\lor B$.\n\n**Let's try to derive a contradiction:**\nAssume the negation of the conclusion (i.e., try to make them ALL False).\nIf we assume $A=0, B=0, C=0$:\n*   C1: $0 \\lor 1 = T$. (OK)\n*   C2: $1 \\lor 1 = T$. (OK)\n*   C3: $0 \\lor 1 = T$. (OK)\n*   C4: $1 \\lor 0 = T$. (OK)\n*   C5: $0 \\lor 0 = F$. (**CONFLICT**) -> Contradiction found immediately!\n    *   Clause 5 requires $A \\lor C$. If $A=0$ and $C=0$, this is false.\n    *   Therefore, we cannot have ($A=0$ AND $C=0$). At least one must be true.\n\nLet's try another path: Assume $A=1, B=1, C=1$.\n*   C1: $1 \\lor 0 = T$.\n*   C2: $0 \\lor 0 = F$. (**CONFLICT**)\n    *   Clause 2 requires $\\neg A \\lor \\neg C$. If $A=1$ and $C=1$, then $\\neg A=0$ and $\\neg C=0$, so $0 \\lor 0 = F$.\n\nIs there any other combination?\nLet's solve the system algebraically.\nFrom C2: $\\neg A \\lor \\neg C$\nFrom C3: $B \\lor \\neg C$\nFrom C6: $\\neg A \\lor B$\n\nConsider C5: $A \\lor C$.\nCase A: $A=1$.\nThen from C1: $1 \\lor \\dots = T$.\nFrom C6: $\\neg 1 \\lor B \\Rightarrow B=T$.\nFrom C5: $1 \\lor C = T$.\nFrom C2: $\\neg 1 \\lor \\neg C \\Rightarrow \\neg C$ must be true for C2 to hold? No, if $\\neg A$ is false, then $\\neg C$ MUST be true. So $C=0$.\nLet's check C4: $\\neg B \\lor C$. With $B=1, C=0$: $\\neg 1 \\lor 0 = 0 \\lor 0 = F$.\nSo if $A=1$, we get $C=0$ (from C2) and $B=1$ (from C6/C5/C1). But C4 fails ($0 \\lor 0 = 0$).\nResult: **UNSAT**.\n\nCase B: $A=0$.\nFrom C5: $0 \\lor C \\Rightarrow C=1$.\nFrom C1: $0 \\lor \\neg B \\Rightarrow \\neg B = T \\Rightarrow B=0$.\nFrom C6: $\\neg 0 \\lor B \\Rightarrow B=T$.\nContradiction in $B$: Must be 0 (from C1) and 1 (from C6).\nResult: **UNSAT**.\n\n**Conclusion**: The system is logically inconsistent. No assignment exists that satisfies all 6 clauses simultaneously.\n\n**4. Final Verification against Certificate**\n*   The Z3 certificate correctly identifies the unsat core.\n*   The mapped conditions show how the clauses correspond to the text.\n*   The reasoning above proves that the conjunction of these specific conditions leads to a contradiction (specifically regarding the boolean values of $A, B, C$).\n\n**Assignment**: None exists. The puzzle is UNSAT.\n\n**Answer Formulation**:\nThe puzzle asks \"Is there a way...?\" Since the system is UNSAT, the answer is \"No\".\n\n**Final Output Construction**:\nLabel: UNSAT\nReasoning: Follows the deduction above.\nAssignment: N/A.\n\n```\n[UNSAT]\n```",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1608,
+    "generated_tokens": 2846,
+    "batch_elapsed_seconds": 75.34648513793945,
+    "tokens_per_second_for_batch": 37.772166741284984,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777797632.3048267,
+  "slurm_job_id": "3180394",
+  "slurm_array_job_id": "3179795",
+  "slurm_array_task_id": "29",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nTwo space explorers, Amy and Ben, are each responsible for two types of tasks: navigation (task 0) and communication (task 1). These tasks can be performed under two different conditions: during the day (condition 0) and at night (condition 1). Each decision about who performs which task under what condition is independent.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean explorer i performs task j under condition k. Here, explorer 0 is Amy, and explorer 1 is Ben.\n</variable_mapping>\n\n<conditions>\n1. Either Ben communicates at night, or Amy doesn't navigate during the day.\n2. Either Ben doesn't communicate at night, or Amy doesn't communicate at night.\n3. Either Amy navigates during the day, or Amy doesn't communicate at night.\n4. Either Amy doesn't navigate during the day, or Amy communicates at night.\n5. Either Ben communicates at night, or Amy communicates at night.\n6. Either Ben doesn't communicate at night, or Amy navigates during the day.\n</conditions>\n\n<question>\nIs there a way to assign tasks so that all these conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n6\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    10,\n    -1\n  ],\n  [\n    -10,\n    1\n  ],\n  [\n    1,\n    -4\n  ],\n  [\n    -1,\n    4\n  ],\n  [\n    10,\n    4\n  ],\n  [\n    -10,\n    -4\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(1, 1, 1) ∨ ¬x(0, 0, 0)) ∧ (¬x(1, 1, 1) ∨ ¬x(0, 1, 1)) ∧ (x(0, 0, 0) ∨ ¬x(0, 1, 1)) ∧ (¬x(0, 0, 0) ∨ x(0, 1, 1)) ∧ (x(1, 1, 1) ∨ x(0, 1, 1)) ∧ (¬x(1, 1, 1) ∨ x(0, 0, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [10, -1] -> (x(1, 1, 1) ∨ ¬x(0, 0, 0)); matching condition number(s): [1]\n- raw clause index 1: [-10, 1] -> (¬x(1, 1, 1) ∨ x(0, 0, 0)); matching condition number(s): [6]\n- raw clause index 2: [1, -4] -> (x(0, 0, 0) ∨ ¬x(0, 1, 1)); matching condition number(s): [3]\n- raw clause index 3: [-1, 4] -> (¬x(0, 0, 0) ∨ x(0, 1, 1)); matching condition number(s): [4]\n- raw clause index 4: [10, 4] -> (x(1, 1, 1) ∨ x(0, 1, 1)); matching condition number(s): [5]\n- raw clause index 5: [-10, -4] -> (¬x(1, 1, 1) ∨ ¬x(0, 1, 1)); matching condition number(s): [2]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [10, 1, 4]: (x(1, 1, 1) ∨ ¬x(0, 0, 0)), (¬x(1, 1, 1) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(0, 1, 1)), (¬x(0, 0, 0) ∨ x(0, 1, 1)), (x(1, 1, 1) ∨ x(0, 1, 1)), (¬x(1, 1, 1) ∨ ¬x(0, 1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nTwo space explorers, Amy and Ben, are each responsible for two types of tasks: navigation (task 0) and communication (task 1). These tasks can be performed under two different conditions: during the day (condition 0) and at night (condition 1). Each decision about who performs which task under what condition is independent.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean explorer i performs task j under condition k. Here, explorer 0 is Amy, and explorer 1 is Ben.\n</variable_mapping>\n\n<conditions>\n1. Either Ben communicates at night, or Amy doesn't navigate during the day.\n2. Either Ben doesn't communicate at night, or Amy doesn't communicate at night.\n3. Either Amy navigates during the day, or Amy doesn't communicate at night.\n4. Either Amy doesn't navigate during the day, or Amy communicates at night.\n5. Either Ben communicates at night, or Amy communicates at night.\n6. Either Ben doesn't communicate at night, or Amy navigates during the day.\n</conditions>\n\n<question>\nIs there a way to assign tasks so that all these conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n6\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    10,\n    -1\n  ],\n  [\n    -10,\n    1\n  ],\n  [\n    1,\n    -4\n  ],\n  [\n    -1,\n    4\n  ],\n  [\n    10,\n    4\n  ],\n  [\n    -10,\n    -4\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(1, 1, 1) ∨ ¬x(0, 0, 0)) ∧ (¬x(1, 1, 1) ∨ ¬x(0, 1, 1)) ∧ (x(0, 0, 0) ∨ ¬x(0, 1, 1)) ∧ (¬x(0, 0, 0) ∨ x(0, 1, 1)) ∧ (x(1, 1, 1) ∨ x(0, 1, 1)) ∧ (¬x(1, 1, 1) ∨ x(0, 0, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [10, -1] -> (x(1, 1, 1) ∨ ¬x(0, 0, 0)); matching condition number(s): [1]\n- raw clause index 1: [-10, 1] -> (¬x(1, 1, 1) ∨ x(0, 0, 0)); matching condition number(s): [6]\n- raw clause index 2: [1, -4] -> (x(0, 0, 0) ∨ ¬x(0, 1, 1)); matching condition number(s): [3]\n- raw clause index 3: [-1, 4] -> (¬x(0, 0, 0) ∨ x(0, 1, 1)); matching condition number(s): [4]\n- raw clause index 4: [10, 4] -> (x(1, 1, 1) ∨ x(0, 1, 1)); matching condition number(s): [5]\n- raw clause index 5: [-10, -4] -> (¬x(1, 1, 1) ∨ ¬x(0, 1, 1)); matching condition number(s): [2]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [10, 1, 4]: (x(1, 1, 1) ∨ ¬x(0, 0, 0)), (¬x(1, 1, 1) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(0, 1, 1)), (¬x(0, 0, 0) ∨ x(0, 1, 1)), (x(1, 1, 1) ∨ x(0, 1, 1)), (¬x(1, 1, 1) ∨ ¬x(0, 1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      3,
+      2
+    ],
+    "num_vars": 18,
+    "num_clauses": 6,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          10,
+          -1
+        ],
+        "clause_structural": "(x(1, 1, 1) ∨ ¬x(0, 0, 0))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -10,
+          1
+        ],
+        "clause_structural": "(¬x(1, 1, 1) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          1,
+          -4
+        ],
+        "clause_structural": "(x(0, 0, 0) ∨ ¬x(0, 1, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -1,
+          4
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(0, 1, 1))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          10,
+          4
+        ],
+        "clause_structural": "(x(1, 1, 1) ∨ x(0, 1, 1))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -10,
+          -4
+        ],
+        "clause_structural": "(¬x(1, 1, 1) ∨ ¬x(0, 1, 1))",
+        "condition_numbers": [
+          2
+        ]
+      }
+    ],
+    "unsat_reason": "XOR Chain contradiction over variables [10, 1, 4]: (x(1, 1, 1) ∨ ¬x(0, 0, 0)), (¬x(1, 1, 1) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(0, 1, 1)), (¬x(0, 0, 0) ∨ x(0, 1, 1)), (x(1, 1, 1) ∨ x(0, 1, 1)), (¬x(1, 1, 1) ∨ ¬x(0, 1, 1))"
+  }
+}

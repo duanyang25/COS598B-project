@@ -1,0 +1,153 @@
+{
+  "index": 1009,
+  "row_index_in_prompt_file": 1009,
+  "prompt_id": "satbench_01009",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "**Label: UNSAT**\n\n### Step-by-Step Reasoning\n\nTo determine if the system is satisfiable, we must analyze the logical implications provided in the conditions and verify them against the derived CNF formula and Z3 certificate.\n\n**1. Analysis of Condition 7:**\nCondition 7 states: \"Either Dr. Adams does not conduct a successful chemistry experiment in the field, or Dr. Chen conducts a successful chemistry experiment in the field.\"\nUsing the variable mapping ($x(i, j, k)$ where $j=1$ is chemistry and $k=1$ is field):\n- Let $A_{chem, f}$ represent \"Dr. Adams conducts a successful chemistry experiment in the field\".\n- Let $C_{chem, f}$ represent \"Dr. Chen conducts a successful chemistry experiment in the field\".\n- The statement translates to: $\\neg A_{chem, f} \\lor C_{chem, f}$.\n- **Logical Equivalence:** This is equivalent to $C_{chem, f} \\implies A_{chem, f}$. This implies that if Dr. Chen succeeds in the field, Dr. Adams *must* also succeed in the field.\n\n**2. Analysis of Condition 2:**\nCondition 2 states: \"Dr. Diaz conducts a successful chemistry experiment in the laboratory.\"\n- Let $D_{chem, l}$ represent \"Dr. Diaz conducts a successful chemistry experiment in the laboratory\" (where lab=0).\n- **Logical Value:** $D_{chem, l} = \\text{True}$.\n\n**3. Analysis of Condition 1:**\nCondition 1 states: \"Either Dr. Adams does not conduct a successful chemistry experiment in the laboratory, or Dr. Diaz does not conduct a successful chemistry experiment in the laboratory.\"\n- Formula: $\\neg A_{chem, l} \\lor \\neg D_{chem, l}$.\n- We know from Condition 2 that $D_{chem, l}$ is **True**.\n- Therefore, $\\neg D_{chem, l}$ is **False**.\n- For the disjunction ($\\text{False} \\lor Y$) to be true, $Y$ must be **True**.\n- **Result:** $\\neg A_{chem, l}$ must be **True**, meaning $A_{chem, l}$ (Adams in lab) must be **False**.\n\n**4. Synthesis and Contradiction Detection:**\nNow let's look at the interaction between Condition 2 and Condition 7 in light of the deduction from Condition 1.\n- From Condition 2, we deduced $D_{chem, l} = \\text{True}$.\n- However, looking at Condition 6: \"Either Dr. Diaz does not conduct a successful physics experiment in the laboratory, or Dr. Adams conducts a successful chemistry experiment in the laboratory.\" ($\\neg D_{phy, l} \\lor A_{chem, l}$).\n- Looking at Condition 4: \"Either Dr. Chen does not conduct a successful chemistry experiment in the laboratory, or Dr. Diaz conducts a successful physics experiment in the laboratory.\" ($\\neg C_{chem, l} \\lor D_{phy, l}$).\n\nLet's re-evaluate the specific unsat core derived by the Z3 solver:\nThe unsat core includes the clause: **(x(3, 1, 0))**.\nBased on the variable mapping:\n- Scientist 3 is Dr. Diaz.\n- Field 1 is Chemistry.\n- Condition 0 is Laboratory (since condition 0 = in laboratory).\n- Thus, the clause $(x(3, 1, 0))$ means **\"Dr. Diaz conducts a successful chemistry experiment in the laboratory.\"**\n\n**Conflict Identification:**\n- **Condition 2** explicitly states: \"Dr. Diaz conducts a successful chemistry experiment in the laboratory.\" ($x(3, 1, 0)$).\n- **Clause 6** in the CNF (which corresponds to Condition 6 in the problem description) is: $(\\neg x(3, 0, 0) \\lor x(0, 1, 0))$.\n  - Wait, let's map the dimensions correctly based on the `clauses_dimacs` list vs `readable_cnf`.\n  - `readable_cnf` lists 7 clauses. `clauses_dimacs` lists 7 pairs.\n  - Clause 0 in readable: `(-15, 4)`. In dimacs, index 0 is the first negative literal. Literal 4 corresponds to $x(3, 1, 0)$?\n    - Dimension order is [Sci, Field, Cond].\n    - Sci 0, Field 1, Cond 0 -> $x(0, 1, 0)$.\n    - Sci 3, Field 1, Cond 0 -> $x(3, 1, 0)$.\n    - The `dimacs` pair for index 0 is `[-15, 4]`. Usually, in DIMACS format, the first number is the ID of the literal, which is the index in the list. But here the list of clauses `[[..., ...], ...]` seems to be flattened or indexed differently.\n    - Let's look at the `unsat_core_clauses` mapping provided in the certificate:\n      - Index 0 corresponds to condition number **[3]**.\n      - Index 6 corresponds to condition number **[2]**.\n    - Certificate says: `raw clause index 6: [15] -> (x(3, 1, 0)); matching condition number(s): [2]`.\n    - This implies the clause containing $x(3, 1, 0)$ is condition #2.\n    - Condition #2 text: \"Dr. Diaz conducts a successful chemistry experiment in the laboratory.\"\n    - If this clause is present in the CNF, then Condition #2 is satisfied *by definition*.\n    - Wait, the certificate says `unsat_core_raw_clause_indices: [0,1,2,3,4,5,6]`. All 7 clauses are part of the unsat core.\n    - The reason says: \"Cycle conflict... (¬x(3, 1, 0) ∨ x(0, 1, 1)), ... (x(3, 1, 0))\".\n    - The presence of `(x(3, 1, 0))` as a clause forces $x(3, 1, 0)$ to be **True**.\n    - Condition 2 says $x(3, 1, 0)$ must be **True**.\n    - Is there a contradiction?\n    - Let's check Condition 7 again: $\\neg A_{chem, f} \\lor C_{chem, f}$.\n      - If we assume the variables are independent as per instructions (\"Variables not mentioned... may be assigned arbitrarily\"), can we satisfy everything?\n      - Let's try to construct a truth table mentally.\n      - We need $D_{chem, l} = T$ (from Cond 2).\n      - We need $\\neg A_{chem, l} \\lor \\neg D_{chem, l} = T$. Since $D=T$, we get $\\neg A_{chem, l} = T \\Rightarrow A_{chem, l} = F$.\n      - We need Condition 7: $\\neg A_{chem, f} \\lor C_{chem, f}$.\n      - We need Condition 6: $\\neg D_{phy, l} \\lor A_{chem, l}$.\n        - Since $A_{chem, l} = F$, we need $\\neg D_{phy, l} = T \\Rightarrow D_{phy, l} = F$.\n      - We need Condition 4: $\\neg C_{chem, l} \\lor D_{phy, l}$.\n        - Since $D_{phy, l} = F$, we need $\\neg C_{chem, l} = T \\Rightarrow C_{chem, l} = F$.\n      - We need Condition 5: $\\neg C_{chem, f} \\lor C_{chem, l}$.\n        - We have $C_{chem, l} = F$. So we need $\\neg C_{chem, f} = T \\Rightarrow C_{chem, f} = F$.\n      - Now check Condition 7: $\\neg A_{chem, f} \\lor C_{chem, f}$.\n        - We have $C_{chem, f} = F$. So we need $\\neg A_{chem, f} = T \\Rightarrow A_{chem, f} = F$.\n      - Now check Condition 3: $\\neg D_{chem, l} \\lor A_{chem, f}$.\n        - We have $D_{chem, l} = T$, so $\\neg D_{chem, l} = F$.\n        - We have $A_{chem, f} = F$. So $\\neg D_{chem, l} \\lor A_{chem, f} = F \\lor F = F$.\n        - **Contradiction found.**\n\n**Formal Proof of Contradiction:**\n1.  **Cond 2**: $x(3, 1, 0)$ is True.\n2.  **Cond 7**: $\\neg x(0, 1, 1) \\lor x(2, 1, 1)$.\n3.  **Cond 1**: $\\neg x(0, 1, 0) \\lor \\neg x(3, 1, 0)$. Since $x(3, 1, 0)$ is True, this forces $\\neg x(0, 1, 0)$ to be True $\\rightarrow$ $x(0, 1, 0)$ is False.\n4.  **Cond 6**: $\\neg x(3, 0, 0) \\lor x(0, 1, 0)$. Since $x(0, 1, 0)$ is False, this forces $\\neg x(3, 0, 0)$ to be True $\\rightarrow$ $x(3, 0, 0)$ is False.\n5.  **Cond 4**: $\\neg x(2, 1, 0) \\lor x(3, 0, 0)$. Since $x(3, 0, 0)$ is False, this forces $\\neg x(2, 1, 0)$ to be True $\\rightarrow$ $x(2, 1, 0)$ is False.\n6.  **Cond 5**: $\\neg x(2, 1, 1) \\lor x(2, 1, 0)$. Since $x(2, 1, 0)$ is False, this forces $\\neg x(2, 1, 1)$ to be True $\\rightarrow$ $x(2, 1, 1)$ is False.\n7.  **Cond 2** (Revisited via implication chain or direct): Wait, Cond 2 says $x(3, 1, 0)$ is True.\n8.  **Cond 3**: $\\neg x(3, 1, 0) \\lor x(0, 1, 1)$. Since $x(3, 1, 0)$ is True, this forces $\\neg x(3, 1, 0)$ to be False, so $x(0, 1, 1)$ must be True.\n9.  **Cond 7**: $\\neg x(0, 1, 1) \\lor x(2, 1, 1)$.\n    - From step 8, $x(0, 1, 1)$ is True, so $\\neg x(0, 1, 1)$ is False.\n    - For the OR to be true, $x(2, 1, 1)$ must be True.\n    - But from step 6, we derived that $x(2, 1, 1)$ must be False.\n10. **Final Conflict**: $x(2, 1, 1)$ cannot be both True (from Cond 7 + Cond 3 + Cond 1) and False (from Cond 5 + Cond 4 + Cond 2).\n\nThe Z3 certificate confirms this unsatisfiability by listing all 7 clauses as part of the unsat core and deriving the conflict between $x(2, 1, 1)$ being required to be True and False.\n\n### Final Answer\n\n**Label: UNSAT**",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1811,
+    "generated_tokens": 2716,
+    "batch_elapsed_seconds": 74.02062559127808,
+    "tokens_per_second_for_batch": 36.69247562155201,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777850886.0810704,
+  "slurm_job_id": "3182680",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "100",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nFour scientists—Dr. Adams, Dr. Blake, Dr. Chen, and Dr. Diaz—are conducting experiments in two fields (0 = physics, 1 = chemistry) under two different conditions (0 = in laboratory, 1 = in field). For each scientist, field, and condition, they determine whether the experiment was successful. Each decision is made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean scientist i conducts a successful experiment in field j under condition k. Here, scientist 0 is Dr. Adams, scientist 1 is Dr. Blake, scientist 2 is Dr. Chen, and scientist 3 is Dr. Diaz.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Adams does not conduct a successful chemistry experiment in the laboratory, or Dr. Diaz does not conduct a successful chemistry experiment in the laboratory.\n2. Dr. Diaz conducts a successful chemistry experiment in the laboratory.\n3. Either Dr. Diaz does not conduct a successful chemistry experiment in the laboratory, or Dr. Adams conducts a successful chemistry experiment in the field.\n4. Either Dr. Chen does not conduct a successful chemistry experiment in the laboratory, or Dr. Diaz conducts a successful physics experiment in the laboratory.\n5. Either Dr. Chen does not conduct a successful chemistry experiment in the field, or Dr. Chen conducts a successful chemistry experiment in the laboratory.\n6. Either Dr. Diaz does not conduct a successful physics experiment in the laboratory, or Dr. Adams conducts a successful chemistry experiment in the laboratory.\n7. Either Dr. Adams does not conduct a successful chemistry experiment in the field, or Dr. Chen conducts a successful chemistry experiment in the field.\n</conditions>\n\n<question>\nIs there a way to assign values that makes all these experimental outcomes possible?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,2,2]\n</dims>\n\n<num_vars>\n16\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -15,\n    4\n  ],\n  [\n    -4,\n    12\n  ],\n  [\n    -12,\n    11\n  ],\n  [\n    -11,\n    13\n  ],\n  [\n    -13,\n    3\n  ],\n  [\n    -3,\n    -15\n  ],\n  [\n    15\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 1, 0) ∨ ¬x(3, 1, 0)) ∧ (x(3, 1, 0)) ∧ (¬x(3, 1, 0) ∨ x(0, 1, 1)) ∧ (¬x(2, 1, 0) ∨ x(3, 0, 0)) ∧ (¬x(2, 1, 1) ∨ x(2, 1, 0)) ∧ (¬x(3, 0, 0) ∨ x(0, 1, 0)) ∧ (¬x(0, 1, 1) ∨ x(2, 1, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-15, 4] -> (¬x(3, 1, 0) ∨ x(0, 1, 1)); matching condition number(s): [3]\n- raw clause index 1: [-4, 12] -> (¬x(0, 1, 1) ∨ x(2, 1, 1)); matching condition number(s): [7]\n- raw clause index 2: [-12, 11] -> (¬x(2, 1, 1) ∨ x(2, 1, 0)); matching condition number(s): [5]\n- raw clause index 3: [-11, 13] -> (¬x(2, 1, 0) ∨ x(3, 0, 0)); matching condition number(s): [4]\n- raw clause index 4: [-13, 3] -> (¬x(3, 0, 0) ∨ x(0, 1, 0)); matching condition number(s): [6]\n- raw clause index 5: [-3, -15] -> (¬x(0, 1, 0) ∨ ¬x(3, 1, 0)); matching condition number(s): [1]\n- raw clause index 6: [15] -> (x(3, 1, 0)); matching condition number(s): [2]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(3, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(3, 0, 0)), (¬x(3, 0, 0) ∨ x(0, 1, 0)), (¬x(0, 1, 0) ∨ ¬x(3, 1, 0)), (x(3, 1, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nFour scientists—Dr. Adams, Dr. Blake, Dr. Chen, and Dr. Diaz—are conducting experiments in two fields (0 = physics, 1 = chemistry) under two different conditions (0 = in laboratory, 1 = in field). For each scientist, field, and condition, they determine whether the experiment was successful. Each decision is made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean scientist i conducts a successful experiment in field j under condition k. Here, scientist 0 is Dr. Adams, scientist 1 is Dr. Blake, scientist 2 is Dr. Chen, and scientist 3 is Dr. Diaz.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Adams does not conduct a successful chemistry experiment in the laboratory, or Dr. Diaz does not conduct a successful chemistry experiment in the laboratory.\n2. Dr. Diaz conducts a successful chemistry experiment in the laboratory.\n3. Either Dr. Diaz does not conduct a successful chemistry experiment in the laboratory, or Dr. Adams conducts a successful chemistry experiment in the field.\n4. Either Dr. Chen does not conduct a successful chemistry experiment in the laboratory, or Dr. Diaz conducts a successful physics experiment in the laboratory.\n5. Either Dr. Chen does not conduct a successful chemistry experiment in the field, or Dr. Chen conducts a successful chemistry experiment in the laboratory.\n6. Either Dr. Diaz does not conduct a successful physics experiment in the laboratory, or Dr. Adams conducts a successful chemistry experiment in the laboratory.\n7. Either Dr. Adams does not conduct a successful chemistry experiment in the field, or Dr. Chen conducts a successful chemistry experiment in the field.\n</conditions>\n\n<question>\nIs there a way to assign values that makes all these experimental outcomes possible?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,2,2]\n</dims>\n\n<num_vars>\n16\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -15,\n    4\n  ],\n  [\n    -4,\n    12\n  ],\n  [\n    -12,\n    11\n  ],\n  [\n    -11,\n    13\n  ],\n  [\n    -13,\n    3\n  ],\n  [\n    -3,\n    -15\n  ],\n  [\n    15\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 1, 0) ∨ ¬x(3, 1, 0)) ∧ (x(3, 1, 0)) ∧ (¬x(3, 1, 0) ∨ x(0, 1, 1)) ∧ (¬x(2, 1, 0) ∨ x(3, 0, 0)) ∧ (¬x(2, 1, 1) ∨ x(2, 1, 0)) ∧ (¬x(3, 0, 0) ∨ x(0, 1, 0)) ∧ (¬x(0, 1, 1) ∨ x(2, 1, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-15, 4] -> (¬x(3, 1, 0) ∨ x(0, 1, 1)); matching condition number(s): [3]\n- raw clause index 1: [-4, 12] -> (¬x(0, 1, 1) ∨ x(2, 1, 1)); matching condition number(s): [7]\n- raw clause index 2: [-12, 11] -> (¬x(2, 1, 1) ∨ x(2, 1, 0)); matching condition number(s): [5]\n- raw clause index 3: [-11, 13] -> (¬x(2, 1, 0) ∨ x(3, 0, 0)); matching condition number(s): [4]\n- raw clause index 4: [-13, 3] -> (¬x(3, 0, 0) ∨ x(0, 1, 0)); matching condition number(s): [6]\n- raw clause index 5: [-3, -15] -> (¬x(0, 1, 0) ∨ ¬x(3, 1, 0)); matching condition number(s): [1]\n- raw clause index 6: [15] -> (x(3, 1, 0)); matching condition number(s): [2]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(3, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(3, 0, 0)), (¬x(3, 0, 0) ∨ x(0, 1, 0)), (¬x(0, 1, 0) ∨ ¬x(3, 1, 0)), (x(3, 1, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      4,
+      2,
+      2
+    ],
+    "num_vars": 16,
+    "num_clauses": 7,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          -15,
+          4
+        ],
+        "clause_structural": "(¬x(3, 1, 0) ∨ x(0, 1, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -4,
+          12
+        ],
+        "clause_structural": "(¬x(0, 1, 1) ∨ x(2, 1, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -12,
+          11
+        ],
+        "clause_structural": "(¬x(2, 1, 1) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -11,
+          13
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ x(3, 0, 0))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -13,
+          3
+        ],
+        "clause_structural": "(¬x(3, 0, 0) ∨ x(0, 1, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -3,
+          -15
+        ],
+        "clause_structural": "(¬x(0, 1, 0) ∨ ¬x(3, 1, 0))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          15
+        ],
+        "clause_structural": "(x(3, 1, 0))",
+        "condition_numbers": [
+          2
+        ]
+      }
+    ],
+    "unsat_reason": "Cycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(3, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(3, 0, 0)), (¬x(3, 0, 0) ∨ x(0, 1, 0)), (¬x(0, 1, 0) ∨ ¬x(3, 1, 0)), (x(3, 1, 0))"
+  }
+}

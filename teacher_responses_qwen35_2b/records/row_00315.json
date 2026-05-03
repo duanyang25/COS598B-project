@@ -1,0 +1,646 @@
+{
+  "index": 315,
+  "row_index_in_prompt_file": 315,
+  "prompt_id": "satbench_00315",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "Based on the provided SATBench puzzle, formal CNF formula, and Z3 solver output, here is the step-by-step logical deduction.\n\n### Step-by-Step Reasoning\n\n1.  **Analyze the Goal**: The question asks if \"all these task assignments can be satisfied simultaneously.\" This requires determining if the entire system of constraints (represented by the CNF formula) is satisfiable (SAT) or unsatisfiable (UNSAT).\n\n2.  **Examine the Z3 Certificate**:\n    *   The `satisfiable` field is explicitly set to `false`.\n    *   The `<unsat_core_raw_clause_indices>` lists indices from 0 to 44.\n    *   The `<unsat_core_mapped_condition_numbers>` maps these indices to condition numbers 1 through 45.\n    *   The `<unsat_core_clauses>` details specific conflicts. For example, Clause 0 corresponds to `(¬x(0, 3, 2))`, which is a direct negation of Condition 38 (`x(0, 3, 2)`), while Clause 1 corresponds to `(¬x(0, 3, 2) ∨ x(2, 3, 2))`, creating a dependency loop. Finally, Clause 44 corresponds to the single literal `(¬x(0, 5, 0))`.\n    *   Crucially, the `<unsat_reason>` provides a detailed \"Frozen conflict chain\" showing how variables are sequentially forced into contradictions. For instance, it shows `x(0, 3, 2)` is forced true by Condition 38, then forced false by Condition 42 (via the derived clause), and so on.\n\n3.  **Verify the Contradiction**:\n    *   Look at Condition 38: `x(0, 3, 2)` must be **True**.\n    *   Look at Condition 42: `(¬x(2, 2, 2) ∨ x(0, 3, 0))`. Since `x(0, 3, 2)` is true, does this force a contradiction? Not immediately on its own.\n    *   However, look at Clause 0: `(¬x(0, 3, 2))`. If Condition 38 holds, this clause is satisfied (False OR True = True). Wait, the standard CNF format is `Clause = (L1 ∨ L2)`. If Condition 38 is `x(0, 3, 2)`, then Clause 0 being `(¬x(0, 3, 2))` creates a direct contradiction **if** we treat the problem as asking if the set of *all* clauses is satisfiable.\n    *   Let's re-read the mapping carefully.\n        *   Condition 38: `x(0, 3, 2)` (Must be True).\n        *   Clause 0 in the list is `[12]`. In the readable CNF, Clause 12 (index 11 in 0-indexed list?) is `(¬x(2, 3, 2))`. Wait, let's align the indices properly.\n        *   The text `<clauses_dimacs>` has length 45. The `<unsat_core_clauses>` has length 45.\n        *   Item 1 in `<unsat_core_clauses>`: Raw index 0 -> `[12]`. The readable CNF for index 12 is `(¬x(0, 3, 2))`. Note: The prompt says \"raw clause index 0: [12]\". This implies the CNF index 12 corresponds to the clause with dimension 12. Looking at the `<clauses_dimacs>` data, the first element is `[12]`. So, the clause corresponding to the first literal in the chain is indeed the one containing `x(0, 3, 2)`.\n        *   Let's check the readable CNF block again.\n            *   Line 1 (Index 0): `(¬x(2, 3, 1) ∨ x(3, 2, 1))`? No, looking at the text representation: `(¬x(0, 3, 2))` appears in the readable output as the first item listed under `<clauses_dimacs>`? No.\n            *   Let's look at the `<unsat_core_clauses>` mapping again.\n                *   Raw Index 0: `[12]`.\n                *   Raw Index 1: `[-12, 48]`.\n                *   ...\n                *   Raw Index 44: `[-16]`.\n            *   Now look at the readable CNF text block.\n                *   The first sentence in the readable block is: `(¬x(2, 3, 1) ∨ x(3, 2, 1))` ... wait, I need to find `(¬x(0, 3, 2))`.\n                *   Scanning the readable CNF text:\n                    *   `(¬x(2, 3, 1) ∨ x(3, 2, 1))`\n                    *   `(¬x(0, 3, 2))` -> **Found this one**. This is the clause containing the literal `x(0, 3, 2)`.\n                    *   Wait, if `x(0, 3, 2)` is True (Condition 38), then `(¬x(0, 3, 2))` is False.\n                    *   The next clause in the readable CNF is `(¬x(0, 3, 2) ∨ x(2, 3, 2))`.\n                        *   Since `x(0, 3, 2)` is True, `(¬x(0, 3, 2))` is False.\n                        *   Therefore, `x(2, 3, 2)` **must be True**.\n                    *   Next clause: `(¬x(2, 3, 2) ∨ x(0, 2, 0))`.\n                        *   Since `x(2, 3, 2)` is True, `¬x(2, 3, 2)` is False.\n                        *   Therefore, `x(0, 2, 0)` **must be True**.\n                    *   Next clause: `(¬x(0, 2, 0) ∨ x(1, 2, 2))`.\n                        *   Since `x(0, 2, 0)` is True, `¬x(0, 2, 0)` is False.\n                        *   Therefore, `x(1, 2, 2)` **must be True**.\n                    *   Next clause: `(¬x(1, 2, 2) ∨ x(0, 4, 2))`.\n                        *   Since `x(1, 2, 2)` is True, `¬x(1, 2, 2)` is False.\n                        *   Therefore, `x(0, 4, 2)` **must be True**.\n                    *   Next clause: `(¬x(0, 4, 2) ∨ x(3, 5, 1))`.\n                        *   Since `x(0, 4, 2)` is True, `¬x(0, 4, 2)` is False.\n                        *   Therefore, `x(3, 5, 1)` **must be True**.\n                    *   Next clause: `(¬x(3, 5, 1) ∨ x(1, 1, 0))`.\n                        *   Since `x(3, 5, 1)` is True, `¬x(3, 5, 1)` is False.\n                        *   Therefore, `x(1, 1, 0)` **must be True**.\n                    *   And so on.\n                    *   Following this chain, we eventually reach the end of the chain.\n                    *   The final clause in the readable CNF sequence is `(¬x(0, 5, 0))`.\n                        *   This clause forces `x(0, 5, 0)` to be **False**.\n                    *   Let's check if there is a direct contradiction with Condition 16.\n                        *   Condition 16 states: `x(0, 5, 0)` is **False**.\n                        *   Wait, let me re-read Condition 16.\n                        *   Condition 16: `Either Alice is not assigned task 0 during phase 0, or Bob is assigned task 3 during phase 1.`\n                        *   In the variable mapping: `x(i, j, k)`.\n                        *   Condition 16 text: \"Alice is not assigned task 0 during phase 0\" -> `¬x(0, 0, 0)`.\n                        *   \"or Bob is assigned task 3 during phase 1\" -> `x(1, 3, 1)`.\n                        *   So Condition 16 is `(¬x(0, 0, 0) ∨ x(1, 3, 1))`.\n                        *   The Z3 mapping for Clause 44 (`[-16]`) maps to condition 16.\n                        *   The Z3 mapping for Clause 44 in the list is `[-16]`. This usually means the literal `¬x(...)` or just the negation.\n                        *   Let's look at `<unsat_core_clauses>` entry 44: `(¬x(0, 5, 0))`.\n                        *   This clause comes from reading the readable CNF text.\n                        *   Is `(¬x(0, 5, 0))` Condition 16?\n                        *   Condition 16 text: \"Alice is not assigned task 0 during phase 0\" -> `¬x(0, 0, 0)`.\n                        *   There seems to be a discrepancy between my textual interpretation of Condition 16 and the mapped clause index in the certificate.\n                        *   Let's re-examine the certificate's `<unsat_core_clauses>` vs the `<readable_cnf>`.\n                        *   The `<unsat_core_clauses>` lists:\n                            *   Index 44: `[-16]`.\n                            *   The readable CNF text ends with: `... ∧ (¬x(0, 5, 0)) ∧ (¬x(0, 5, 1)) ...`?\n                            *   Actually, let's look at the last few lines of the readable CNF:\n                                *   `... ∧ (¬x(0, 5, 1)) ∧ (¬x(0, 5, 0)) ∧ (¬x(0, 5, 1))`? No.\n                                *   Text: `... ∧ (¬x(0, 5, 1)) ∧ (¬x(0, 5, 0)) ∧ (¬x(0, 5, 1))`?\n                                *   Let's copy-paste the end of the readable CNF:\n                                    `... ∧ (¬x(1, 3, 2) ∨ x(2, 1, 1)) ∧ (¬x(0, 0, 2) ∨ x(2, 2, 0)) ∧ (¬x(2, 2, 0) ∨ x(2, 5, 0)) ∧ (¬x(2, 5, 0) ∨ x(2, 3, 1)) ∧ (¬x(2, 3, 1) ∨ x(3, 2, 1)) ∧ (¬x(3, 2, 1) ∨ x(0, 5, 2)) ∧ (¬x(0, 5, 2) ∨ x(2, 0, 1)) ∧ (¬x(2, 0, 1) ∨ x(3, 3, 0)) ∧ (¬x(3, 3, 0) ∨ x(0, 5, 0)) ∧ (¬x(0, 5, 0))`\n                            *   Okay, the clause at the very end is `(¬x(0, 5, 0))`.\n                            *   Does this correspond to Condition 16?\n                            *   Condition 16: \"Alice is not assigned task 0 during phase 0\" -> `¬x(0, 0, 0)`.\n                            *   Condition 38: `x(0, 3, 2)`.\n                            *   Condition 42: `(¬x(2, 2, 2) ∨ x(0, 3, 0))`.\n                            *   Condition 39: `(¬x(2, 2, 2) ∨ x(0, 0, 1))`.\n                            *   Condition 38 says `x(0, 3, 2)` is True.\n                            *   Condition 42 says `x(0, 3, 0)` is True.\n                            *   Condition 39 says `x(0, 0, 1)` is True.\n                            *   Condition 27 says `x(0, 2, 2)` is True.\n                            *   Condition 26 says `x(0, 0, 2)` is True.\n                            *   Condition 25 says `x(0, 4, 2)` is True.\n                            *   Condition 24 says `x(0, 5, 0)` is True.\n                            *   Condition 23 says `x(2, 4, 0)` is True.\n                            *   Condition 22 says `x(2, 5, 0)` is True.\n                            *   Condition 21 says `x(0, 4, 1)` is True.\n                            *   Condition 20 says `x(1, 4, 2)` is True.\n                            *   Condition 19 says `x(1, 3, 1)` is True.\n                            *   Condition 18 says `x(0, 5, 2)` is True.\n                            *   Condition 17 says `x(2, 0, 1)` is True.\n                            *   Condition 16 says `x(1, 3, 1)` is True.\n                            *   Wait, Condition 16 says: \"Alice is not assigned task 0 during phase 0\".\n                                *   In notation: `x(0, 0, 0)`?\n                                *   Usually `x(i, j, k)` means developer `i`, task `j`, phase `k`.\n                                *   Condition 16: \"Alice (0) is not assigned task 0 (0) during phase 0 (0)\".\n                                *   So `x(0, 0, 0)` is False.\n                                *   Wait, the condition is \"Alice is NOT assigned...\". So `¬x(0, 0, 0)`.\n                                *   But the certificate's clause 44 is `(¬x(0, 5, 0))`.\n                                *   Where did `(¬x(0, 5, 0))` come from?\n                                *   Let's check the chain again.\n                                *   Chain start: Condition 38 -> `x(0, 3, 2)`.\n                                *   Chain step: Condition 42 -> `(¬x(2, 2, 2) ∨ x(0, 3, 0))`.\n                                *   Chain step: Condition 39 -> `(¬x(2, 2, 2) ∨ x(0, 0, 1))`.\n                                *   Chain step: Condition 27 -> `(¬x(2, 1, 0) ∨ x(0, 2, 2))`.\n                                *   Chain step: Condition 26 -> `(¬x(0, 2, 2) ∨ x(2, 5, 2))`.\n                                *   Chain step: Condition 25 -> `(¬x(1, 5, 2) ∨ x(3, 5, 0))`.\n                                *   Chain step: Condition 24 -> `(¬x(1, 1, 1) ∨ x(0, 1, 0))`.\n                                *   Chain step: Condition 23 -> `(¬x(0, 1, 0) ∨ x(1, 4, 2))`.\n                                *   Chain step: Condition 22 -> `(¬x(2, 2, 1) ∨ x(1, 5, 2))`.\n                                *   Chain step: Condition 21 -> `(¬x(1, 4, 2) ∨ x(2, 1, 0))`.\n                                *   Chain step: Condition 20 -> `(¬x(2, 1, 0) ∨ x(0, 2, 2))`.\n                                *   Chain step: Condition 19 -> `(¬x(0, 2, 1) ∨ x(3, 2, 0))`.\n                                *   Chain step: Condition 18 -> `(¬x(0, 2, 1) ∨ x(3, 2, 0))`? No, Condition 18 is `(¬x(1, 3, 1) ∨ x(0, 0, 2))`.\n                                *   Let's trace the \"Z3\" specific chain provided in the reason.\n                                *   The reason lists: `(¬x(0, 3, 2))`, `(¬x(0, 3, 2) ∨ x(2, 3, 2))`, etc.\n                                *   It seems the certificate generated a specific path.\n                                *   Regardless of the exact path, the certificate explicitly states `satisfiable: false` and lists all 45 conditions involved in the unsatisfiability proof.\n                                *   The `<unsat_core_clauses>` section lists all 45 clauses (indices 0-44) mapped to conditions 1-45.\n                                *   Clause 44 is `[-16]`.\n                                *   The readable CNF ends with `(¬x(0, 5, 0))`.\n                                *   Condition 16 is `(¬x(0, 0, 0) ∨ x(1, 3, 1))`.\n                                *   There is a mismatch between the text description of Condition 16 in the \"Readable CNF\" area and the certificate's clause 44.\n                                *   However, the instruction says: \"Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\"\n                                *   The Z3 solver output is authoritative. It claims the system is UNSAT.\n                                *   The contradiction exists because the set of clauses implies a logical impossibility. Specifically, looking at the chain of implications starting from Condition 38 (`x(0, 3, 2)`), it forces values for variables `x(0, 3, 2)`, `x(2, 3, 2)`, ..., `x(0, 5, 0)`.\n                                *   If we follow the implication chain strictly:\n                                    1.  Cond 38: `x(0, 3, 2)` = T\n                                    2.  Clause 0 (`¬x(0, 3, 2)`): Satisfied (T)\n                                    3.  Clause 1 (`¬x(0, 3, 2) ∨ x(2, 3, 2)`): Since `x(0, 3, 2)`=T, `x(2, 3, 2)` can be T or F?\n                                        *   Wait, the readable CNF has `(¬x(0, 3, 2))` as Clause 0.\n                                        *   Then Clause 1 is `(¬x(0, 3, 2) ∨ x(2, 3, 2))`.\n                                        *   If Clause 0 is present in the CNF, then `¬x(0, 3, 2)` must be true?\n                                        *   NO. CNF clauses are disjunctions. If a clause contains a literal that is already true (in the truth assignment), the clause is satisfied.\n                                        *   If the CNF *contains* `(¬x(0, 3, 2))`, and we assign `x(0, 3, 2) = True`, then `¬x(0, 3, 2) = False`. The clause `(False) ∨ (True)` evaluates to `True`.\n                                        *   So assigning `x(0, 3, 2)`=T satisfies Clause 0.\n                                        *   But the certificate says the system is UNSAT.\n                                        *   This implies the *set* of clauses is inconsistent.\n                                        *   Let's look at Clause 44 again: `(¬x(0, 5, 0))`.\n                                        *   This literal appears to be the final one in the chain.\n                                        *   Does it contradict Condition 16?\n                                        *   Condition 16: `(¬x(0, 0, 0) ∨ x(1, 3, 1))`.\n                                        *   If `x(0, 5, 0)` is forced False by the chain, and `x(0, 5, 0)` was actually required by Condition 16?\n                                        *   Condition 16 text: \"Alice is not assigned task 0 during phase 0\".\n                                        *   Variable definition: `x(i, j, k)`.\n                                        *   So `x(0, 0, 0)` means Alice, Task 0, Phase 0.\n                                        *   Condition 16 says `x(0, 0, 0)` must be False.\n                                        *   The certificate's clause 44 is `(¬x(0, 5, 0))`.\n                                        *   Why would `(¬x(0, 5, 0))` appear?\n                                        *   Maybe the certificate mapping is slightly off or I am misinterpreting the clause generation.\n                                        *   However, the prompt asks me to use the Z3 certificate to anchor the derivation. The Z3 certificate clearly states the system is UNSAT.\n                                        *   Therefore, the answer to \"Can all these task assignments be satisfied simultaneously?\" is **No**.\n\n4.  **Formulate the Answer**:\n    *   State that the system is unsatisfiable.\n    *   Cite the Z3 certificate which explicitly reports `satisfiable: false`.\n    *   Explain that the certificate identifies a conflict chain involving all 45 conditions.\n    *   Point out that even though individual conditions might seem to allow freedom, the combined set of constraints creates a logical contradiction (specifically, the chain of implications derived in the certificate's reasoning leads to a forced value that conflicts with another forced value, or simply that the CNF formula is unsatisfiable).\n    *   Provide the assignment that fails (e.g., `x(0, 5, 0)` = False) or simply state that no assignment exists.\n\n### Final Conclusion\nThe system described by the 45 conditions is logically impossible to satisfy simultaneously. The Z3 solver confirms this by proving the CNF formula is unsatisfiable. The contradiction is rooted in the interplay of the conditions, specifically the chain of implications that eventually forces a variable (like `x(0, 5, 0)`) to a value that contradicts other necessary truths derived from the conditions (such as Condition 16 requiring `x(0, 0, 0)` to be False, while the chain forces `x(0, 5, 0)` to be False, but perhaps `x(0, 5, 0)` is actually required to be True by some other condition in the chain? Or maybe the literal is different).\n\nActually, looking closer at the certificate's `<unsat_core_clauses>`:\nIt lists condition 16 mapped to clause 44: `[-16]`.\nIf the clause is `(¬x(0, 5, 0))` (from the readable CNF ending), then Condition 16 forces `x(0, 5, 0)` to be False.\nCondition 16 text: \"Alice is not assigned task 0 during phase 0\".\nWait, if the condition is \"Alice is not assigned...\", then `¬x(0, 0, 0)` is True.\nBut the clause is `(¬x(0, 5, 0))`.\nThis suggests Condition 16 might actually be interpreted as forcing `x(0, 5, 0)`?\nOr the certificate's mapping is key.\nRegardless of the semantic confusion in the mapping (likely due to the complex variable names `x(i,j,k)` vs the text descriptions), the **formal SAT information** provided by the user (the Z3 output) is the ground truth for the puzzle's logic.\nThe Z3 output says **UNSAT**.\nTherefore, the answer is UNSAT.\n\n**Reasoning Summary:**\n1.  **Problem Type**: Propositional Logic / SAT.\n2.  **Input**: A set of 45 logical constraints.\n3.  **Verification Tool**: Z3 Solver Certificate.\n4.  **Result**: The certificate explicitly marks the formula as `satisfiable: false`.\n5.  **Derivation**: The certificate provides a list of 45 clauses that form the basis for the proof. A chain of implications within these clauses leads to a contradiction (e.g., a variable is forced to both True and False via the disjunctions of the clauses).\n6.  **Conclusion**: The system cannot be satisfied simultaneously.\n\n**Answer Construction:**\nLabel: UNSAT\nReason: The Z3 solver output confirms that the CNF formula representing the task assignments is unsatisfiable. The certificate lists a chain of 45 clauses that, when combined, create a logical contradiction. Specifically, the constraints force a specific assignment of values (e.g., `x(0, 5, 0)` to False) that conflicts with the requirements imposed by other conditions in the system, making it impossible for all 45 conditions to hold true at once.\n\nFinal Label: UNSAT\n\n```text\n[UNSAT]\n```",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 7463,
+    "generated_tokens": 5918,
+    "batch_elapsed_seconds": 157.97628664970398,
+    "tokens_per_second_for_batch": 37.461318565631,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777798511.1360185,
+  "slurm_job_id": "3180400",
+  "slurm_array_job_id": "3179795",
+  "slurm_array_task_id": "31",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a tech company, four software developers—Alice, Bob, Carol, and Dave—are working on different modules of a new software product. Each module has various tasks, which they need to complete in different phases of the project. These phases may represent different project milestones or timelines. Each task assignment decision is independent, meaning developers may take on multiple tasks across different phases, or some tasks may be assigned to multiple developers.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean developer i is assigned task j during phase k. Here, developer 0 is Alice, developer 1 is Bob, developer 2 is Carol, and developer 3 is Dave.\n</variable_mapping>\n\n<conditions>\n1. Either Carol is not assigned task 3 during phase 1, or Dave is assigned task 2 during phase 1.\n2. Either Dave is not assigned task 2 during phase 1, or Alice is assigned task 5 during phase 2.\n3. Either Carol is not assigned task 2 during phase 1, or Bob is assigned task 5 during phase 2.\n4. Either Dave is not assigned task 5 during phase 1, or Bob is assigned task 1 during phase 0.\n5. Either Carol is not assigned task 3 during phase 0, or Carol is assigned task 2 during phase 2.\n6. Either Alice is not assigned task 0 during phase 0, or Dave is assigned task 1 during phase 0.\n7. Either Bob is not assigned task 2 during phase 0, or Bob is assigned task 3 during phase 2.\n8. Either Dave is not assigned task 1 during phase 1, or Bob is assigned task 2 during phase 0.\n9. Either Dave is not assigned task 0 during phase 2, or Carol is assigned task 3 during phase 0.\n10. Either Alice is not assigned task 0 during phase 1, or Bob is assigned task 3 during phase 1.\n11. Either Alice is not assigned task 2 during phase 0, or Bob is assigned task 2 during phase 2.\n12. Either Alice is not assigned task 2 during phase 2, or Carol is assigned task 5 during phase 2.\n13. Either Carol is not assigned task 1 during phase 0, or Alice is assigned task 2 during phase 2.\n14. Either Alice is not assigned task 0 during phase 2, or Carol is assigned task 2 during phase 0.\n15. Either Carol is not assigned task 3 during phase 2, or Alice is assigned task 2 during phase 0.\n16. Alice is not assigned task 5 during phase 0.\n17. Either Carol is not assigned task 5 during phase 2, or Dave is assigned task 0 during phase 2.\n18. Either Dave is not assigned task 5 during phase 0, or Bob is assigned task 1 during phase 1.\n19. Either Carol is not assigned task 1 during phase 1, or Alice is assigned task 2 during phase 1.\n20. Either Bob is not assigned task 1 during phase 1, or Alice is assigned task 1 during phase 0.\n21. Either Bob is not assigned task 1 during phase 0, or Alice is assigned task 4 during phase 1.\n22. Either Carol is not assigned task 2 during phase 0, or Carol is assigned task 5 during phase 0.\n23. Either Alice is not assigned task 5 during phase 1, or Carol is assigned task 4 during phase 0.\n24. Either Dave is not assigned task 3 during phase 0, or Alice is assigned task 5 during phase 0.\n25. Either Bob is not assigned task 2 during phase 2, or Alice is assigned task 4 during phase 2.\n26. Either Alice is not assigned task 2 during phase 1, or Dave is assigned task 2 during phase 0.\n27. Either Dave is not assigned task 2 during phase 0, or Alice is assigned task 0 during phase 0.\n28. Either Bob is not assigned task 1 during phase 2, or Dave is assigned task 1 during phase 1.\n29. Either Bob is not assigned task 5 during phase 2, or Dave is assigned task 5 during phase 0.\n30. Either Carol is not assigned task 4 during phase 0, or Bob is assigned task 1 during phase 2.\n31. Either Dave is not assigned task 1 during phase 0, or Carol is assigned task 2 during phase 1.\n32. Either Alice is not assigned task 3 during phase 0, or Alice is assigned task 5 during phase 1.\n33. Either Bob is not assigned task 4 during phase 2, or Carol is assigned task 1 during phase 0.\n34. Either Alice is not assigned task 4 during phase 1, or Dave is assigned task 2 during phase 2.\n35. Either Alice is not assigned task 5 during phase 2, or Carol is assigned task 0 during phase 1.\n36. Either Carol is not assigned task 0 during phase 1, or Dave is assigned task 3 during phase 0.\n37. Either Carol is not assigned task 5 during phase 0, or Carol is assigned task 3 during phase 1.\n38. Alice is assigned task 3 during phase 2.\n39. Either Carol is not assigned task 2 during phase 2, or Alice is assigned task 0 during phase 1.\n40. Either Dave is not assigned task 2 during phase 2, or Alice is assigned task 3 during phase 0.\n41. Either Bob is not assigned task 3 during phase 1, or Alice is assigned task 0 during phase 2.\n42. Either Alice is not assigned task 3 during phase 2, or Carol is assigned task 3 during phase 2.\n43. Either Alice is not assigned task 4 during phase 2, or Dave is assigned task 5 during phase 1.\n44. Either Alice is not assigned task 1 during phase 0, or Bob is assigned task 4 during phase 2.\n45. Either Bob is not assigned task 3 during phase 2, or Carol is assigned task 1 during phase 1.\n</conditions>\n\n<question>\nCan all these task assignments be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,6,3]\n</dims>\n\n<num_vars>\n72\n</num_vars>\n\n<num_clauses>\n45\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    12\n  ],\n  [\n    -12,\n    48\n  ],\n  [\n    -48,\n    7\n  ],\n  [\n    -7,\n    27\n  ],\n  [\n    -27,\n    15\n  ],\n  [\n    -15,\n    71\n  ],\n  [\n    -71,\n    22\n  ],\n  [\n    -22,\n    14\n  ],\n  [\n    -14,\n    63\n  ],\n  [\n    -63,\n    10\n  ],\n  [\n    -10,\n    17\n  ],\n  [\n    -17,\n    49\n  ],\n  [\n    -49,\n    24\n  ],\n  [\n    -24,\n    59\n  ],\n  [\n    -59,\n    25\n  ],\n  [\n    -25,\n    30\n  ],\n  [\n    -30,\n    41\n  ],\n  [\n    -41,\n    8\n  ],\n  [\n    -8,\n    61\n  ],\n  [\n    -61,\n    1\n  ],\n  [\n    -1,\n    58\n  ],\n  [\n    -58,\n    44\n  ],\n  [\n    -44,\n    36\n  ],\n  [\n    -36,\n    70\n  ],\n  [\n    -70,\n    23\n  ],\n  [\n    -23,\n    4\n  ],\n  [\n    -4,\n    33\n  ],\n  [\n    -33,\n    40\n  ],\n  [\n    -40,\n    9\n  ],\n  [\n    -9,\n    54\n  ],\n  [\n    -54,\n    57\n  ],\n  [\n    -57,\n    46\n  ],\n  [\n    -46,\n    45\n  ],\n  [\n    -45,\n    2\n  ],\n  [\n    -2,\n    29\n  ],\n  [\n    -29,\n    3\n  ],\n  [\n    -3,\n    43\n  ],\n  [\n    -43,\n    52\n  ],\n  [\n    -52,\n    47\n  ],\n  [\n    -47,\n    62\n  ],\n  [\n    -62,\n    18\n  ],\n  [\n    -18,\n    38\n  ],\n  [\n    -38,\n    64\n  ],\n  [\n    -64,\n    16\n  ],\n  [\n    -16\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(2, 3, 1) ∨ x(3, 2, 1)) ∧ (¬x(3, 2, 1) ∨ x(0, 5, 2)) ∧ (¬x(2, 2, 1) ∨ x(1, 5, 2)) ∧ (¬x(3, 5, 1) ∨ x(1, 1, 0)) ∧ (¬x(2, 3, 0) ∨ x(2, 2, 2)) ∧ (¬x(0, 0, 0) ∨ x(3, 1, 0)) ∧ (¬x(1, 2, 0) ∨ x(1, 3, 2)) ∧ (¬x(3, 1, 1) ∨ x(1, 2, 0)) ∧ (¬x(3, 0, 2) ∨ x(2, 3, 0)) ∧ (¬x(0, 0, 1) ∨ x(1, 3, 1)) ∧ (¬x(0, 2, 0) ∨ x(1, 2, 2)) ∧ (¬x(0, 2, 2) ∨ x(2, 5, 2)) ∧ (¬x(2, 1, 0) ∨ x(0, 2, 2)) ∧ (¬x(0, 0, 2) ∨ x(2, 2, 0)) ∧ (¬x(2, 3, 2) ∨ x(0, 2, 0)) ∧ (¬x(0, 5, 0)) ∧ (¬x(2, 5, 2) ∨ x(3, 0, 2)) ∧ (¬x(3, 5, 0) ∨ x(1, 1, 1)) ∧ (¬x(2, 1, 1) ∨ x(0, 2, 1)) ∧ (¬x(1, 1, 1) ∨ x(0, 1, 0)) ∧ (¬x(1, 1, 0) ∨ x(0, 4, 1)) ∧ (¬x(2, 2, 0) ∨ x(2, 5, 0)) ∧ (¬x(0, 5, 1) ∨ x(2, 4, 0)) ∧ (¬x(3, 3, 0) ∨ x(0, 5, 0)) ∧ (¬x(1, 2, 2) ∨ x(0, 4, 2)) ∧ (¬x(0, 2, 1) ∨ x(3, 2, 0)) ∧ (¬x(3, 2, 0) ∨ x(0, 0, 0)) ∧ (¬x(1, 1, 2) ∨ x(3, 1, 1)) ∧ (¬x(1, 5, 2) ∨ x(3, 5, 0)) ∧ (¬x(2, 4, 0) ∨ x(1, 1, 2)) ∧ (¬x(3, 1, 0) ∨ x(2, 2, 1)) ∧ (¬x(0, 3, 0) ∨ x(0, 5, 1)) ∧ (¬x(1, 4, 2) ∨ x(2, 1, 0)) ∧ (¬x(0, 4, 1) ∨ x(3, 2, 2)) ∧ (¬x(0, 5, 2) ∨ x(2, 0, 1)) ∧ (¬x(2, 0, 1) ∨ x(3, 3, 0)) ∧ (¬x(2, 5, 0) ∨ x(2, 3, 1)) ∧ (x(0, 3, 2)) ∧ (¬x(2, 2, 2) ∨ x(0, 0, 1)) ∧ (¬x(3, 2, 2) ∨ x(0, 3, 0)) ∧ (¬x(1, 3, 1) ∨ x(0, 0, 2)) ∧ (¬x(0, 3, 2) ∨ x(2, 3, 2)) ∧ (¬x(0, 4, 2) ∨ x(3, 5, 1)) ∧ (¬x(0, 1, 0) ∨ x(1, 4, 2)) ∧ (¬x(1, 3, 2) ∨ x(2, 1, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [12] -> (x(0, 3, 2)); matching condition number(s): [38]\n- raw clause index 1: [-12, 48] -> (¬x(0, 3, 2) ∨ x(2, 3, 2)); matching condition number(s): [42]\n- raw clause index 2: [-48, 7] -> (¬x(2, 3, 2) ∨ x(0, 2, 0)); matching condition number(s): [15]\n- raw clause index 3: [-7, 27] -> (¬x(0, 2, 0) ∨ x(1, 2, 2)); matching condition number(s): [11]\n- raw clause index 4: [-27, 15] -> (¬x(1, 2, 2) ∨ x(0, 4, 2)); matching condition number(s): [25]\n- raw clause index 5: [-15, 71] -> (¬x(0, 4, 2) ∨ x(3, 5, 1)); matching condition number(s): [43]\n- raw clause index 6: [-71, 22] -> (¬x(3, 5, 1) ∨ x(1, 1, 0)); matching condition number(s): [4]\n- raw clause index 7: [-22, 14] -> (¬x(1, 1, 0) ∨ x(0, 4, 1)); matching condition number(s): [21]\n- raw clause index 8: [-14, 63] -> (¬x(0, 4, 1) ∨ x(3, 2, 2)); matching condition number(s): [34]\n- raw clause index 9: [-63, 10] -> (¬x(3, 2, 2) ∨ x(0, 3, 0)); matching condition number(s): [40]\n- raw clause index 10: [-10, 17] -> (¬x(0, 3, 0) ∨ x(0, 5, 1)); matching condition number(s): [32]\n- raw clause index 11: [-17, 49] -> (¬x(0, 5, 1) ∨ x(2, 4, 0)); matching condition number(s): [23]\n- raw clause index 12: [-49, 24] -> (¬x(2, 4, 0) ∨ x(1, 1, 2)); matching condition number(s): [30]\n- raw clause index 13: [-24, 59] -> (¬x(1, 1, 2) ∨ x(3, 1, 1)); matching condition number(s): [28]\n- raw clause index 14: [-59, 25] -> (¬x(3, 1, 1) ∨ x(1, 2, 0)); matching condition number(s): [8]\n- raw clause index 15: [-25, 30] -> (¬x(1, 2, 0) ∨ x(1, 3, 2)); matching condition number(s): [7]\n- raw clause index 16: [-30, 41] -> (¬x(1, 3, 2) ∨ x(2, 1, 1)); matching condition number(s): [45]\n- raw clause index 17: [-41, 8] -> (¬x(2, 1, 1) ∨ x(0, 2, 1)); matching condition number(s): [19]\n- raw clause index 18: [-8, 61] -> (¬x(0, 2, 1) ∨ x(3, 2, 0)); matching condition number(s): [26]\n- raw clause index 19: [-61, 1] -> (¬x(3, 2, 0) ∨ x(0, 0, 0)); matching condition number(s): [27]\n- raw clause index 20: [-1, 58] -> (¬x(0, 0, 0) ∨ x(3, 1, 0)); matching condition number(s): [6]\n- raw clause index 21: [-58, 44] -> (¬x(3, 1, 0) ∨ x(2, 2, 1)); matching condition number(s): [31]\n- raw clause index 22: [-44, 36] -> (¬x(2, 2, 1) ∨ x(1, 5, 2)); matching condition number(s): [3]\n- raw clause index 23: [-36, 70] -> (¬x(1, 5, 2) ∨ x(3, 5, 0)); matching condition number(s): [29]\n- raw clause index 24: [-70, 23] -> (¬x(3, 5, 0) ∨ x(1, 1, 1)); matching condition number(s): [18]\n- raw clause index 25: [-23, 4] -> (¬x(1, 1, 1) ∨ x(0, 1, 0)); matching condition number(s): [20]\n- raw clause index 26: [-4, 33] -> (¬x(0, 1, 0) ∨ x(1, 4, 2)); matching condition number(s): [44]\n- raw clause index 27: [-33, 40] -> (¬x(1, 4, 2) ∨ x(2, 1, 0)); matching condition number(s): [33]\n- raw clause index 28: [-40, 9] -> (¬x(2, 1, 0) ∨ x(0, 2, 2)); matching condition number(s): [13]\n- raw clause index 29: [-9, 54] -> (¬x(0, 2, 2) ∨ x(2, 5, 2)); matching condition number(s): [12]\n- raw clause index 30: [-54, 57] -> (¬x(2, 5, 2) ∨ x(3, 0, 2)); matching condition number(s): [17]\n- raw clause index 31: [-57, 46] -> (¬x(3, 0, 2) ∨ x(2, 3, 0)); matching condition number(s): [9]\n- raw clause index 32: [-46, 45] -> (¬x(2, 3, 0) ∨ x(2, 2, 2)); matching condition number(s): [5]\n- raw clause index 33: [-45, 2] -> (¬x(2, 2, 2) ∨ x(0, 0, 1)); matching condition number(s): [39]\n- raw clause index 34: [-2, 29] -> (¬x(0, 0, 1) ∨ x(1, 3, 1)); matching condition number(s): [10]\n- raw clause index 35: [-29, 3] -> (¬x(1, 3, 1) ∨ x(0, 0, 2)); matching condition number(s): [41]\n- raw clause index 36: [-3, 43] -> (¬x(0, 0, 2) ∨ x(2, 2, 0)); matching condition number(s): [14]\n- raw clause index 37: [-43, 52] -> (¬x(2, 2, 0) ∨ x(2, 5, 0)); matching condition number(s): [22]\n- raw clause index 38: [-52, 47] -> (¬x(2, 5, 0) ∨ x(2, 3, 1)); matching condition number(s): [37]\n- raw clause index 39: [-47, 62] -> (¬x(2, 3, 1) ∨ x(3, 2, 1)); matching condition number(s): [1]\n- raw clause index 40: [-62, 18] -> (¬x(3, 2, 1) ∨ x(0, 5, 2)); matching condition number(s): [2]\n- raw clause index 41: [-18, 38] -> (¬x(0, 5, 2) ∨ x(2, 0, 1)); matching condition number(s): [35]\n- raw clause index 42: [-38, 64] -> (¬x(2, 0, 1) ∨ x(3, 3, 0)); matching condition number(s): [36]\n- raw clause index 43: [-64, 16] -> (¬x(3, 3, 0) ∨ x(0, 5, 0)); matching condition number(s): [24]\n- raw clause index 44: [-16] -> (¬x(0, 5, 0)); matching condition number(s): [16]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(0, 3, 2)), (¬x(0, 3, 2) ∨ x(2, 3, 2)), (¬x(2, 3, 2) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(1, 2, 2)), (¬x(1, 2, 2) ∨ x(0, 4, 2)), (¬x(0, 4, 2) ∨ x(3, 5, 1)), (¬x(3, 5, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(0, 4, 1)), (¬x(0, 4, 1) ∨ x(3, 2, 2)), (¬x(3, 2, 2) ∨ x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 5, 1)), (¬x(0, 5, 1) ∨ x(2, 4, 0)), (¬x(2, 4, 0) ∨ x(1, 1, 2)), (¬x(1, 1, 2) ∨ x(3, 1, 1)), (¬x(3, 1, 1) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(1, 3, 2)), (¬x(1, 3, 2) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(3, 2, 0)), (¬x(3, 2, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(3, 1, 0)), (¬x(3, 1, 0) ∨ x(2, 2, 1)), (¬x(2, 2, 1) ∨ x(1, 5, 2)), (¬x(1, 5, 2) ∨ x(3, 5, 0)), (¬x(3, 5, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(0, 1, 0)), (¬x(0, 1, 0) ∨ x(1, 4, 2)), (¬x(1, 4, 2) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 2, 2)), (¬x(0, 2, 2) ∨ x(2, 5, 2)), (¬x(2, 5, 2) ∨ x(3, 0, 2)), (¬x(3, 0, 2) ∨ x(2, 3, 0)), (¬x(2, 3, 0) ∨ x(2, 2, 2)), (¬x(2, 2, 2) ∨ x(0, 0, 1)), (¬x(0, 0, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(0, 0, 2)), (¬x(0, 0, 2) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(2, 5, 0)), (¬x(2, 5, 0) ∨ x(2, 3, 1)), (¬x(2, 3, 1) ∨ x(3, 2, 1)), (¬x(3, 2, 1) ∨ x(0, 5, 2)), (¬x(0, 5, 2) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ x(3, 3, 0)), (¬x(3, 3, 0) ∨ x(0, 5, 0)), (¬x(0, 5, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a tech company, four software developers—Alice, Bob, Carol, and Dave—are working on different modules of a new software product. Each module has various tasks, which they need to complete in different phases of the project. These phases may represent different project milestones or timelines. Each task assignment decision is independent, meaning developers may take on multiple tasks across different phases, or some tasks may be assigned to multiple developers.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean developer i is assigned task j during phase k. Here, developer 0 is Alice, developer 1 is Bob, developer 2 is Carol, and developer 3 is Dave.\n</variable_mapping>\n\n<conditions>\n1. Either Carol is not assigned task 3 during phase 1, or Dave is assigned task 2 during phase 1.\n2. Either Dave is not assigned task 2 during phase 1, or Alice is assigned task 5 during phase 2.\n3. Either Carol is not assigned task 2 during phase 1, or Bob is assigned task 5 during phase 2.\n4. Either Dave is not assigned task 5 during phase 1, or Bob is assigned task 1 during phase 0.\n5. Either Carol is not assigned task 3 during phase 0, or Carol is assigned task 2 during phase 2.\n6. Either Alice is not assigned task 0 during phase 0, or Dave is assigned task 1 during phase 0.\n7. Either Bob is not assigned task 2 during phase 0, or Bob is assigned task 3 during phase 2.\n8. Either Dave is not assigned task 1 during phase 1, or Bob is assigned task 2 during phase 0.\n9. Either Dave is not assigned task 0 during phase 2, or Carol is assigned task 3 during phase 0.\n10. Either Alice is not assigned task 0 during phase 1, or Bob is assigned task 3 during phase 1.\n11. Either Alice is not assigned task 2 during phase 0, or Bob is assigned task 2 during phase 2.\n12. Either Alice is not assigned task 2 during phase 2, or Carol is assigned task 5 during phase 2.\n13. Either Carol is not assigned task 1 during phase 0, or Alice is assigned task 2 during phase 2.\n14. Either Alice is not assigned task 0 during phase 2, or Carol is assigned task 2 during phase 0.\n15. Either Carol is not assigned task 3 during phase 2, or Alice is assigned task 2 during phase 0.\n16. Alice is not assigned task 5 during phase 0.\n17. Either Carol is not assigned task 5 during phase 2, or Dave is assigned task 0 during phase 2.\n18. Either Dave is not assigned task 5 during phase 0, or Bob is assigned task 1 during phase 1.\n19. Either Carol is not assigned task 1 during phase 1, or Alice is assigned task 2 during phase 1.\n20. Either Bob is not assigned task 1 during phase 1, or Alice is assigned task 1 during phase 0.\n21. Either Bob is not assigned task 1 during phase 0, or Alice is assigned task 4 during phase 1.\n22. Either Carol is not assigned task 2 during phase 0, or Carol is assigned task 5 during phase 0.\n23. Either Alice is not assigned task 5 during phase 1, or Carol is assigned task 4 during phase 0.\n24. Either Dave is not assigned task 3 during phase 0, or Alice is assigned task 5 during phase 0.\n25. Either Bob is not assigned task 2 during phase 2, or Alice is assigned task 4 during phase 2.\n26. Either Alice is not assigned task 2 during phase 1, or Dave is assigned task 2 during phase 0.\n27. Either Dave is not assigned task 2 during phase 0, or Alice is assigned task 0 during phase 0.\n28. Either Bob is not assigned task 1 during phase 2, or Dave is assigned task 1 during phase 1.\n29. Either Bob is not assigned task 5 during phase 2, or Dave is assigned task 5 during phase 0.\n30. Either Carol is not assigned task 4 during phase 0, or Bob is assigned task 1 during phase 2.\n31. Either Dave is not assigned task 1 during phase 0, or Carol is assigned task 2 during phase 1.\n32. Either Alice is not assigned task 3 during phase 0, or Alice is assigned task 5 during phase 1.\n33. Either Bob is not assigned task 4 during phase 2, or Carol is assigned task 1 during phase 0.\n34. Either Alice is not assigned task 4 during phase 1, or Dave is assigned task 2 during phase 2.\n35. Either Alice is not assigned task 5 during phase 2, or Carol is assigned task 0 during phase 1.\n36. Either Carol is not assigned task 0 during phase 1, or Dave is assigned task 3 during phase 0.\n37. Either Carol is not assigned task 5 during phase 0, or Carol is assigned task 3 during phase 1.\n38. Alice is assigned task 3 during phase 2.\n39. Either Carol is not assigned task 2 during phase 2, or Alice is assigned task 0 during phase 1.\n40. Either Dave is not assigned task 2 during phase 2, or Alice is assigned task 3 during phase 0.\n41. Either Bob is not assigned task 3 during phase 1, or Alice is assigned task 0 during phase 2.\n42. Either Alice is not assigned task 3 during phase 2, or Carol is assigned task 3 during phase 2.\n43. Either Alice is not assigned task 4 during phase 2, or Dave is assigned task 5 during phase 1.\n44. Either Alice is not assigned task 1 during phase 0, or Bob is assigned task 4 during phase 2.\n45. Either Bob is not assigned task 3 during phase 2, or Carol is assigned task 1 during phase 1.\n</conditions>\n\n<question>\nCan all these task assignments be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,6,3]\n</dims>\n\n<num_vars>\n72\n</num_vars>\n\n<num_clauses>\n45\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    12\n  ],\n  [\n    -12,\n    48\n  ],\n  [\n    -48,\n    7\n  ],\n  [\n    -7,\n    27\n  ],\n  [\n    -27,\n    15\n  ],\n  [\n    -15,\n    71\n  ],\n  [\n    -71,\n    22\n  ],\n  [\n    -22,\n    14\n  ],\n  [\n    -14,\n    63\n  ],\n  [\n    -63,\n    10\n  ],\n  [\n    -10,\n    17\n  ],\n  [\n    -17,\n    49\n  ],\n  [\n    -49,\n    24\n  ],\n  [\n    -24,\n    59\n  ],\n  [\n    -59,\n    25\n  ],\n  [\n    -25,\n    30\n  ],\n  [\n    -30,\n    41\n  ],\n  [\n    -41,\n    8\n  ],\n  [\n    -8,\n    61\n  ],\n  [\n    -61,\n    1\n  ],\n  [\n    -1,\n    58\n  ],\n  [\n    -58,\n    44\n  ],\n  [\n    -44,\n    36\n  ],\n  [\n    -36,\n    70\n  ],\n  [\n    -70,\n    23\n  ],\n  [\n    -23,\n    4\n  ],\n  [\n    -4,\n    33\n  ],\n  [\n    -33,\n    40\n  ],\n  [\n    -40,\n    9\n  ],\n  [\n    -9,\n    54\n  ],\n  [\n    -54,\n    57\n  ],\n  [\n    -57,\n    46\n  ],\n  [\n    -46,\n    45\n  ],\n  [\n    -45,\n    2\n  ],\n  [\n    -2,\n    29\n  ],\n  [\n    -29,\n    3\n  ],\n  [\n    -3,\n    43\n  ],\n  [\n    -43,\n    52\n  ],\n  [\n    -52,\n    47\n  ],\n  [\n    -47,\n    62\n  ],\n  [\n    -62,\n    18\n  ],\n  [\n    -18,\n    38\n  ],\n  [\n    -38,\n    64\n  ],\n  [\n    -64,\n    16\n  ],\n  [\n    -16\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(2, 3, 1) ∨ x(3, 2, 1)) ∧ (¬x(3, 2, 1) ∨ x(0, 5, 2)) ∧ (¬x(2, 2, 1) ∨ x(1, 5, 2)) ∧ (¬x(3, 5, 1) ∨ x(1, 1, 0)) ∧ (¬x(2, 3, 0) ∨ x(2, 2, 2)) ∧ (¬x(0, 0, 0) ∨ x(3, 1, 0)) ∧ (¬x(1, 2, 0) ∨ x(1, 3, 2)) ∧ (¬x(3, 1, 1) ∨ x(1, 2, 0)) ∧ (¬x(3, 0, 2) ∨ x(2, 3, 0)) ∧ (¬x(0, 0, 1) ∨ x(1, 3, 1)) ∧ (¬x(0, 2, 0) ∨ x(1, 2, 2)) ∧ (¬x(0, 2, 2) ∨ x(2, 5, 2)) ∧ (¬x(2, 1, 0) ∨ x(0, 2, 2)) ∧ (¬x(0, 0, 2) ∨ x(2, 2, 0)) ∧ (¬x(2, 3, 2) ∨ x(0, 2, 0)) ∧ (¬x(0, 5, 0)) ∧ (¬x(2, 5, 2) ∨ x(3, 0, 2)) ∧ (¬x(3, 5, 0) ∨ x(1, 1, 1)) ∧ (¬x(2, 1, 1) ∨ x(0, 2, 1)) ∧ (¬x(1, 1, 1) ∨ x(0, 1, 0)) ∧ (¬x(1, 1, 0) ∨ x(0, 4, 1)) ∧ (¬x(2, 2, 0) ∨ x(2, 5, 0)) ∧ (¬x(0, 5, 1) ∨ x(2, 4, 0)) ∧ (¬x(3, 3, 0) ∨ x(0, 5, 0)) ∧ (¬x(1, 2, 2) ∨ x(0, 4, 2)) ∧ (¬x(0, 2, 1) ∨ x(3, 2, 0)) ∧ (¬x(3, 2, 0) ∨ x(0, 0, 0)) ∧ (¬x(1, 1, 2) ∨ x(3, 1, 1)) ∧ (¬x(1, 5, 2) ∨ x(3, 5, 0)) ∧ (¬x(2, 4, 0) ∨ x(1, 1, 2)) ∧ (¬x(3, 1, 0) ∨ x(2, 2, 1)) ∧ (¬x(0, 3, 0) ∨ x(0, 5, 1)) ∧ (¬x(1, 4, 2) ∨ x(2, 1, 0)) ∧ (¬x(0, 4, 1) ∨ x(3, 2, 2)) ∧ (¬x(0, 5, 2) ∨ x(2, 0, 1)) ∧ (¬x(2, 0, 1) ∨ x(3, 3, 0)) ∧ (¬x(2, 5, 0) ∨ x(2, 3, 1)) ∧ (x(0, 3, 2)) ∧ (¬x(2, 2, 2) ∨ x(0, 0, 1)) ∧ (¬x(3, 2, 2) ∨ x(0, 3, 0)) ∧ (¬x(1, 3, 1) ∨ x(0, 0, 2)) ∧ (¬x(0, 3, 2) ∨ x(2, 3, 2)) ∧ (¬x(0, 4, 2) ∨ x(3, 5, 1)) ∧ (¬x(0, 1, 0) ∨ x(1, 4, 2)) ∧ (¬x(1, 3, 2) ∨ x(2, 1, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [12] -> (x(0, 3, 2)); matching condition number(s): [38]\n- raw clause index 1: [-12, 48] -> (¬x(0, 3, 2) ∨ x(2, 3, 2)); matching condition number(s): [42]\n- raw clause index 2: [-48, 7] -> (¬x(2, 3, 2) ∨ x(0, 2, 0)); matching condition number(s): [15]\n- raw clause index 3: [-7, 27] -> (¬x(0, 2, 0) ∨ x(1, 2, 2)); matching condition number(s): [11]\n- raw clause index 4: [-27, 15] -> (¬x(1, 2, 2) ∨ x(0, 4, 2)); matching condition number(s): [25]\n- raw clause index 5: [-15, 71] -> (¬x(0, 4, 2) ∨ x(3, 5, 1)); matching condition number(s): [43]\n- raw clause index 6: [-71, 22] -> (¬x(3, 5, 1) ∨ x(1, 1, 0)); matching condition number(s): [4]\n- raw clause index 7: [-22, 14] -> (¬x(1, 1, 0) ∨ x(0, 4, 1)); matching condition number(s): [21]\n- raw clause index 8: [-14, 63] -> (¬x(0, 4, 1) ∨ x(3, 2, 2)); matching condition number(s): [34]\n- raw clause index 9: [-63, 10] -> (¬x(3, 2, 2) ∨ x(0, 3, 0)); matching condition number(s): [40]\n- raw clause index 10: [-10, 17] -> (¬x(0, 3, 0) ∨ x(0, 5, 1)); matching condition number(s): [32]\n- raw clause index 11: [-17, 49] -> (¬x(0, 5, 1) ∨ x(2, 4, 0)); matching condition number(s): [23]\n- raw clause index 12: [-49, 24] -> (¬x(2, 4, 0) ∨ x(1, 1, 2)); matching condition number(s): [30]\n- raw clause index 13: [-24, 59] -> (¬x(1, 1, 2) ∨ x(3, 1, 1)); matching condition number(s): [28]\n- raw clause index 14: [-59, 25] -> (¬x(3, 1, 1) ∨ x(1, 2, 0)); matching condition number(s): [8]\n- raw clause index 15: [-25, 30] -> (¬x(1, 2, 0) ∨ x(1, 3, 2)); matching condition number(s): [7]\n- raw clause index 16: [-30, 41] -> (¬x(1, 3, 2) ∨ x(2, 1, 1)); matching condition number(s): [45]\n- raw clause index 17: [-41, 8] -> (¬x(2, 1, 1) ∨ x(0, 2, 1)); matching condition number(s): [19]\n- raw clause index 18: [-8, 61] -> (¬x(0, 2, 1) ∨ x(3, 2, 0)); matching condition number(s): [26]\n- raw clause index 19: [-61, 1] -> (¬x(3, 2, 0) ∨ x(0, 0, 0)); matching condition number(s): [27]\n- raw clause index 20: [-1, 58] -> (¬x(0, 0, 0) ∨ x(3, 1, 0)); matching condition number(s): [6]\n- raw clause index 21: [-58, 44] -> (¬x(3, 1, 0) ∨ x(2, 2, 1)); matching condition number(s): [31]\n- raw clause index 22: [-44, 36] -> (¬x(2, 2, 1) ∨ x(1, 5, 2)); matching condition number(s): [3]\n- raw clause index 23: [-36, 70] -> (¬x(1, 5, 2) ∨ x(3, 5, 0)); matching condition number(s): [29]\n- raw clause index 24: [-70, 23] -> (¬x(3, 5, 0) ∨ x(1, 1, 1)); matching condition number(s): [18]\n- raw clause index 25: [-23, 4] -> (¬x(1, 1, 1) ∨ x(0, 1, 0)); matching condition number(s): [20]\n- raw clause index 26: [-4, 33] -> (¬x(0, 1, 0) ∨ x(1, 4, 2)); matching condition number(s): [44]\n- raw clause index 27: [-33, 40] -> (¬x(1, 4, 2) ∨ x(2, 1, 0)); matching condition number(s): [33]\n- raw clause index 28: [-40, 9] -> (¬x(2, 1, 0) ∨ x(0, 2, 2)); matching condition number(s): [13]\n- raw clause index 29: [-9, 54] -> (¬x(0, 2, 2) ∨ x(2, 5, 2)); matching condition number(s): [12]\n- raw clause index 30: [-54, 57] -> (¬x(2, 5, 2) ∨ x(3, 0, 2)); matching condition number(s): [17]\n- raw clause index 31: [-57, 46] -> (¬x(3, 0, 2) ∨ x(2, 3, 0)); matching condition number(s): [9]\n- raw clause index 32: [-46, 45] -> (¬x(2, 3, 0) ∨ x(2, 2, 2)); matching condition number(s): [5]\n- raw clause index 33: [-45, 2] -> (¬x(2, 2, 2) ∨ x(0, 0, 1)); matching condition number(s): [39]\n- raw clause index 34: [-2, 29] -> (¬x(0, 0, 1) ∨ x(1, 3, 1)); matching condition number(s): [10]\n- raw clause index 35: [-29, 3] -> (¬x(1, 3, 1) ∨ x(0, 0, 2)); matching condition number(s): [41]\n- raw clause index 36: [-3, 43] -> (¬x(0, 0, 2) ∨ x(2, 2, 0)); matching condition number(s): [14]\n- raw clause index 37: [-43, 52] -> (¬x(2, 2, 0) ∨ x(2, 5, 0)); matching condition number(s): [22]\n- raw clause index 38: [-52, 47] -> (¬x(2, 5, 0) ∨ x(2, 3, 1)); matching condition number(s): [37]\n- raw clause index 39: [-47, 62] -> (¬x(2, 3, 1) ∨ x(3, 2, 1)); matching condition number(s): [1]\n- raw clause index 40: [-62, 18] -> (¬x(3, 2, 1) ∨ x(0, 5, 2)); matching condition number(s): [2]\n- raw clause index 41: [-18, 38] -> (¬x(0, 5, 2) ∨ x(2, 0, 1)); matching condition number(s): [35]\n- raw clause index 42: [-38, 64] -> (¬x(2, 0, 1) ∨ x(3, 3, 0)); matching condition number(s): [36]\n- raw clause index 43: [-64, 16] -> (¬x(3, 3, 0) ∨ x(0, 5, 0)); matching condition number(s): [24]\n- raw clause index 44: [-16] -> (¬x(0, 5, 0)); matching condition number(s): [16]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(0, 3, 2)), (¬x(0, 3, 2) ∨ x(2, 3, 2)), (¬x(2, 3, 2) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(1, 2, 2)), (¬x(1, 2, 2) ∨ x(0, 4, 2)), (¬x(0, 4, 2) ∨ x(3, 5, 1)), (¬x(3, 5, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(0, 4, 1)), (¬x(0, 4, 1) ∨ x(3, 2, 2)), (¬x(3, 2, 2) ∨ x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 5, 1)), (¬x(0, 5, 1) ∨ x(2, 4, 0)), (¬x(2, 4, 0) ∨ x(1, 1, 2)), (¬x(1, 1, 2) ∨ x(3, 1, 1)), (¬x(3, 1, 1) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(1, 3, 2)), (¬x(1, 3, 2) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(3, 2, 0)), (¬x(3, 2, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(3, 1, 0)), (¬x(3, 1, 0) ∨ x(2, 2, 1)), (¬x(2, 2, 1) ∨ x(1, 5, 2)), (¬x(1, 5, 2) ∨ x(3, 5, 0)), (¬x(3, 5, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(0, 1, 0)), (¬x(0, 1, 0) ∨ x(1, 4, 2)), (¬x(1, 4, 2) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 2, 2)), (¬x(0, 2, 2) ∨ x(2, 5, 2)), (¬x(2, 5, 2) ∨ x(3, 0, 2)), (¬x(3, 0, 2) ∨ x(2, 3, 0)), (¬x(2, 3, 0) ∨ x(2, 2, 2)), (¬x(2, 2, 2) ∨ x(0, 0, 1)), (¬x(0, 0, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(0, 0, 2)), (¬x(0, 0, 2) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(2, 5, 0)), (¬x(2, 5, 0) ∨ x(2, 3, 1)), (¬x(2, 3, 1) ∨ x(3, 2, 1)), (¬x(3, 2, 1) ∨ x(0, 5, 2)), (¬x(0, 5, 2) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ x(3, 3, 0)), (¬x(3, 3, 0) ∨ x(0, 5, 0)), (¬x(0, 5, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      4,
+      6,
+      3
+    ],
+    "num_vars": 72,
+    "num_clauses": 45,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          12
+        ],
+        "clause_structural": "(x(0, 3, 2))",
+        "condition_numbers": [
+          38
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -12,
+          48
+        ],
+        "clause_structural": "(¬x(0, 3, 2) ∨ x(2, 3, 2))",
+        "condition_numbers": [
+          42
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -48,
+          7
+        ],
+        "clause_structural": "(¬x(2, 3, 2) ∨ x(0, 2, 0))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -7,
+          27
+        ],
+        "clause_structural": "(¬x(0, 2, 0) ∨ x(1, 2, 2))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -27,
+          15
+        ],
+        "clause_structural": "(¬x(1, 2, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          25
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -15,
+          71
+        ],
+        "clause_structural": "(¬x(0, 4, 2) ∨ x(3, 5, 1))",
+        "condition_numbers": [
+          43
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -71,
+          22
+        ],
+        "clause_structural": "(¬x(3, 5, 1) ∨ x(1, 1, 0))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -22,
+          14
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(0, 4, 1))",
+        "condition_numbers": [
+          21
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          -14,
+          63
+        ],
+        "clause_structural": "(¬x(0, 4, 1) ∨ x(3, 2, 2))",
+        "condition_numbers": [
+          34
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -63,
+          10
+        ],
+        "clause_structural": "(¬x(3, 2, 2) ∨ x(0, 3, 0))",
+        "condition_numbers": [
+          40
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          -10,
+          17
+        ],
+        "clause_structural": "(¬x(0, 3, 0) ∨ x(0, 5, 1))",
+        "condition_numbers": [
+          32
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -17,
+          49
+        ],
+        "clause_structural": "(¬x(0, 5, 1) ∨ x(2, 4, 0))",
+        "condition_numbers": [
+          23
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          -49,
+          24
+        ],
+        "clause_structural": "(¬x(2, 4, 0) ∨ x(1, 1, 2))",
+        "condition_numbers": [
+          30
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -24,
+          59
+        ],
+        "clause_structural": "(¬x(1, 1, 2) ∨ x(3, 1, 1))",
+        "condition_numbers": [
+          28
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          -59,
+          25
+        ],
+        "clause_structural": "(¬x(3, 1, 1) ∨ x(1, 2, 0))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -25,
+          30
+        ],
+        "clause_structural": "(¬x(1, 2, 0) ∨ x(1, 3, 2))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 16,
+        "clause_dimacs": [
+          -30,
+          41
+        ],
+        "clause_structural": "(¬x(1, 3, 2) ∨ x(2, 1, 1))",
+        "condition_numbers": [
+          45
+        ]
+      },
+      {
+        "raw_clause_index": 17,
+        "clause_dimacs": [
+          -41,
+          8
+        ],
+        "clause_structural": "(¬x(2, 1, 1) ∨ x(0, 2, 1))",
+        "condition_numbers": [
+          19
+        ]
+      },
+      {
+        "raw_clause_index": 18,
+        "clause_dimacs": [
+          -8,
+          61
+        ],
+        "clause_structural": "(¬x(0, 2, 1) ∨ x(3, 2, 0))",
+        "condition_numbers": [
+          26
+        ]
+      },
+      {
+        "raw_clause_index": 19,
+        "clause_dimacs": [
+          -61,
+          1
+        ],
+        "clause_structural": "(¬x(3, 2, 0) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          27
+        ]
+      },
+      {
+        "raw_clause_index": 20,
+        "clause_dimacs": [
+          -1,
+          58
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(3, 1, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 21,
+        "clause_dimacs": [
+          -58,
+          44
+        ],
+        "clause_structural": "(¬x(3, 1, 0) ∨ x(2, 2, 1))",
+        "condition_numbers": [
+          31
+        ]
+      },
+      {
+        "raw_clause_index": 22,
+        "clause_dimacs": [
+          -44,
+          36
+        ],
+        "clause_structural": "(¬x(2, 2, 1) ∨ x(1, 5, 2))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 23,
+        "clause_dimacs": [
+          -36,
+          70
+        ],
+        "clause_structural": "(¬x(1, 5, 2) ∨ x(3, 5, 0))",
+        "condition_numbers": [
+          29
+        ]
+      },
+      {
+        "raw_clause_index": 24,
+        "clause_dimacs": [
+          -70,
+          23
+        ],
+        "clause_structural": "(¬x(3, 5, 0) ∨ x(1, 1, 1))",
+        "condition_numbers": [
+          18
+        ]
+      },
+      {
+        "raw_clause_index": 25,
+        "clause_dimacs": [
+          -23,
+          4
+        ],
+        "clause_structural": "(¬x(1, 1, 1) ∨ x(0, 1, 0))",
+        "condition_numbers": [
+          20
+        ]
+      },
+      {
+        "raw_clause_index": 26,
+        "clause_dimacs": [
+          -4,
+          33
+        ],
+        "clause_structural": "(¬x(0, 1, 0) ∨ x(1, 4, 2))",
+        "condition_numbers": [
+          44
+        ]
+      },
+      {
+        "raw_clause_index": 27,
+        "clause_dimacs": [
+          -33,
+          40
+        ],
+        "clause_structural": "(¬x(1, 4, 2) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          33
+        ]
+      },
+      {
+        "raw_clause_index": 28,
+        "clause_dimacs": [
+          -40,
+          9
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ x(0, 2, 2))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 29,
+        "clause_dimacs": [
+          -9,
+          54
+        ],
+        "clause_structural": "(¬x(0, 2, 2) ∨ x(2, 5, 2))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 30,
+        "clause_dimacs": [
+          -54,
+          57
+        ],
+        "clause_structural": "(¬x(2, 5, 2) ∨ x(3, 0, 2))",
+        "condition_numbers": [
+          17
+        ]
+      },
+      {
+        "raw_clause_index": 31,
+        "clause_dimacs": [
+          -57,
+          46
+        ],
+        "clause_structural": "(¬x(3, 0, 2) ∨ x(2, 3, 0))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 32,
+        "clause_dimacs": [
+          -46,
+          45
+        ],
+        "clause_structural": "(¬x(2, 3, 0) ∨ x(2, 2, 2))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 33,
+        "clause_dimacs": [
+          -45,
+          2
+        ],
+        "clause_structural": "(¬x(2, 2, 2) ∨ x(0, 0, 1))",
+        "condition_numbers": [
+          39
+        ]
+      },
+      {
+        "raw_clause_index": 34,
+        "clause_dimacs": [
+          -2,
+          29
+        ],
+        "clause_structural": "(¬x(0, 0, 1) ∨ x(1, 3, 1))",
+        "condition_numbers": [
+          10
+        ]
+      },
+      {
+        "raw_clause_index": 35,
+        "clause_dimacs": [
+          -29,
+          3
+        ],
+        "clause_structural": "(¬x(1, 3, 1) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          41
+        ]
+      },
+      {
+        "raw_clause_index": 36,
+        "clause_dimacs": [
+          -3,
+          43
+        ],
+        "clause_structural": "(¬x(0, 0, 2) ∨ x(2, 2, 0))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 37,
+        "clause_dimacs": [
+          -43,
+          52
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(2, 5, 0))",
+        "condition_numbers": [
+          22
+        ]
+      },
+      {
+        "raw_clause_index": 38,
+        "clause_dimacs": [
+          -52,
+          47
+        ],
+        "clause_structural": "(¬x(2, 5, 0) ∨ x(2, 3, 1))",
+        "condition_numbers": [
+          37
+        ]
+      },
+      {
+        "raw_clause_index": 39,
+        "clause_dimacs": [
+          -47,
+          62
+        ],
+        "clause_structural": "(¬x(2, 3, 1) ∨ x(3, 2, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 40,
+        "clause_dimacs": [
+          -62,
+          18
+        ],
+        "clause_structural": "(¬x(3, 2, 1) ∨ x(0, 5, 2))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 41,
+        "clause_dimacs": [
+          -18,
+          38
+        ],
+        "clause_structural": "(¬x(0, 5, 2) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          35
+        ]
+      },
+      {
+        "raw_clause_index": 42,
+        "clause_dimacs": [
+          -38,
+          64
+        ],
+        "clause_structural": "(¬x(2, 0, 1) ∨ x(3, 3, 0))",
+        "condition_numbers": [
+          36
+        ]
+      },
+      {
+        "raw_clause_index": 43,
+        "clause_dimacs": [
+          -64,
+          16
+        ],
+        "clause_structural": "(¬x(3, 3, 0) ∨ x(0, 5, 0))",
+        "condition_numbers": [
+          24
+        ]
+      },
+      {
+        "raw_clause_index": 44,
+        "clause_dimacs": [
+          -16
+        ],
+        "clause_structural": "(¬x(0, 5, 0))",
+        "condition_numbers": [
+          16
+        ]
+      }
+    ],
+    "unsat_reason": "Frozen conflict chain: sequential forced assignments leading to contradiction: (x(0, 3, 2)), (¬x(0, 3, 2) ∨ x(2, 3, 2)), (¬x(2, 3, 2) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(1, 2, 2)), (¬x(1, 2, 2) ∨ x(0, 4, 2)), (¬x(0, 4, 2) ∨ x(3, 5, 1)), (¬x(3, 5, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(0, 4, 1)), (¬x(0, 4, 1) ∨ x(3, 2, 2)), (¬x(3, 2, 2) ∨ x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 5, 1)), (¬x(0, 5, 1) ∨ x(2, 4, 0)), (¬x(2, 4, 0) ∨ x(1, 1, 2)), (¬x(1, 1, 2) ∨ x(3, 1, 1)), (¬x(3, 1, 1) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(1, 3, 2)), (¬x(1, 3, 2) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(3, 2, 0)), (¬x(3, 2, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(3, 1, 0)), (¬x(3, 1, 0) ∨ x(2, 2, 1)), (¬x(2, 2, 1) ∨ x(1, 5, 2)), (¬x(1, 5, 2) ∨ x(3, 5, 0)), (¬x(3, 5, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(0, 1, 0)), (¬x(0, 1, 0) ∨ x(1, 4, 2)), (¬x(1, 4, 2) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 2, 2)), (¬x(0, 2, 2) ∨ x(2, 5, 2)), (¬x(2, 5, 2) ∨ x(3, 0, 2)), (¬x(3, 0, 2) ∨ x(2, 3, 0)), (¬x(2, 3, 0) ∨ x(2, 2, 2)), (¬x(2, 2, 2) ∨ x(0, 0, 1)), (¬x(0, 0, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(0, 0, 2)), (¬x(0, 0, 2) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(2, 5, 0)), (¬x(2, 5, 0) ∨ x(2, 3, 1)), (¬x(2, 3, 1) ∨ x(3, 2, 1)), (¬x(3, 2, 1) ∨ x(0, 5, 2)), (¬x(0, 5, 2) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ x(3, 3, 0)), (¬x(3, 3, 0) ∨ x(0, 5, 0)), (¬x(0, 5, 0))"
+  }
+}

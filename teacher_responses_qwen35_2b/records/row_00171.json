@@ -1,0 +1,113 @@
+{
+  "index": 171,
+  "row_index_in_prompt_file": 171,
+  "prompt_id": "satbench_00171",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "# Step-by-Step Reasoning\n\n### 1. Variable Mapping and Condition Analysis\nFirst, we map the logical variables based on the `<variable_mapping>` and `<readable_cnf>` provided:\n*   **Birds:** Eagle (0), Sparrow (1), Parrot (2), Owl (3)\n*   **Behaviors:** Flying (0), Singing (1)\n*   **Contexts:** Morning (0), Evening (1)\n*   **Variables:** $x_{i,j,k}$ denotes Bird $i$ exhibits Behavior $j$ in Context $k$.\n    *   Indices: $i \\in \\{0..3\\}, j \\in \\{0,1\\}, k \\in \\{0,1\\}$.\n\nThe 8 conditions translate directly to the 8 clauses in the CNF list:\n1.  $(x_{1,0,1} \\lor x_{2,1,1} \\lor x_{1,1,0})$ $\\rightarrow$ \"Either Sparrow flies evening OR Parrot sings evening OR Sparrow sings morning\"\n2.  $(\\neg x_{2,1,1})$ $\\rightarrow$ \"Parrot does not sing evening\"\n3.  $(\\neg x_{1,1,0})$ $\\rightarrow$ \"Sparrow does not sing morning\"\n4.  $(\\neg x_{1,0,1} \\lor \\neg x_{2,1,1})$ $\\rightarrow$ \"Either Sparrow does not fly evening OR Parrot does not sing evening\"\n5.  $(\\neg x_{1,0,1} \\lor \\neg x_{1,1,0})$ $\\rightarrow$ \"Either Sparrow does not fly evening OR Sparrow does not sing morning\"\n6.  $(\\neg x_{1,0,1})$ $\\rightarrow$ \"Sparrow does not fly evening\"\n7.  $(x_{3,0,1} \\lor \\neg x_{0,0,0} \\lor \\neg x_{1,1,1})$ $\\rightarrow$ \"Either Owl flies evening OR Eagle does not fly morning OR Sparrow does not sing evening\"\n8.  $(\\neg x_{2,1,1} \\lor \\neg x_{1,1,0})$ $\\rightarrow$ \"Either Parrot does not sing evening OR Sparrow does not sing morning\"\n\n**Note on Z3 Certificate Interpretation:**\nThe Z3 output indicates `satisfiable: false`. However, looking closely at Clause 8 ($\\neg x_{2,1,1} \\lor \\neg x_{1,1,0}$) and Clause 6 ($\\neg x_{1,0,1}$), there appears to be a discrepancy between the `<readable_cnf>` and the `<unsat_core_clauses>` in the prompt description versus the raw `<clauses_dimacs>` array.\n*   Raw Clauses Array shows 8 clauses.\n*   Readable CNF string shows 8 clauses.\n*   Let's re-evaluate the \"Unsat Core\" mapping provided in the prompt's text block which seems to contain a specific interpretation of the Z3 unsat core.\n    *   Clause 0 in readable: $(x_{1,0,1} \\lor x_{2,1,1} \\lor x_{1,1,0})$ matches Condition 1.\n    *   Clause 1 in readable: $(\\neg x_{2,1,1})$ matches Condition 2.\n    *   Clause 2 in readable: $(\\neg x_{1,1,0})$ matches Condition 3.\n    *   Clause 3 in readable: $(\\neg x_{1,0,1} \\lor \\neg x_{2,1,1})$ matches Condition 4.\n    *   Clause 4 in readable: $(\\neg x_{1,0,1} \\lor \\neg x_{1,1,0})$ matches Condition 5.\n    *   Clause 5 in readable: $(\\neg x_{1,0,1})$ matches Condition 6.\n    *   Clause 6 in readable: $(x_{3,0,1} \\lor \\neg x_{0,0,0} \\lor \\neg x_{1,1,1})$ matches Condition 7.\n    *   Clause 7 in readable: $(\\neg x_{2,1,1} \\lor \\neg x_{1,1,0})$ matches Condition 8.\n\nWait, the `<unsat_core_clauses>` section in the prompt text claims:\n> \"raw clause index 0: [6, 12, 7] -> ... matching condition number(s): [1]\"\nThis implies the prompt's provided Z3 certificate information contains a specific mapping that suggests the puzzle is UNSAT.\nHowever, my manual verification of the conditions shows:\n1. $x_{1,0,1} \\lor x_{2,1,1} \\lor x_{1,1,0}$\n2. $\\neg x_{2,1,1}$\n3. $\\neg x_{1,1,0}$\n4. $\\neg x_{1,0,1} \\lor \\neg x_{2,1,1}$\n5. $\\neg x_{1,0,1} \\lor \\neg x_{1,1,0}$\n6. $\\neg x_{1,0,1}$\n7. $x_{3,0,1} \\lor \\neg x_{0,0,0} \\lor \\neg x_{1,1,1}$\n8. $\\neg x_{2,1,1} \\lor \\neg x_{1,1,0}$\n\nLet's test for contradiction:\nFrom Cond 6: $x_{1,0,1}$ must be **False**.\nFrom Cond 2: $x_{2,1,1}$ must be **False**.\nFrom Cond 3: $x_{1,1,0}$ must be **False**.\n\nNow substitute these into the remaining clauses:\n*   Cond 1: $(F \\lor F \\lor F)$? No, wait. $x_{1,0,1}$ is False. But $x_{2,1,1}$ is False. $x_{1,1,0}$ is False. So Cond 1 becomes $F \\lor F \\lor F = F$.\n    *   Wait, let's re-read Cond 1 carefully: \"Either Sparrow flies in the evening ($x_{1,0,1}$), or Parrot sings in the evening ($x_{2,1,1}$), or Sparrow sings in the morning ($x_{1,1,0}$).\"\n    *   We found from Cond 6 that $x_{1,0,1}$ is False.\n    *   We found from Cond 2 that $x_{2,1,1}$ is False.\n    *   We found from Cond 3 that $x_{1,1,0}$ is False.\n    *   Therefore, Cond 1 requires at least one of three terms to be true. All three are False. This creates a direct contradiction.\n\nLet's double check the variable indices.\nCond 1: $x(1,0,1) \\lor x(2,1,1) \\lor x(1,1,0)$\n*   $x(1,0,1)$: Sparrow, Flying, Morning.\n*   $x(2,1,1)$: Parrot, Singing, Evening.\n*   $x(1,1,0)$: Sparrow, Singing, Morning.\n\nConditions forcing them to False:\n*   Cond 6: $x(1,0,1)$ is False. (\"Sparrow does not fly in the evening\"). Wait, Cond 6 says $\\neg x(1,0,1)$. Yes.\n*   Cond 2: $x(2,1,1)$ is False. (\"Parrot does not sing in the evening\"). Yes.\n*   Cond 3: $x(1,1,0)$ is False. (\"Sparrow does not sing in the morning\"). Yes.\n\nSince $x(1,0,1)$, $x(2,1,1)$, and $x(1,1,0)$ are all constrained to be False by Conditions 6, 2, and 3 respectively, the disjunction in Condition 1 evaluates to False.\nCondition 1 is: $(x(1,0,1) \\lor x(2,1,1) \\lor x(1,1,0))$.\nIf all atoms are false, the clause is violated.\nTherefore, the system is **UNSAT**.\n\nLet's verify the Z3 output provided in the prompt matches this derivation.\nThe `<unsat_core_clauses>` section lists:\n*   Clause 0: Matches Cond 1.\n*   Clause 4: Matches Cond 6 ($\\neg x(1,0,1)$).\n*   Clause 5: Matches Cond 2 ($\\neg x(2,1,1)$).\n*   Clause 6: Matches Cond 3 ($\\neg x(1,1,0)$).\n*   Clause 7: Matches Cond 8.\n\nThe reason states: \"Exactly-one conflict... (Cond 1) [Clause 0], (Cond 6) [Clause 4], (Cond 2) [Clause 5], (Cond 3) [Clause 6]\".\nThis perfectly aligns with our logical deduction. The conflict arises because the conditions independently force the same variables in Condition 1 to be false, making Condition 1 false.\n\n### 2. Logical Derivation Summary\n\n1.  **Analyze Constraint 6**: $\\neg x(1,0,1)$ is required. (Sparrow cannot fly in the evening).\n2.  **Analyze Constraint 2**: $\\neg x(2,1,1)$ is required. (Parrot cannot sing in the evening).\n3.  **Analyze Constraint 3**: $\\neg x(1,1,0)$ is required. (Sparrow cannot sing in the morning).\n4.  **Analyze Constraint 1**: Requires $(x(1,0,1) \\lor x(2,1,1) \\lor x(1,1,0))$ to be true.\n5.  **Evaluate Conflict**:\n    *   From (1), the first term is False.\n    *   From (2), the second term is False.\n    *   From (3), the third term is False.\n    *   The sum of False terms is False.\n    *   Therefore, Constraint 1 cannot be satisfied simultaneously with Constraints 2 and 3.\n\n### 3. Final Conclusion\nThe conditions create an unavoidable contradiction regarding the behavior of the Sparrow (specifically preventing her from flying in the evening while simultaneously requiring her to do something else in other contexts, or more simply, the set of necessary conditions for Parrot and Sparrow forces them into mutually exclusive states defined by their individual negative constraints combined with a positive constraint covering both).\n\nSpecifically, the conditions force:\n*   Sparrow $\\neg$ Fly Evening (from C6)\n*   Parrot $\\neg$ Sing Evening (from C2)\n*   Sparrow $\\neg$ Sing Morning (from C3)\nBut C1 requires: Sparrow Fly Evening OR Parrot Sing Evening OR Sparrow Sing Morning.\nGiven the above, C1 requires: False OR False OR False, which is impossible.\n\nThe Z3 certificate confirms this via the unsat core, identifying clauses corresponding to conditions 1, 6, 2, and 3 as the source of contradiction.\n\n### Answer\n\n**[UNSAT]**",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1608,
+    "generated_tokens": 2569,
+    "batch_elapsed_seconds": 70.19075512886047,
+    "tokens_per_second_for_batch": 36.600261605444665,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777782382.8740103,
+  "slurm_job_id": "3179998",
+  "slurm_array_job_id": "3179795",
+  "slurm_array_task_id": "17",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a nature reserve, four birds—Eagle, Sparrow, Parrot, and Owl—are being observed across two behaviors (0 = flying, 1 = singing) in two different contexts (0 = morning, 1 = evening). For each bird, behavior, and context, a decision is made whether that behavior is exhibited. Each decision is independent.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean bird i exhibits behavior j in context k. Here, bird 0 is Eagle, bird 1 is Sparrow, bird 2 is Parrot, and bird 3 is Owl.\n</variable_mapping>\n\n<conditions>\n1. Either Sparrow flies in the evening, or Parrot sings in the evening, or Sparrow sings in the morning.\n2. Parrot does not sing in the evening.\n3. Sparrow does not sing in the morning.\n4. Either Sparrow does not fly in the evening, or Parrot does not sing in the evening.\n5. Either Sparrow does not fly in the evening, or Sparrow does not sing in the morning.\n6. Sparrow does not fly in the evening.\n7. Either Owl flies in the evening, or Eagle does not fly in the morning, or Sparrow does not sing in the evening.\n8. Either Parrot does not sing in the evening, or Sparrow does not sing in the morning.\n</conditions>\n\n<question>\nCan all these behavioral observations be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,2,2]\n</dims>\n\n<num_vars>\n16\n</num_vars>\n\n<num_clauses>\n8\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    6,\n    12,\n    7\n  ],\n  [\n    -6,\n    -12\n  ],\n  [\n    -6,\n    -7\n  ],\n  [\n    -12,\n    -7\n  ],\n  [\n    -6\n  ],\n  [\n    -12\n  ],\n  [\n    -7\n  ],\n  [\n    14,\n    -1,\n    -8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(1, 0, 1) ∨ x(2, 1, 1) ∨ x(1, 1, 0)) ∧ (¬x(2, 1, 1)) ∧ (¬x(1, 1, 0)) ∧ (¬x(1, 0, 1) ∨ ¬x(2, 1, 1)) ∧ (¬x(1, 0, 1) ∨ ¬x(1, 1, 0)) ∧ (¬x(1, 0, 1)) ∧ (x(3, 0, 1) ∨ ¬x(0, 0, 0) ∨ ¬x(1, 1, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(1, 1, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,4,5,6]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,6]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [6, 12, 7] -> (x(1, 0, 1) ∨ x(2, 1, 1) ∨ x(1, 1, 0)); matching condition number(s): [1]\n- raw clause index 4: [-6] -> (¬x(1, 0, 1)); matching condition number(s): [6]\n- raw clause index 5: [-12] -> (¬x(2, 1, 1)); matching condition number(s): [2]\n- raw clause index 6: [-7] -> (¬x(1, 1, 0)); matching condition number(s): [3]\n</unsat_core_clauses>\n\n<unsat_reason>\nExactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(1, 0, 1) ∨ x(2, 1, 1) ∨ x(1, 1, 0)), (¬x(1, 0, 1) ∨ ¬x(2, 1, 1)), (¬x(1, 0, 1) ∨ ¬x(1, 1, 0)), (¬x(2, 1, 1) ∨ ¬x(1, 1, 0)), (¬x(1, 0, 1)), (¬x(2, 1, 1)), (¬x(1, 1, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a nature reserve, four birds—Eagle, Sparrow, Parrot, and Owl—are being observed across two behaviors (0 = flying, 1 = singing) in two different contexts (0 = morning, 1 = evening). For each bird, behavior, and context, a decision is made whether that behavior is exhibited. Each decision is independent.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean bird i exhibits behavior j in context k. Here, bird 0 is Eagle, bird 1 is Sparrow, bird 2 is Parrot, and bird 3 is Owl.\n</variable_mapping>\n\n<conditions>\n1. Either Sparrow flies in the evening, or Parrot sings in the evening, or Sparrow sings in the morning.\n2. Parrot does not sing in the evening.\n3. Sparrow does not sing in the morning.\n4. Either Sparrow does not fly in the evening, or Parrot does not sing in the evening.\n5. Either Sparrow does not fly in the evening, or Sparrow does not sing in the morning.\n6. Sparrow does not fly in the evening.\n7. Either Owl flies in the evening, or Eagle does not fly in the morning, or Sparrow does not sing in the evening.\n8. Either Parrot does not sing in the evening, or Sparrow does not sing in the morning.\n</conditions>\n\n<question>\nCan all these behavioral observations be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,2,2]\n</dims>\n\n<num_vars>\n16\n</num_vars>\n\n<num_clauses>\n8\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    6,\n    12,\n    7\n  ],\n  [\n    -6,\n    -12\n  ],\n  [\n    -6,\n    -7\n  ],\n  [\n    -12,\n    -7\n  ],\n  [\n    -6\n  ],\n  [\n    -12\n  ],\n  [\n    -7\n  ],\n  [\n    14,\n    -1,\n    -8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(1, 0, 1) ∨ x(2, 1, 1) ∨ x(1, 1, 0)) ∧ (¬x(2, 1, 1)) ∧ (¬x(1, 1, 0)) ∧ (¬x(1, 0, 1) ∨ ¬x(2, 1, 1)) ∧ (¬x(1, 0, 1) ∨ ¬x(1, 1, 0)) ∧ (¬x(1, 0, 1)) ∧ (x(3, 0, 1) ∨ ¬x(0, 0, 0) ∨ ¬x(1, 1, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(1, 1, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,4,5,6]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,6]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [6, 12, 7] -> (x(1, 0, 1) ∨ x(2, 1, 1) ∨ x(1, 1, 0)); matching condition number(s): [1]\n- raw clause index 4: [-6] -> (¬x(1, 0, 1)); matching condition number(s): [6]\n- raw clause index 5: [-12] -> (¬x(2, 1, 1)); matching condition number(s): [2]\n- raw clause index 6: [-7] -> (¬x(1, 1, 0)); matching condition number(s): [3]\n</unsat_core_clauses>\n\n<unsat_reason>\nExactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(1, 0, 1) ∨ x(2, 1, 1) ∨ x(1, 1, 0)), (¬x(1, 0, 1) ∨ ¬x(2, 1, 1)), (¬x(1, 0, 1) ∨ ¬x(1, 1, 0)), (¬x(2, 1, 1) ∨ ¬x(1, 1, 0)), (¬x(1, 0, 1)), (¬x(2, 1, 1)), (¬x(1, 1, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      4,
+      2,
+      2
+    ],
+    "num_vars": 16,
+    "num_clauses": 8,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      4,
+      5,
+      6
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      6
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          6,
+          12,
+          7
+        ],
+        "clause_structural": "(x(1, 0, 1) ∨ x(2, 1, 1) ∨ x(1, 1, 0))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -6
+        ],
+        "clause_structural": "(¬x(1, 0, 1))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -12
+        ],
+        "clause_structural": "(¬x(2, 1, 1))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -7
+        ],
+        "clause_structural": "(¬x(1, 1, 0))",
+        "condition_numbers": [
+          3
+        ]
+      }
+    ],
+    "unsat_reason": "Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(1, 0, 1) ∨ x(2, 1, 1) ∨ x(1, 1, 0)), (¬x(1, 0, 1) ∨ ¬x(2, 1, 1)), (¬x(1, 0, 1) ∨ ¬x(1, 1, 0)), (¬x(2, 1, 1) ∨ ¬x(1, 1, 0)), (¬x(1, 0, 1)), (¬x(2, 1, 1)), (¬x(1, 1, 0))"
+  }
+}

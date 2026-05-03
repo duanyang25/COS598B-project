@@ -1,0 +1,175 @@
+{
+  "index": 424,
+  "row_index_in_prompt_file": 424,
+  "prompt_id": "satbench_00424",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Teacher Answer\n\n**Label:**\n[UNSAT]\n\n**Step-by-Step Reasoning:**\n\n1.  **Analyze the Variables and Constraints:**\n    *   We have 4 drones (A=0, B=1, C=2, D=3).\n    *   We have 2 sensor types per drone (thermal/acoustic/visual/etc., mapped to indices like 0, 1, 2, 4, 5 in the mapping).\n    *   We have 2 weather conditions per drone (clear/foggy, mapped to indices like 0, 1 in the mapping).\n    *   Total variables involved in the core logic are $N = 4 \\times 2 \\times 2 = 16$ (e.g., $x(0,0,0)$).\n    *   The provided CNF formula has 10 clauses.\n    *   The provided Z3 certificate indicates the formula is **UNSAT**.\n\n2.  **Examine the Certificate's Core Logic:**\n    *   The certificate identifies 8 specific combinations of variables (represented by indices `1`, `41`, `22`, etc., which map to the logical combinations of the sensors and weather for Drives A, B, and D based on the dimension order `[4, 6, 2]` and the mapping logic inferred from the readable CNF).\n    *   Specifically, the core logic involves variables related to Drives A ($i=0$), B ($i=1$), and D ($i=3$).\n    *   The certificate lists 8 clauses that form the unsatisfiable core. These clauses restrict the possible states of the variables to specific combinations that cover all $2^3 = 8$ possibilities of the subset of variables {Drone A, Drone B, Drone D}.\n    *   Since the core forbids all 8 valid truth assignments for these three drones, the entire system is impossible to satisfy.\n\n3.  **Verify via Logical Contradiction (Mental Simulation):**\n    *   Let's look at the structure of the conditions provided in the `<readable_cnf>` section to see if the certificate correctly identified the conflict.\n    *   Condition 10: $(\\neg x(0, 5, 0) \\lor \\neg x(1, 2, 0) \\lor \\neg x(3, 4, 1))$. This says \"At least one of these must be false\" (i.e., cannot be true simultaneously).\n    *   Conditions 1 through 9 create a dense web of implications involving $\\neg x(0,0,0)$ (Drone A clear/thermal off) and $x(3,2,0)$ (Drone D visual clear on) and $x(1,4,1)$ (Drone B sensor 4 foggy).\n    *   The certificate explicitly states: \"all 8 possible combinations forbidden for variables [1, 41, 22]\". In the context of the solver, `1` often represents the first available variable combination slot, `41` might represent a derived constraint index, and `22` might be another. However, the text explanation clarifies: \"all 8 possible combinations forbidden for variables [1, 41, 22]\". Given the problem setup (4 drones, 2 sensors, 2 weather), there are $4 \\times 2 \\times 2 = 16$ binary variables. The certificate analysis suggests the conflict arises from the interactions between the sensors (specifically thermal, acoustic, visual, sensor 4, sensor 5) and weather (clear, foggy) across the drones.\n    *   The key phrase from the certificate's reasoning is: \"all 8 possible combinations forbidden...\". This implies that the logical constraints force a contradiction where every single valid assignment for the relevant subset leads to a violation of one of the conditions (likely Condition 10 combined with the restrictive nature of the other clauses regarding the specific sensors).\n    *   Since the certificate concludes `unsat` and provides an explicit list of conflicting clauses covering the full search space for the active variables, we must conclude the system is unsatisfiable.\n\n4.  **Conclusion:**\n    The provided Z3 certificate confirms the formula is unsatisfiable by identifying a set of clauses that eliminates every possible valid assignment for the relevant variables. Therefore, no assignment exists that satisfies all 10 conditions.\n\n**Final Answer:**\nThe system described by the conditions and CNF formula is unsatisfiable. The certificate confirms this by showing that all 8 possible valid combinations for the relevant drone/sensor/weather variables violate at least one of the constraints.\n\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 2770,
+    "generated_tokens": 1008,
+    "batch_elapsed_seconds": 26.704619646072388,
+    "tokens_per_second_for_batch": 37.74627811065838,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777805367.3047533,
+  "slurm_job_id": "3180496",
+  "slurm_array_job_id": "3179795",
+  "slurm_array_task_id": "42",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a futuristic city, four surveillance drones—identified as Drone A, Drone B, Drone C, and Drone D—are tasked with monitoring various zones. Each drone (0 to 3 for A to D) is equipped with different sensor types (0 = thermal, 1 = acoustic, 2 = visual, etc.), and each sensor can operate in distinct weather conditions (0 = clear, 1 = foggy). For each drone, sensor type, and weather condition, we decide whether the sensor is activated. Each decision regarding the activation of a sensor is made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean drone i has sensor j activated in weather condition k. Here, drone 0 is Drone A, drone 1 is Drone B, drone 2 is Drone C, and drone 3 is Drone D.\n</variable_mapping>\n\n<conditions>\n1. Either Drone A doesn't have the thermal sensor activated in clear weather, or Drone D doesn't have the visual sensor activated in clear weather, or Drone B doesn't have the sensor type 4 activated in foggy weather.\n2. Either Drone A doesn't have the thermal sensor activated in clear weather, or Drone D doesn't have the visual sensor activated in clear weather, or Drone B has the sensor type 4 activated in foggy weather.\n3. Either Drone A has the thermal sensor activated in clear weather, or Drone D has the visual sensor activated in clear weather, or Drone B doesn't have the sensor type 4 activated in foggy weather.\n4. Either Drone D has the acoustic sensor activated in foggy weather, or Drone A doesn't have the sensor type 5 activated in clear weather, or Drone C doesn't have the acoustic sensor activated in foggy weather.\n5. Either Drone A has the thermal sensor activated in clear weather, or Drone D doesn't have the visual sensor activated in clear weather, or Drone B doesn't have the sensor type 4 activated in foggy weather.\n6. Either Drone A doesn't have the thermal sensor activated in clear weather, or Drone D has the visual sensor activated in clear weather, or Drone B doesn't have the sensor type 4 activated in foggy weather.\n7. Either Drone A doesn't have the thermal sensor activated in clear weather, or Drone D has the visual sensor activated in clear weather, or Drone B has the sensor type 4 activated in foggy weather.\n8. Either Drone A has the thermal sensor activated in clear weather, or Drone D has the visual sensor activated in clear weather, or Drone B has the sensor type 4 activated in foggy weather.\n9. Either Drone A has the thermal sensor activated in clear weather, or Drone D doesn't have the visual sensor activated in clear weather, or Drone B has the sensor type 4 activated in foggy weather.\n10. Either Drone A doesn't have the sensor type 5 activated in clear weather, or Drone B doesn't have the sensor type 2 activated in clear weather, or Drone D doesn't have the sensor type 4 activated in foggy weather.\n</conditions>\n\n<question>\nIs there a way to assign values that makes this work?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,6,2]\n</dims>\n\n<num_vars>\n48\n</num_vars>\n\n<num_clauses>\n10\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    1,\n    41,\n    22\n  ],\n  [\n    -1,\n    41,\n    22\n  ],\n  [\n    1,\n    -41,\n    22\n  ],\n  [\n    -1,\n    -41,\n    22\n  ],\n  [\n    1,\n    41,\n    -22\n  ],\n  [\n    -1,\n    41,\n    -22\n  ],\n  [\n    1,\n    -41,\n    -22\n  ],\n  [\n    -1,\n    -41,\n    -22\n  ],\n  [\n    -11,\n    -17,\n    -46\n  ],\n  [\n    40,\n    -11,\n    -28\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)) ∧ (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)) ∧ (x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)) ∧ (x(3, 1, 1) ∨ ¬x(0, 5, 0) ∨ ¬x(2, 1, 1)) ∧ (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)) ∧ (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)) ∧ (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)) ∧ (x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)) ∧ (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)) ∧ (¬x(0, 5, 0) ∨ ¬x(1, 2, 0) ∨ ¬x(3, 4, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,5,6,7,8,9]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [1, 41, 22] -> (x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)); matching condition number(s): [8]\n- raw clause index 1: [-1, 41, 22] -> (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)); matching condition number(s): [7]\n- raw clause index 2: [1, -41, 22] -> (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)); matching condition number(s): [9]\n- raw clause index 3: [-1, -41, 22] -> (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)); matching condition number(s): [2]\n- raw clause index 4: [1, 41, -22] -> (x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)); matching condition number(s): [3]\n- raw clause index 5: [-1, 41, -22] -> (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)); matching condition number(s): [6]\n- raw clause index 6: [1, -41, -22] -> (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)); matching condition number(s): [5]\n- raw clause index 7: [-1, -41, -22] -> (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)); matching condition number(s): [1]\n</unsat_core_clauses>\n\n<unsat_reason>\nFull block: all 8 possible combinations forbidden for variables [1, 41, 22]: (x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)), (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)), (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)), (x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)), (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)), (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a futuristic city, four surveillance drones—identified as Drone A, Drone B, Drone C, and Drone D—are tasked with monitoring various zones. Each drone (0 to 3 for A to D) is equipped with different sensor types (0 = thermal, 1 = acoustic, 2 = visual, etc.), and each sensor can operate in distinct weather conditions (0 = clear, 1 = foggy). For each drone, sensor type, and weather condition, we decide whether the sensor is activated. Each decision regarding the activation of a sensor is made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean drone i has sensor j activated in weather condition k. Here, drone 0 is Drone A, drone 1 is Drone B, drone 2 is Drone C, and drone 3 is Drone D.\n</variable_mapping>\n\n<conditions>\n1. Either Drone A doesn't have the thermal sensor activated in clear weather, or Drone D doesn't have the visual sensor activated in clear weather, or Drone B doesn't have the sensor type 4 activated in foggy weather.\n2. Either Drone A doesn't have the thermal sensor activated in clear weather, or Drone D doesn't have the visual sensor activated in clear weather, or Drone B has the sensor type 4 activated in foggy weather.\n3. Either Drone A has the thermal sensor activated in clear weather, or Drone D has the visual sensor activated in clear weather, or Drone B doesn't have the sensor type 4 activated in foggy weather.\n4. Either Drone D has the acoustic sensor activated in foggy weather, or Drone A doesn't have the sensor type 5 activated in clear weather, or Drone C doesn't have the acoustic sensor activated in foggy weather.\n5. Either Drone A has the thermal sensor activated in clear weather, or Drone D doesn't have the visual sensor activated in clear weather, or Drone B doesn't have the sensor type 4 activated in foggy weather.\n6. Either Drone A doesn't have the thermal sensor activated in clear weather, or Drone D has the visual sensor activated in clear weather, or Drone B doesn't have the sensor type 4 activated in foggy weather.\n7. Either Drone A doesn't have the thermal sensor activated in clear weather, or Drone D has the visual sensor activated in clear weather, or Drone B has the sensor type 4 activated in foggy weather.\n8. Either Drone A has the thermal sensor activated in clear weather, or Drone D has the visual sensor activated in clear weather, or Drone B has the sensor type 4 activated in foggy weather.\n9. Either Drone A has the thermal sensor activated in clear weather, or Drone D doesn't have the visual sensor activated in clear weather, or Drone B has the sensor type 4 activated in foggy weather.\n10. Either Drone A doesn't have the sensor type 5 activated in clear weather, or Drone B doesn't have the sensor type 2 activated in clear weather, or Drone D doesn't have the sensor type 4 activated in foggy weather.\n</conditions>\n\n<question>\nIs there a way to assign values that makes this work?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,6,2]\n</dims>\n\n<num_vars>\n48\n</num_vars>\n\n<num_clauses>\n10\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    1,\n    41,\n    22\n  ],\n  [\n    -1,\n    41,\n    22\n  ],\n  [\n    1,\n    -41,\n    22\n  ],\n  [\n    -1,\n    -41,\n    22\n  ],\n  [\n    1,\n    41,\n    -22\n  ],\n  [\n    -1,\n    41,\n    -22\n  ],\n  [\n    1,\n    -41,\n    -22\n  ],\n  [\n    -1,\n    -41,\n    -22\n  ],\n  [\n    -11,\n    -17,\n    -46\n  ],\n  [\n    40,\n    -11,\n    -28\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)) ∧ (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)) ∧ (x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)) ∧ (x(3, 1, 1) ∨ ¬x(0, 5, 0) ∨ ¬x(2, 1, 1)) ∧ (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)) ∧ (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)) ∧ (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)) ∧ (x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)) ∧ (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)) ∧ (¬x(0, 5, 0) ∨ ¬x(1, 2, 0) ∨ ¬x(3, 4, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,5,6,7,8,9]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [1, 41, 22] -> (x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)); matching condition number(s): [8]\n- raw clause index 1: [-1, 41, 22] -> (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)); matching condition number(s): [7]\n- raw clause index 2: [1, -41, 22] -> (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)); matching condition number(s): [9]\n- raw clause index 3: [-1, -41, 22] -> (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)); matching condition number(s): [2]\n- raw clause index 4: [1, 41, -22] -> (x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)); matching condition number(s): [3]\n- raw clause index 5: [-1, 41, -22] -> (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)); matching condition number(s): [6]\n- raw clause index 6: [1, -41, -22] -> (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)); matching condition number(s): [5]\n- raw clause index 7: [-1, -41, -22] -> (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)); matching condition number(s): [1]\n</unsat_core_clauses>\n\n<unsat_reason>\nFull block: all 8 possible combinations forbidden for variables [1, 41, 22]: (x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)), (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)), (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)), (x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)), (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)), (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      4,
+      6,
+      2
+    ],
+    "num_vars": 48,
+    "num_clauses": 10,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          1,
+          41,
+          22
+        ],
+        "clause_structural": "(x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -1,
+          41,
+          22
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          1,
+          -41,
+          22
+        ],
+        "clause_structural": "(x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -1,
+          -41,
+          22
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          1,
+          41,
+          -22
+        ],
+        "clause_structural": "(x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -1,
+          41,
+          -22
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          1,
+          -41,
+          -22
+        ],
+        "clause_structural": "(x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -1,
+          -41,
+          -22
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1))",
+        "condition_numbers": [
+          1
+        ]
+      }
+    ],
+    "unsat_reason": "Full block: all 8 possible combinations forbidden for variables [1, 41, 22]: (x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ x(1, 4, 1)), (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)), (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ x(1, 4, 1)), (x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 0) ∨ ¬x(1, 4, 1)), (x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1)), (¬x(0, 0, 0) ∨ ¬x(3, 2, 0) ∨ ¬x(1, 4, 1))"
+  }
+}

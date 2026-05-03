@@ -1,0 +1,141 @@
+{
+  "index": 45,
+  "row_index_in_prompt_file": 45,
+  "prompt_id": "satbench_00045",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Teacher's Solution\n\n**Step 1: Analyze the Logical Conditions**\nWe have 7 conditions involving binary variables $x(0, j, k)$ and $x(2, j, k)$, representing Mike (astronaut 0), Sarah (astronaut 1), and Jane (astronaut 2).\nLet us denote the boolean values as $M_1, S_1, J_1$ for Mike's role 1/environment 1, etc., but to strictly follow the provided CNF structure, we map the atomic propositions to the specific variables listed in the `readable_cnf`:\n- $x(0, 1, 1)$: Mike competent in role 1 on planetary surface (Env 1).\n- $x(0, 0, 0)$: Mike competent in role 0 on spaceship (Env 0).\n- $x(2, 1, 0)$: Jane competent in role 1 on spaceship (Env 1).\n- $x(2, 0, 0)$: Jane competent in role 0 on spaceship (Env 0).\n\nThe readable CNF contains the following 6 active clauses derived from the input conditions (Condition 5 was simplified or grouped in the provided CNF representation, but let's verify consistency):\n1. $(x(2, 1, 0) \\lor \\neg x(2, 0, 0))$ — This matches Condition 1: \"Jane is competent in role 1 on the spaceship OR Jane is not competent in role 0\".\n2. $(\\neg x(2, 1, 0) \\lor x(2, 0, 0))$ — This matches Condition 2: \"Jane is NOT competent in role 1... OR Jane IS competent in role 0\".\n3. $(x(0, 1, 1) \\lor \\neg x(2, 1, 0))$ — This matches Condition 3: \"Mike is competent in role 1... OR Jane is NOT competent in role 1\".\n4. $(\\neg x(0, 1, 1) \\lor x(2, 1, 0))$ — This matches Condition 4: \"Mike is NOT competent in role 1... OR Jane IS competent in role 1\".\n5. $(x(0, 0, 0) \\lor \\neg x(0, 1, 1) \\lor \\neg x(2, 1, 0))$ — This combines conditions about Mike Role 0/Space, Mike Role 1/PPlanetary, and Jane Role 1/Space.\n6. $(x(0, 1, 1) \\lor x(2, 0, 0))$ — This matches Condition 6.\n7. $(\\neg x(0, 1, 1) \\lor \\neg x(2, 0, 0))$ — This matches Condition 7.\n\n**Step 2: Identify the Contradiction**\nThe Z3 certificate explicitly identifies an \"XOR chain\" or \"XNOR chain\" contradiction involving the set of clauses $\\{0, 1, 2, 3, 4, 5\\}$. Specifically, the unsat core maps condition numbers $\\{1, 2, 3, 4, 6, 7\\}$ to specific clauses.\n\nLet's trace the logical flow of these first four clauses (which form the core XOR loop):\n- From Clause 1 ($C_1$) and Clause 2 ($C_2$):\n  $C_1 = A \\lor B$\n  $C_2 = \\neg A \\lor B$\n  This forces $B$ to be true (Jane must be competent in role 0 on the spaceship).\n  *Note: In standard SAT logic, if $A \\lor B$ and $\\neg A \\lor B$ are both present, it implies $B$ is true regardless of $A$.*\n\n- However, looking deeper at the provided Z3 mapping and the specific structure of the puzzle often found in these benchmarks:\n  Let's re-examine the interaction between the \"Jane Competence\" variables and the \"Mike Competence\" variables.\n  \n  Clauses involving Jane's competence (Vars: $x(2,1,0)$ and $x(2,0,0)$):\n  1. $J_{space1} \\lor \\neg J_{space0}$\n  2. $\\neg J_{space1} \\lor J_{space0}$\n  These two together force **$J_{space0}$ is TRUE** (Jane IS competent in role 0 on the spaceship).\n\n  Now look at Mike's variables involved in the conflict.\n  Clauses involving Mike's competence ($x(0,1,1)$ and $x(2,1,0)$):\n  3. $M_{planetary1} \\lor \\neg J_{space1}$\n  4. $\\neg M_{planetary1} \\lor J_{space1}$\n  These two also force **$J_{space1}$ is TRUE** (Jane IS competent in role 1 on the spaceship).\n\n  **Wait, let's look closer at the specific contradiction reported in the Z3 output.**\n  The Z3 output lists conditions [1, 2, 3, 4, 6, 7] as the unsat core.\n  Let's test the truth assignments implied by these specific clauses.\n  \n  Actually, there is a simpler interpretation often used in these specific \"XOR chain\" puzzles:\n  Consider the implication:\n  - Condition 1 & 2 imply $J_{space0} = 1$.\n  - Condition 3 & 4 imply $J_{space1} = 1$.\n  - Condition 6: $M_{planetary1} \\lor J_{space0}$\n  - Condition 7: $\\neg M_{planetary1} \\lor \\neg J_{space0}$\n  - Condition 5: $M_{planetary0} \\lor \\neg M_{planetary1} \\lor \\neg J_{space1}$\n\n  Let's try to satisfy the system directly using the variables defined in the CNF:\n  $x(2, 1, 0)$ (Jane Space 1)\n  $x(2, 0, 0)$ (Jane Space 0)\n  $x(0, 1, 1)$ (Mike Planetary 1)\n  $x(0, 0, 0)$ (Mike Space 0)\n  \n  **Hypothesis:** Is it possible for Jane to be competent in BOTH roles?\n  - Condition 1: $J_{space1} \\lor \\neg J_{space0}$. If $J_{space1}=1$, satisfied. If $J_{space0}=1$, then $J_{space1}$ must be 0.\n  - Condition 2: $\\neg J_{space1} \\lor J_{space0}$.\n  \n  If we assign $J_{space1} = 1$ and $J_{space0} = 1$:\n  - Cond 1: $1 \\lor 0 = 1$ (OK)\n  - Cond 2: $0 \\lor 1 = 1$ (OK)\n  \n  Now check Mike.\n  - Condition 3: $M_{planetary1} \\lor \\neg J_{space1}$. If $J_{space1}=1$, $\\neg J_{space1}=0$, so $M_{planetary1}$ MUST be 1.\n  - Condition 4: $\\neg M_{planetary1} \\lor J_{space1}$. If $J_{space1}=1$, satisfied regardless of $M_{planetary1}$.\n  So far: $J_{space1}=1, J_{space0}=1, M_{planetary1}=1$.\n  \n  Check Condition 6: $M_{planetary1} \\lor J_{space0}$.\n  Values: $1 \\lor 1 = 1$. OK.\n  \n  Check Condition 7: $\\neg M_{planetary1} \\lor \\neg J_{space0}$.\n  Values: $\\neg 1 \\lor \\neg 1 = 0 \\lor 0 = 0$. **FAIL**.\n  \n  So, the assignment $J_{space1}=1, J_{space0}=1$ makes Condition 7 false.\n  \n  Does the CNF allow $J_{space1}=0$?\n  If $J_{space1} = 0$:\n  - Cond 1: $0 \\lor \\neg J_{space0} \\implies \\neg J_{space0} = 1 \\implies J_{space0} = 0$.\n  - Cond 2: $1 \\lor 0 = 1$. OK.\n  So we must have $J_{space1}=0$ AND $J_{space0}=0$.\n  \n  Now check Mike again with $J_{space1}=0, J_{space0}=0$:\n  - Cond 3: $M_{planetary1} \\lor \\neg 0 = M_{planetary1} \\lor 1$. Always true.\n  - Cond 4: $\\neg M_{planetary1} \\lor 0 \\implies \\neg M_{planetary1} = 1 \\implies M_{planetary1} = 0$.\n  So we must have $M_{planetary1} = 0$.\n  \n  Now check Condition 6: $M_{planetary1} \\lor J_{space0}$.\n  Values: $0 \\lor 0 = 0$. **FAIL**.\n  \n  Therefore, there is no assignment that satisfies all 7 clauses. The system is indeed UNSAT.\n\n**Step 3: Construct the Assignment**\nSince the system is unsatisfiable, we cannot provide a valid assignment of truth values to the variables $x(\\dots)$. We must report the contradiction.\nThe Z3 certificate confirms this via the unsat core. The contradiction arises because the conditions force mutually exclusive requirements on the boolean state of the variables that satisfy all clauses simultaneously.\n\nSpecifically, the conditions effectively enforce:\n1. Jane must be competent in Role 0 ($x(2, 0, 0)$) OR incompetent in Role 1 ($x(2, 1, 0)$) — wait, let's re-evaluate the \"XOR\" nature.\n   - Cond 1: $x(2,1,0) \\lor \\neg x(2,0,0)$\n   - Cond 2: $\\neg x(2,1,0) \\lor x(2,0,0)$\n   These imply that it is impossible for $(x(2,1,0)=0 \\land x(2,0,0)=0)$? No.\n   If $x(2,1,0)=0$, then $x(2,0,0)$ must be 1 (from Cond 2).\n   If $x(2,1,0)=1$, then $x(2,0,0)$ can be anything (Cond 1 satisfied).\n   \n   Let's re-read the unsat core logic carefully.\n   The unsat core indices are 1, 2, 3, 4, 6, 7.\n   The clauses are:\n   1. $x(2,1,0) \\lor \\neg x(2,0,0)$\n   2. $\\neg x(2,1,0) \\lor x(2,0,0)$\n   3. $x(0,1,1) \\lor \\neg x(2,1,0)$\n   4. $\\neg x(0,1,1) \\lor x(2,1,0)$\n   6. $x(0,1,1) \\lor x(2,0,0)$\n   7. $\\neg x(0,1,1) \\lor \\neg x(2,0,0)$\n   \n   Let's try to find a model where ALL these are True.\n   From (1) and (2): $(x(2,1,0) \\lor \\neg A) \\land (\\neg A \\lor A)$? No.\n   Let $P = x(2,1,0)$, $Q = x(2,0,0)$.\n   (1) $P \\lor \\neg Q$\n   (2) $\\neg P \\lor Q$\n   This pair implies that we cannot have ($P=0$ and $Q=0$)?\n   If $P=0, Q=0$: $0 \\lor 1 = 1$ (True), $1 \\lor 0 = 1$ (True).\n   Wait, the XOR/XNOR pattern usually implies $P \\oplus Q$.\n   Let's re-evaluate:\n   If $P=0, Q=0$: (1) True, (2) True.\n   If $P=1, Q=0$: (1) True, (2) False.\n   If $P=0, Q=1$: (1) True, (2) True.\n   If $P=1, Q=1$: (1) False, (2) False.\n   So the combination ($P=0, Q=1$) or ($P=1, Q=0$) is allowed?\n   No, if $P=0, Q=0$, both are satisfied.\n   Actually, (1) and (2) are satisfied if $P \\neq Q$?\n   If $P=1, Q=0$: (1) T, (2) F. Fail.\n   If $P=0, Q=1$: (1) T, (2) T. Pass.\n   If $P=1, Q=1$: (1) F. Fail.\n   If $P=0, Q=0$: (1) T, (2) T. Pass.\n   So the constraint is: **Either ($P=1, Q=0$) OR ($P=0, Q=0$)**.\n   Essentially, $Q$ must be $\\le P$ (if we interpret 1 as True). Or simply, you cannot have ($P=1$ AND $Q=1$). And you cannot have ($P=0$ AND $Q=1$)?\n   Wait, if $P=0, Q=1$: Cond 1 is $\\neg Q = 0$ (False). So ($P=0, Q=1$) is INVALID.\n   Let's re-calculate:\n   Cond 1: $P \\lor \\neg Q$.\n     - If $P=1$: T.\n     - If $P=0$: Need $\\neg Q = 1 \\implies Q=0$.\n   Cond 2: $\\neg P \\lor Q$.\n     - If $P=0$: T.\n     - If $P=1$: Need $Q=1$.\n   \n   Case $P=1$: Cond 1 OK, Cond 2 requires $Q=1$. Result: $(1,1)$\n   Case $P=0$: Cond 1 requires $Q=0$. Cond 2 OK. Result: $(0,0)$\n   \n   So the constraints from 1 & 2 on variables $P, Q$ allow ONLY $(1,1)$ or $(0,0)$.\n   Meaning: **$P$ and $Q$ must have the same value**. ($x(2,1,0) \\iff x(2,0,0)$).\n   Wait, checking my previous deduction:\n   If $P=0, Q=0$: $0 \\lor 1 = 1$, $1 \\lor 0 = 1$. OK.\n   If $P=1, Q=1$: $1 \\lor 0 = 1$, $0 \\lor 1 = 1$. OK.\n   If $P=0, Q=1$: $0 \\lor 0 = 0$. Bad.\n   If $P=1, Q=0$: $1 \\lor 1 = 1$, $0 \\lor 0 = 0$. Bad.\n   \n   Okay, so Cond 1 and 2 imply **$x(2,1,0) = x(2,0,0)$**.\n\n   Now look at Clauses 3 & 4:\n   3: $x(0,1,1) \\lor \\neg x(2,1,0)$\n   4: $\\neg x(0,1,1) \\lor x(2,1,0)$\n   Let $R = x(0,1,1)$.\n   3: $R \\lor \\neg P$\n   4: $\\neg R \\lor P$\n   This is structurally identical to 1 & 2.\n   It implies **$R = P$** (i.e., $x(0,1,1) = x(2,1,0)$).\n   \n   Now look at Clause 6:\n   6: $x(0,1,1) \\lor x(2,0,0)$\n   Substitute $R=P$: $P \\lor P \\implies P$.\n   So Clause 6 is equivalent to $x(2,1,0)$.\n   For this to be True, we need $x(2,1,0) = 1$.\n   \n   Now look at Clause 7:\n   7: $\\neg x(0,1,1) \\lor \\neg x(2,0,0)$\n   Substitute $R=P$: $\\neg P \\lor \\neg P \\implies \\neg P$.\n   So Clause 7 is equivalent to $\\neg x(2,1,0)$.\n   For this to be True, we need $\\neg x(2,1,0) = 1 \\implies x(2,1,0) = 0$.\n   \n   **Contradiction**:\n   From (6), we need $x(2,1,0) = 1$.\n   From (7), we need $x(2,1,0) = 0$.\n   Therefore, the system is **UNSAT**.\n\n**Final Answer Formulation:**\nThe problem asks \"Can all these competence assessments be satisfied simultaneously?\".\nBased on the analysis of the CNF constraints:\n1. Conditions 1 & 2 constrain Jane's roles to be equal ($x(2,1,0) = x(2,0,0)$).\n2. Conditions 3 & 4 constrain Mike's role relative to Jane's role similarly, forcing equality.\n3. Conditions 6 and 7 impose opposite requirements on the same variable ($x(2,1,0)$ must be 1 AND 0 simultaneously).\nThis logical contradiction proves the formula is unsatisfiable.\n\nAnswer:\nUNSAT\n\nReasoning:\nThe conditions impose logical constraints that create a direct contradiction. Specifically, conditions 1 and 2 require that Jane's competence status in role 1 and role 0 are identical (she must either be competent in both or neither). Similarly, conditions 3 and 4 impose constraints on Mike's competence that align with this relationship. However, conditions 6 and 7 impose mutually exclusive requirements on the same variable (specifically requiring Jane to be competent in role 1 while simultaneously requiring her to NOT be competent in role 1, based on the simplification of the clauses). Since no single assignment of truth values can satisfy the conjunction of all these clauses, the system is unsatisfiable.\n\nLabel:\nUNSAT",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1774,
+    "generated_tokens": 4327,
+    "batch_elapsed_seconds": 113.26344203948975,
+    "tokens_per_second_for_batch": 38.20297107420922,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777774386.0884726,
+  "slurm_job_id": "3179677",
+  "slurm_array_job_id": "3179672",
+  "slurm_array_task_id": "4",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a space exploration program, three astronauts—Mike, Sarah, and Jane—are assigned different roles in a mission. For each role, they need to demonstrate competence in one of two environments: on the spaceship (0) or on a planetary surface (1). Each competence check is an independent decision.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i is competent in role j in environment k. Here, astronaut 0 is Mike, astronaut 1 is Sarah, and astronaut 2 is Jane.\n</variable_mapping>\n\n<conditions>\n1. Either Jane is competent in role 1 on the spaceship, or Jane is not competent in role 0 on the spaceship.\n2. Either Jane is not competent in role 1 on the spaceship, or Jane is competent in role 0 on the spaceship.\n3. Either Mike is competent in role 1 on the planetary surface, or Jane is not competent in role 1 on the spaceship.\n4. Either Mike is not competent in role 1 on the planetary surface, or Jane is competent in role 1 on the spaceship.\n5. Either Mike is competent in role 0 on the spaceship, or Mike is not competent in role 1 on the planetary surface, or Jane is not competent in role 1 on the spaceship.\n6. Either Mike is competent in role 1 on the planetary surface, or Jane is competent in role 0 on the spaceship.\n7. Either Mike is not competent in role 1 on the planetary surface, or Jane is not competent in role 0 on the spaceship.\n</conditions>\n\n<question>\nCan all these competence assessments be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    4,\n    -15\n  ],\n  [\n    -4,\n    15\n  ],\n  [\n    15,\n    -13\n  ],\n  [\n    -15,\n    13\n  ],\n  [\n    4,\n    13\n  ],\n  [\n    -4,\n    -13\n  ],\n  [\n    1,\n    -4,\n    -15\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(2, 1, 0) ∨ ¬x(2, 0, 0)) ∧ (¬x(2, 1, 0) ∨ x(2, 0, 0)) ∧ (x(0, 1, 1) ∨ ¬x(2, 1, 0)) ∧ (¬x(0, 1, 1) ∨ x(2, 1, 0)) ∧ (x(0, 0, 0) ∨ ¬x(0, 1, 1) ∨ ¬x(2, 1, 0)) ∧ (x(0, 1, 1) ∨ x(2, 0, 0)) ∧ (¬x(0, 1, 1) ∨ ¬x(2, 0, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [4, -15] -> (x(0, 1, 1) ∨ ¬x(2, 1, 0)); matching condition number(s): [3]\n- raw clause index 1: [-4, 15] -> (¬x(0, 1, 1) ∨ x(2, 1, 0)); matching condition number(s): [4]\n- raw clause index 2: [15, -13] -> (x(2, 1, 0) ∨ ¬x(2, 0, 0)); matching condition number(s): [1]\n- raw clause index 3: [-15, 13] -> (¬x(2, 1, 0) ∨ x(2, 0, 0)); matching condition number(s): [2]\n- raw clause index 4: [4, 13] -> (x(0, 1, 1) ∨ x(2, 0, 0)); matching condition number(s): [6]\n- raw clause index 5: [-4, -13] -> (¬x(0, 1, 1) ∨ ¬x(2, 0, 0)); matching condition number(s): [7]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [4, 15, 13]: (x(0, 1, 1) ∨ ¬x(2, 1, 0)), (¬x(0, 1, 1) ∨ x(2, 1, 0)), (x(2, 1, 0) ∨ ¬x(2, 0, 0)), (¬x(2, 1, 0) ∨ x(2, 0, 0)), (x(0, 1, 1) ∨ x(2, 0, 0)), (¬x(0, 1, 1) ∨ ¬x(2, 0, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a space exploration program, three astronauts—Mike, Sarah, and Jane—are assigned different roles in a mission. For each role, they need to demonstrate competence in one of two environments: on the spaceship (0) or on a planetary surface (1). Each competence check is an independent decision.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i is competent in role j in environment k. Here, astronaut 0 is Mike, astronaut 1 is Sarah, and astronaut 2 is Jane.\n</variable_mapping>\n\n<conditions>\n1. Either Jane is competent in role 1 on the spaceship, or Jane is not competent in role 0 on the spaceship.\n2. Either Jane is not competent in role 1 on the spaceship, or Jane is competent in role 0 on the spaceship.\n3. Either Mike is competent in role 1 on the planetary surface, or Jane is not competent in role 1 on the spaceship.\n4. Either Mike is not competent in role 1 on the planetary surface, or Jane is competent in role 1 on the spaceship.\n5. Either Mike is competent in role 0 on the spaceship, or Mike is not competent in role 1 on the planetary surface, or Jane is not competent in role 1 on the spaceship.\n6. Either Mike is competent in role 1 on the planetary surface, or Jane is competent in role 0 on the spaceship.\n7. Either Mike is not competent in role 1 on the planetary surface, or Jane is not competent in role 0 on the spaceship.\n</conditions>\n\n<question>\nCan all these competence assessments be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    4,\n    -15\n  ],\n  [\n    -4,\n    15\n  ],\n  [\n    15,\n    -13\n  ],\n  [\n    -15,\n    13\n  ],\n  [\n    4,\n    13\n  ],\n  [\n    -4,\n    -13\n  ],\n  [\n    1,\n    -4,\n    -15\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(2, 1, 0) ∨ ¬x(2, 0, 0)) ∧ (¬x(2, 1, 0) ∨ x(2, 0, 0)) ∧ (x(0, 1, 1) ∨ ¬x(2, 1, 0)) ∧ (¬x(0, 1, 1) ∨ x(2, 1, 0)) ∧ (x(0, 0, 0) ∨ ¬x(0, 1, 1) ∨ ¬x(2, 1, 0)) ∧ (x(0, 1, 1) ∨ x(2, 0, 0)) ∧ (¬x(0, 1, 1) ∨ ¬x(2, 0, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [4, -15] -> (x(0, 1, 1) ∨ ¬x(2, 1, 0)); matching condition number(s): [3]\n- raw clause index 1: [-4, 15] -> (¬x(0, 1, 1) ∨ x(2, 1, 0)); matching condition number(s): [4]\n- raw clause index 2: [15, -13] -> (x(2, 1, 0) ∨ ¬x(2, 0, 0)); matching condition number(s): [1]\n- raw clause index 3: [-15, 13] -> (¬x(2, 1, 0) ∨ x(2, 0, 0)); matching condition number(s): [2]\n- raw clause index 4: [4, 13] -> (x(0, 1, 1) ∨ x(2, 0, 0)); matching condition number(s): [6]\n- raw clause index 5: [-4, -13] -> (¬x(0, 1, 1) ∨ ¬x(2, 0, 0)); matching condition number(s): [7]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [4, 15, 13]: (x(0, 1, 1) ∨ ¬x(2, 1, 0)), (¬x(0, 1, 1) ∨ x(2, 1, 0)), (x(2, 1, 0) ∨ ¬x(2, 0, 0)), (¬x(2, 1, 0) ∨ x(2, 0, 0)), (x(0, 1, 1) ∨ x(2, 0, 0)), (¬x(0, 1, 1) ∨ ¬x(2, 0, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      3,
+      2
+    ],
+    "num_vars": 18,
+    "num_clauses": 7,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          4,
+          -15
+        ],
+        "clause_structural": "(x(0, 1, 1) ∨ ¬x(2, 1, 0))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -4,
+          15
+        ],
+        "clause_structural": "(¬x(0, 1, 1) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          15,
+          -13
+        ],
+        "clause_structural": "(x(2, 1, 0) ∨ ¬x(2, 0, 0))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -15,
+          13
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ x(2, 0, 0))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          4,
+          13
+        ],
+        "clause_structural": "(x(0, 1, 1) ∨ x(2, 0, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -4,
+          -13
+        ],
+        "clause_structural": "(¬x(0, 1, 1) ∨ ¬x(2, 0, 0))",
+        "condition_numbers": [
+          7
+        ]
+      }
+    ],
+    "unsat_reason": "XOR Chain contradiction over variables [4, 15, 13]: (x(0, 1, 1) ∨ ¬x(2, 1, 0)), (¬x(0, 1, 1) ∨ x(2, 1, 0)), (x(2, 1, 0) ∨ ¬x(2, 0, 0)), (¬x(2, 1, 0) ∨ x(2, 0, 0)), (x(0, 1, 1) ∨ x(2, 0, 0)), (¬x(0, 1, 1) ∨ ¬x(2, 0, 0))"
+  }
+}

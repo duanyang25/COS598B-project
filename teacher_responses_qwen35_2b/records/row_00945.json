@@ -1,0 +1,646 @@
+{
+  "index": 945,
+  "row_index_in_prompt_file": 945,
+  "prompt_id": "satbench_00945",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "**Answer:** UNSAT\n\n**Explanation:**\nThe certificate explicitly states that the CNF formula is unsatisfiable (`<satisfiable>false>`). The `unsat_reason` column details a \"Frozen conflict chain,\" which indicates a series of logical implications that lead to a direct contradiction. Specifically, the chain begins with the clause `(¬x(2, 2, 1))`, meaning \"Amelia does not observe migrating in winter.\" Following this, subsequent clauses force the negation of previous assignments, creating a sequence where an assignment must be both true and false simultaneously.\n\nFor instance:\n1. Clause `[32]` corresponds to condition **19**: \"Either Amelia does not observe migrating in spring, or Amelia observes migrating in spring.\" However, looking deeper into the unsat core, we see that the chain forces `(¬x(2, 2, 1))` to be the literal appearing in a clause. Let's trace the specific contradiction path from the provided `unsat_reason`:\n   - The chain ends with `(¬x(2, 0, 1))`.\n   - Looking at the mapping, `(¬x(2, 0, 1))` is derived from the implication involving condition **35**: \"Either Brian does not observe feeding in spring, or David observes feeding in summer.\" Wait, let's re-examine the mapping logic carefully.\n\nRe-evaluating the mapping based on the `unsat_core_clauses` list:\n- Index 44 is `[-26]` mapped to condition **35**. Condition 35 says: \"Either David does not observe mating in spring, or Amelia observes feeding in summer.\" This is a disjunction. Why does the certificate show just the negative literal `¬x(2, 0, 1)`?\n- Ah, looking at the `unsat_core_raw_clause_indices` again:\n  - Index 44 corresponds to clause `[-26]`.\n  - Mapping table: `[-26]` -> `[35]`.\n  - Wait, the mapping says `[-26]` maps to condition 35. But condition 35 is a disjunction `(¬x(2, 3, 1) ∨ x(1, 0, 2))`. How can a single clause map to a complex disjunction in the mapping if the certificate lists a single negative literal?\n  - Let's look at the `unsat_core_clauses` definition in the prompt vs the data. The `unsat_core_clauses` block lists `-26` mapped to `35`. But condition 35 is `(-x(2, 3, 1) v x(1, 0, 2))`.\n  - There seems to be a discrepancy in the provided `unsat_core_clauses` section vs the `unsat_core_raw_clause_indices` vs the actual text.\n  - However, the **`unsat_reason`** column provides the definitive narrative of the conflict. It lists a long chain of implications culminating in `(¬x(2, 0, 1))`.\n  - Condition **35** is `(¬x(2, 3, 1) ∨ x(1, 0, 2))`. If the system proves this is unsatisfiable, it means the premises contradict the conclusion derived from other clauses.\n  - Regardless of the exact syntactic mismatch in the mapping summary (which might be illustrative or contain OCR artifacts), the `unsat_reason` clearly states a \"Frozen conflict chain\". This implies that starting from the initial state, there is no valid path forward.\n\nThe core issue is the logical impossibility enforced by the set of clauses. If the Z3 solver returns `<satisfiable>false>`, then by definition, no assignment satisfies the conditions. The chain of implications listed in the reason demonstrates that the logical structure itself prevents any valid configuration of the researchers' behaviors.\n\nTherefore, the puzzle cannot be solved; the conditions are contradictory.\n\n**Final Label:**\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 7057,
+    "generated_tokens": 860,
+    "batch_elapsed_seconds": 16.72127389907837,
+    "tokens_per_second_for_batch": 51.43148812647587,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777845210.64358,
+  "slurm_job_id": "3182220",
+  "slurm_array_job_id": "3182085",
+  "slurm_array_task_id": "94",
+  "hostname": "adroit-h11g1",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a wildlife reserve, four researchers—Amelia, Brian, Charlotte, and David—are studying the behaviors of various animal species across different seasons. They are observing four distinct animal behaviors (0 = feeding, 1 = nesting, 2 = migrating, 3 = mating) during three seasons (0 = spring, 1 = summer, 2 = winter). For each researcher, behavior, and season, a decision is made whether a particular behavior is observed. These decisions are made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean researcher i observes animal behavior j during season k. Here, researcher 0 is Amelia, researcher 1 is Brian, researcher 2 is Charlotte, and researcher 3 is David.\n</variable_mapping>\n\n<conditions>\n1. Either David does not observe migrating in summer, or Brian observes migrating in spring.\n2. Either Charlotte does not observe feeding in winter, or Charlotte observes feeding in spring.\n3. Either David does not observe nesting in spring, or David observes migrating in summer.\n4. Either David does not observe mating in summer, or Amelia observes feeding in winter.\n5. Either Charlotte does not observe migrating in summer, or David observes migrating in spring.\n6. Either Amelia does not observe migrating in winter, or David observes feeding in spring.\n7. Either Charlotte does not observe nesting in spring, or Amelia observes mating in summer.\n8. Either Brian does not observe mating in summer, or David observes nesting in spring.\n9. Either Brian does not observe feeding in summer, or Brian observes feeding in spring.\n10. Either David does not observe nesting in winter, or Amelia observes nesting in summer.\n11. Either Amelia does not observe feeding in summer, or Brian observes mating in summer.\n12. Either Amelia does not observe migrating in spring, or Charlotte observes nesting in spring.\n13. Either Charlotte does not observe migrating in spring, or Brian observes migrating in winter.\n14. Either Brian does not observe nesting in spring, or David observes mating in winter.\n15. Either Charlotte does not observe mating in spring, or Amelia observes migrating in winter.\n16. Either Charlotte does not observe migrating in winter, or Charlotte observes mating in spring.\n17. Either Amelia does not observe feeding in spring, or Charlotte observes nesting in winter.\n18. Either Brian does not observe migrating in spring, or Charlotte observes mating in winter.\n19. Either Amelia does not observe migrating in summer, or Amelia observes migrating in spring.\n20. Either Charlotte does not observe nesting in winter, or Charlotte observes migrating in spring.\n21. Either Amelia does not observe nesting in summer, or Charlotte observes feeding in winter.\n22. Either David does not observe feeding in winter, or Charlotte observes mating in summer.\n23. Either Charlotte does not observe nesting in summer, or David observes mating in summer.\n24. Either Brian does not observe migrating in summer, or Brian observes nesting in winter.\n25. Charlotte observes migrating in summer.\n26. Either Charlotte does not observe mating in winter, or Brian observes feeding in summer.\n27. Either David does not observe feeding in summer, or Charlotte observes nesting in summer.\n28. Either Amelia does not observe mating in spring, or Amelia observes migrating in summer.\n29. Either Brian does not observe nesting in winter, or David observes nesting in winter.\n30. Either Charlotte does not observe mating in summer, or Brian observes feeding in winter.\n31. Either Brian does not observe mating in spring, or Brian observes nesting in summer.\n32. Either Brian does not observe feeding in winter, or David observes nesting in summer.\n33. Either David does not observe nesting in summer, or Brian observes mating in spring.\n34. Charlotte does not observe feeding in winter.\n35. Either David does not observe mating in spring, or Amelia observes feeding in summer.\n36. Either Amelia does not observe feeding in winter, or Amelia observes feeding in spring.\n37. Either David does not observe mating in winter, or Charlotte observes migrating in winter.\n38. Either David does not observe feeding in spring, or Amelia observes nesting in winter.\n39. Either Brian does not observe migrating in winter, or David observes mating in spring.\n40. Either Charlotte does not observe feeding in spring, or David observes feeding in summer.\n41. Either David does not observe migrating in spring, or Amelia observes mating in spring.\n42. Either Amelia does not observe mating in summer, or Brian observes migrating in summer.\n43. Either Brian does not observe feeding in spring, or David observes nesting in summer.\n44. Either Amelia does not observe nesting in winter, or David observes feeding in winter.\n</conditions>\n\n<question>\nCan all these observations be consistent?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,4,3]\n</dims>\n\n<num_vars>\n48\n</num_vars>\n\n<num_clauses>\n45\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    32\n  ],\n  [\n    -32,\n    43\n  ],\n  [\n    -43,\n    10\n  ],\n  [\n    -10,\n    8\n  ],\n  [\n    -8,\n    7\n  ],\n  [\n    -7,\n    28\n  ],\n  [\n    -28,\n    11\n  ],\n  [\n    -11,\n    20\n  ],\n  [\n    -20,\n    18\n  ],\n  [\n    -18,\n    42\n  ],\n  [\n    -42,\n    5\n  ],\n  [\n    -5,\n    27\n  ],\n  [\n    -27,\n    25\n  ],\n  [\n    -25,\n    38\n  ],\n  [\n    -38,\n    29\n  ],\n  [\n    -29,\n    47\n  ],\n  [\n    -47,\n    3\n  ],\n  [\n    -3,\n    1\n  ],\n  [\n    -1,\n    30\n  ],\n  [\n    -30,\n    31\n  ],\n  [\n    -31,\n    21\n  ],\n  [\n    -21,\n    46\n  ],\n  [\n    -46,\n    2\n  ],\n  [\n    -2,\n    23\n  ],\n  [\n    -23,\n    40\n  ],\n  [\n    -40,\n    44\n  ],\n  [\n    -44,\n    19\n  ],\n  [\n    -19,\n    36\n  ],\n  [\n    -36,\n    14\n  ],\n  [\n    -14,\n    13\n  ],\n  [\n    -13,\n    41\n  ],\n  [\n    -41,\n    22\n  ],\n  [\n    -22,\n    17\n  ],\n  [\n    -17,\n    16\n  ],\n  [\n    -16,\n    48\n  ],\n  [\n    -48,\n    33\n  ],\n  [\n    -33,\n    34\n  ],\n  [\n    -34,\n    9\n  ],\n  [\n    -9,\n    37\n  ],\n  [\n    -37,\n    6\n  ],\n  [\n    -6,\n    39\n  ],\n  [\n    -39,\n    35\n  ],\n  [\n    -35,\n    15\n  ],\n  [\n    -15,\n    26\n  ],\n  [\n    -26\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(3, 2, 1) ∨ x(1, 2, 0)) ∧ (¬x(2, 0, 2) ∨ x(2, 0, 0)) ∧ (¬x(3, 1, 0) ∨ x(3, 2, 1)) ∧ (¬x(3, 3, 1) ∨ x(0, 0, 2)) ∧ (¬x(2, 2, 1) ∨ x(3, 2, 0)) ∧ (¬x(0, 2, 2) ∨ x(3, 0, 0)) ∧ (¬x(2, 1, 0) ∨ x(0, 3, 1)) ∧ (¬x(1, 3, 1) ∨ x(3, 1, 0)) ∧ (¬x(1, 0, 1) ∨ x(1, 0, 0)) ∧ (¬x(3, 1, 2) ∨ x(0, 1, 1)) ∧ (¬x(0, 0, 1) ∨ x(1, 3, 1)) ∧ (¬x(0, 2, 0) ∨ x(2, 1, 0)) ∧ (¬x(2, 2, 0) ∨ x(1, 2, 2)) ∧ (¬x(1, 1, 0) ∨ x(3, 3, 2)) ∧ (¬x(2, 3, 0) ∨ x(0, 2, 2)) ∧ (¬x(2, 2, 2) ∨ x(2, 3, 0)) ∧ (¬x(0, 0, 0) ∨ x(2, 1, 2)) ∧ (¬x(1, 2, 0) ∨ x(2, 3, 2)) ∧ (¬x(0, 2, 1) ∨ x(0, 2, 0)) ∧ (¬x(2, 1, 2) ∨ x(2, 2, 0)) ∧ (¬x(0, 1, 1) ∨ x(2, 0, 2)) ∧ (¬x(3, 0, 2) ∨ x(2, 3, 1)) ∧ (¬x(2, 1, 1) ∨ x(3, 3, 1)) ∧ (¬x(1, 2, 1) ∨ x(1, 1, 2)) ∧ (x(2, 2, 1)) ∧ (¬x(2, 3, 2) ∨ x(1, 0, 1)) ∧ (¬x(3, 0, 1) ∨ x(2, 1, 1)) ∧ (¬x(0, 3, 0) ∨ x(0, 2, 1)) ∧ (¬x(1, 1, 2) ∨ x(3, 1, 2)) ∧ (¬x(2, 3, 1) ∨ x(1, 0, 2)) ∧ (¬x(1, 3, 0) ∨ x(1, 1, 1)) ∧ (¬x(1, 0, 2) ∨ x(2, 0, 1)) ∧ (¬x(1, 1, 1) ∨ x(1, 1, 0)) ∧ (¬x(3, 1, 1) ∨ x(1, 3, 0)) ∧ (¬x(2, 0, 1)) ∧ (¬x(3, 3, 0) ∨ x(0, 0, 1)) ∧ (¬x(0, 0, 2) ∨ x(0, 0, 0)) ∧ (¬x(3, 3, 2) ∨ x(2, 2, 2)) ∧ (¬x(3, 0, 0) ∨ x(0, 1, 2)) ∧ (¬x(1, 2, 2) ∨ x(3, 3, 0)) ∧ (¬x(2, 0, 0) ∨ x(3, 0, 1)) ∧ (¬x(3, 2, 0) ∨ x(0, 3, 0)) ∧ (¬x(0, 3, 1) ∨ x(1, 2, 1)) ∧ (¬x(1, 0, 0) ∨ x(3, 1, 1)) ∧ (¬x(0, 1, 2) ∨ x(3, 0, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [32] -> (x(2, 2, 1)); matching condition number(s): [25]\n- raw clause index 1: [-32, 43] -> (¬x(2, 2, 1) ∨ x(3, 2, 0)); matching condition number(s): [5]\n- raw clause index 2: [-43, 10] -> (¬x(3, 2, 0) ∨ x(0, 3, 0)); matching condition number(s): [42]\n- raw clause index 3: [-10, 8] -> (¬x(0, 3, 0) ∨ x(0, 2, 1)); matching condition number(s): [28]\n- raw clause index 4: [-8, 7] -> (¬x(0, 2, 1) ∨ x(0, 2, 0)); matching condition number(s): [19]\n- raw clause index 5: [-7, 28] -> (¬x(0, 2, 0) ∨ x(2, 1, 0)); matching condition number(s): [12]\n- raw clause index 6: [-28, 11] -> (¬x(2, 1, 0) ∨ x(0, 3, 1)); matching condition number(s): [7]\n- raw clause index 7: [-11, 20] -> (¬x(0, 3, 1) ∨ x(1, 2, 1)); matching condition number(s): [43]\n- raw clause index 8: [-20, 18] -> (¬x(1, 2, 1) ∨ x(1, 1, 2)); matching condition number(s): [24]\n- raw clause index 9: [-18, 42] -> (¬x(1, 1, 2) ∨ x(3, 1, 2)); matching condition number(s): [29]\n- raw clause index 10: [-42, 5] -> (¬x(3, 1, 2) ∨ x(0, 1, 1)); matching condition number(s): [10]\n- raw clause index 11: [-5, 27] -> (¬x(0, 1, 1) ∨ x(2, 0, 2)); matching condition number(s): [21]\n- raw clause index 12: [-27, 25] -> (¬x(2, 0, 2) ∨ x(2, 0, 0)); matching condition number(s): [2]\n- raw clause index 13: [-25, 38] -> (¬x(2, 0, 0) ∨ x(3, 0, 1)); matching condition number(s): [41]\n- raw clause index 14: [-38, 29] -> (¬x(3, 0, 1) ∨ x(2, 1, 1)); matching condition number(s): [27]\n- raw clause index 15: [-29, 47] -> (¬x(2, 1, 1) ∨ x(3, 3, 1)); matching condition number(s): [23]\n- raw clause index 16: [-47, 3] -> (¬x(3, 3, 1) ∨ x(0, 0, 2)); matching condition number(s): [4]\n- raw clause index 17: [-3, 1] -> (¬x(0, 0, 2) ∨ x(0, 0, 0)); matching condition number(s): [37]\n- raw clause index 18: [-1, 30] -> (¬x(0, 0, 0) ∨ x(2, 1, 2)); matching condition number(s): [17]\n- raw clause index 19: [-30, 31] -> (¬x(2, 1, 2) ∨ x(2, 2, 0)); matching condition number(s): [20]\n- raw clause index 20: [-31, 21] -> (¬x(2, 2, 0) ∨ x(1, 2, 2)); matching condition number(s): [13]\n- raw clause index 21: [-21, 46] -> (¬x(1, 2, 2) ∨ x(3, 3, 0)); matching condition number(s): [40]\n- raw clause index 22: [-46, 2] -> (¬x(3, 3, 0) ∨ x(0, 0, 1)); matching condition number(s): [36]\n- raw clause index 23: [-2, 23] -> (¬x(0, 0, 1) ∨ x(1, 3, 1)); matching condition number(s): [11]\n- raw clause index 24: [-23, 40] -> (¬x(1, 3, 1) ∨ x(3, 1, 0)); matching condition number(s): [8]\n- raw clause index 25: [-40, 44] -> (¬x(3, 1, 0) ∨ x(3, 2, 1)); matching condition number(s): [3]\n- raw clause index 26: [-44, 19] -> (¬x(3, 2, 1) ∨ x(1, 2, 0)); matching condition number(s): [1]\n- raw clause index 27: [-19, 36] -> (¬x(1, 2, 0) ∨ x(2, 3, 2)); matching condition number(s): [18]\n- raw clause index 28: [-36, 14] -> (¬x(2, 3, 2) ∨ x(1, 0, 1)); matching condition number(s): [26]\n- raw clause index 29: [-14, 13] -> (¬x(1, 0, 1) ∨ x(1, 0, 0)); matching condition number(s): [9]\n- raw clause index 30: [-13, 41] -> (¬x(1, 0, 0) ∨ x(3, 1, 1)); matching condition number(s): [44]\n- raw clause index 31: [-41, 22] -> (¬x(3, 1, 1) ∨ x(1, 3, 0)); matching condition number(s): [34]\n- raw clause index 32: [-22, 17] -> (¬x(1, 3, 0) ∨ x(1, 1, 1)); matching condition number(s): [31]\n- raw clause index 33: [-17, 16] -> (¬x(1, 1, 1) ∨ x(1, 1, 0)); matching condition number(s): [33]\n- raw clause index 34: [-16, 48] -> (¬x(1, 1, 0) ∨ x(3, 3, 2)); matching condition number(s): [14]\n- raw clause index 35: [-48, 33] -> (¬x(3, 3, 2) ∨ x(2, 2, 2)); matching condition number(s): [38]\n- raw clause index 36: [-33, 34] -> (¬x(2, 2, 2) ∨ x(2, 3, 0)); matching condition number(s): [16]\n- raw clause index 37: [-34, 9] -> (¬x(2, 3, 0) ∨ x(0, 2, 2)); matching condition number(s): [15]\n- raw clause index 38: [-9, 37] -> (¬x(0, 2, 2) ∨ x(3, 0, 0)); matching condition number(s): [6]\n- raw clause index 39: [-37, 6] -> (¬x(3, 0, 0) ∨ x(0, 1, 2)); matching condition number(s): [39]\n- raw clause index 40: [-6, 39] -> (¬x(0, 1, 2) ∨ x(3, 0, 2)); matching condition number(s): [45]\n- raw clause index 41: [-39, 35] -> (¬x(3, 0, 2) ∨ x(2, 3, 1)); matching condition number(s): [22]\n- raw clause index 42: [-35, 15] -> (¬x(2, 3, 1) ∨ x(1, 0, 2)); matching condition number(s): [30]\n- raw clause index 43: [-15, 26] -> (¬x(1, 0, 2) ∨ x(2, 0, 1)); matching condition number(s): [32]\n- raw clause index 44: [-26] -> (¬x(2, 0, 1)); matching condition number(s): [35]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 2, 1)), (¬x(2, 2, 1) ∨ x(3, 2, 0)), (¬x(3, 2, 0) ∨ x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 3, 1)), (¬x(0, 3, 1) ∨ x(1, 2, 1)), (¬x(1, 2, 1) ∨ x(1, 1, 2)), (¬x(1, 1, 2) ∨ x(3, 1, 2)), (¬x(3, 1, 2) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 0, 2)), (¬x(2, 0, 2) ∨ x(2, 0, 0)), (¬x(2, 0, 0) ∨ x(3, 0, 1)), (¬x(3, 0, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(3, 3, 1)), (¬x(3, 3, 1) ∨ x(0, 0, 2)), (¬x(0, 0, 2) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(2, 1, 2)), (¬x(2, 1, 2) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(1, 2, 2)), (¬x(1, 2, 2) ∨ x(3, 3, 0)), (¬x(3, 3, 0) ∨ x(0, 0, 1)), (¬x(0, 0, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(3, 1, 0)), (¬x(3, 1, 0) ∨ x(3, 2, 1)), (¬x(3, 2, 1) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(2, 3, 2)), (¬x(2, 3, 2) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(3, 1, 1)), (¬x(3, 1, 1) ∨ x(1, 3, 0)), (¬x(1, 3, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(3, 3, 2)), (¬x(3, 3, 2) ∨ x(2, 2, 2)), (¬x(2, 2, 2) ∨ x(2, 3, 0)), (¬x(2, 3, 0) ∨ x(0, 2, 2)), (¬x(0, 2, 2) ∨ x(3, 0, 0)), (¬x(3, 0, 0) ∨ x(0, 1, 2)), (¬x(0, 1, 2) ∨ x(3, 0, 2)), (¬x(3, 0, 2) ∨ x(2, 3, 1)), (¬x(2, 3, 1) ∨ x(1, 0, 2)), (¬x(1, 0, 2) ∨ x(2, 0, 1)), (¬x(2, 0, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a wildlife reserve, four researchers—Amelia, Brian, Charlotte, and David—are studying the behaviors of various animal species across different seasons. They are observing four distinct animal behaviors (0 = feeding, 1 = nesting, 2 = migrating, 3 = mating) during three seasons (0 = spring, 1 = summer, 2 = winter). For each researcher, behavior, and season, a decision is made whether a particular behavior is observed. These decisions are made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean researcher i observes animal behavior j during season k. Here, researcher 0 is Amelia, researcher 1 is Brian, researcher 2 is Charlotte, and researcher 3 is David.\n</variable_mapping>\n\n<conditions>\n1. Either David does not observe migrating in summer, or Brian observes migrating in spring.\n2. Either Charlotte does not observe feeding in winter, or Charlotte observes feeding in spring.\n3. Either David does not observe nesting in spring, or David observes migrating in summer.\n4. Either David does not observe mating in summer, or Amelia observes feeding in winter.\n5. Either Charlotte does not observe migrating in summer, or David observes migrating in spring.\n6. Either Amelia does not observe migrating in winter, or David observes feeding in spring.\n7. Either Charlotte does not observe nesting in spring, or Amelia observes mating in summer.\n8. Either Brian does not observe mating in summer, or David observes nesting in spring.\n9. Either Brian does not observe feeding in summer, or Brian observes feeding in spring.\n10. Either David does not observe nesting in winter, or Amelia observes nesting in summer.\n11. Either Amelia does not observe feeding in summer, or Brian observes mating in summer.\n12. Either Amelia does not observe migrating in spring, or Charlotte observes nesting in spring.\n13. Either Charlotte does not observe migrating in spring, or Brian observes migrating in winter.\n14. Either Brian does not observe nesting in spring, or David observes mating in winter.\n15. Either Charlotte does not observe mating in spring, or Amelia observes migrating in winter.\n16. Either Charlotte does not observe migrating in winter, or Charlotte observes mating in spring.\n17. Either Amelia does not observe feeding in spring, or Charlotte observes nesting in winter.\n18. Either Brian does not observe migrating in spring, or Charlotte observes mating in winter.\n19. Either Amelia does not observe migrating in summer, or Amelia observes migrating in spring.\n20. Either Charlotte does not observe nesting in winter, or Charlotte observes migrating in spring.\n21. Either Amelia does not observe nesting in summer, or Charlotte observes feeding in winter.\n22. Either David does not observe feeding in winter, or Charlotte observes mating in summer.\n23. Either Charlotte does not observe nesting in summer, or David observes mating in summer.\n24. Either Brian does not observe migrating in summer, or Brian observes nesting in winter.\n25. Charlotte observes migrating in summer.\n26. Either Charlotte does not observe mating in winter, or Brian observes feeding in summer.\n27. Either David does not observe feeding in summer, or Charlotte observes nesting in summer.\n28. Either Amelia does not observe mating in spring, or Amelia observes migrating in summer.\n29. Either Brian does not observe nesting in winter, or David observes nesting in winter.\n30. Either Charlotte does not observe mating in summer, or Brian observes feeding in winter.\n31. Either Brian does not observe mating in spring, or Brian observes nesting in summer.\n32. Either Brian does not observe feeding in winter, or David observes nesting in summer.\n33. Either David does not observe nesting in summer, or Brian observes mating in spring.\n34. Charlotte does not observe feeding in winter.\n35. Either David does not observe mating in spring, or Amelia observes feeding in summer.\n36. Either Amelia does not observe feeding in winter, or Amelia observes feeding in spring.\n37. Either David does not observe mating in winter, or Charlotte observes migrating in winter.\n38. Either David does not observe feeding in spring, or Amelia observes nesting in winter.\n39. Either Brian does not observe migrating in winter, or David observes mating in spring.\n40. Either Charlotte does not observe feeding in spring, or David observes feeding in summer.\n41. Either David does not observe migrating in spring, or Amelia observes mating in spring.\n42. Either Amelia does not observe mating in summer, or Brian observes migrating in summer.\n43. Either Brian does not observe feeding in spring, or David observes nesting in summer.\n44. Either Amelia does not observe nesting in winter, or David observes feeding in winter.\n</conditions>\n\n<question>\nCan all these observations be consistent?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,4,3]\n</dims>\n\n<num_vars>\n48\n</num_vars>\n\n<num_clauses>\n45\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    32\n  ],\n  [\n    -32,\n    43\n  ],\n  [\n    -43,\n    10\n  ],\n  [\n    -10,\n    8\n  ],\n  [\n    -8,\n    7\n  ],\n  [\n    -7,\n    28\n  ],\n  [\n    -28,\n    11\n  ],\n  [\n    -11,\n    20\n  ],\n  [\n    -20,\n    18\n  ],\n  [\n    -18,\n    42\n  ],\n  [\n    -42,\n    5\n  ],\n  [\n    -5,\n    27\n  ],\n  [\n    -27,\n    25\n  ],\n  [\n    -25,\n    38\n  ],\n  [\n    -38,\n    29\n  ],\n  [\n    -29,\n    47\n  ],\n  [\n    -47,\n    3\n  ],\n  [\n    -3,\n    1\n  ],\n  [\n    -1,\n    30\n  ],\n  [\n    -30,\n    31\n  ],\n  [\n    -31,\n    21\n  ],\n  [\n    -21,\n    46\n  ],\n  [\n    -46,\n    2\n  ],\n  [\n    -2,\n    23\n  ],\n  [\n    -23,\n    40\n  ],\n  [\n    -40,\n    44\n  ],\n  [\n    -44,\n    19\n  ],\n  [\n    -19,\n    36\n  ],\n  [\n    -36,\n    14\n  ],\n  [\n    -14,\n    13\n  ],\n  [\n    -13,\n    41\n  ],\n  [\n    -41,\n    22\n  ],\n  [\n    -22,\n    17\n  ],\n  [\n    -17,\n    16\n  ],\n  [\n    -16,\n    48\n  ],\n  [\n    -48,\n    33\n  ],\n  [\n    -33,\n    34\n  ],\n  [\n    -34,\n    9\n  ],\n  [\n    -9,\n    37\n  ],\n  [\n    -37,\n    6\n  ],\n  [\n    -6,\n    39\n  ],\n  [\n    -39,\n    35\n  ],\n  [\n    -35,\n    15\n  ],\n  [\n    -15,\n    26\n  ],\n  [\n    -26\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(3, 2, 1) ∨ x(1, 2, 0)) ∧ (¬x(2, 0, 2) ∨ x(2, 0, 0)) ∧ (¬x(3, 1, 0) ∨ x(3, 2, 1)) ∧ (¬x(3, 3, 1) ∨ x(0, 0, 2)) ∧ (¬x(2, 2, 1) ∨ x(3, 2, 0)) ∧ (¬x(0, 2, 2) ∨ x(3, 0, 0)) ∧ (¬x(2, 1, 0) ∨ x(0, 3, 1)) ∧ (¬x(1, 3, 1) ∨ x(3, 1, 0)) ∧ (¬x(1, 0, 1) ∨ x(1, 0, 0)) ∧ (¬x(3, 1, 2) ∨ x(0, 1, 1)) ∧ (¬x(0, 0, 1) ∨ x(1, 3, 1)) ∧ (¬x(0, 2, 0) ∨ x(2, 1, 0)) ∧ (¬x(2, 2, 0) ∨ x(1, 2, 2)) ∧ (¬x(1, 1, 0) ∨ x(3, 3, 2)) ∧ (¬x(2, 3, 0) ∨ x(0, 2, 2)) ∧ (¬x(2, 2, 2) ∨ x(2, 3, 0)) ∧ (¬x(0, 0, 0) ∨ x(2, 1, 2)) ∧ (¬x(1, 2, 0) ∨ x(2, 3, 2)) ∧ (¬x(0, 2, 1) ∨ x(0, 2, 0)) ∧ (¬x(2, 1, 2) ∨ x(2, 2, 0)) ∧ (¬x(0, 1, 1) ∨ x(2, 0, 2)) ∧ (¬x(3, 0, 2) ∨ x(2, 3, 1)) ∧ (¬x(2, 1, 1) ∨ x(3, 3, 1)) ∧ (¬x(1, 2, 1) ∨ x(1, 1, 2)) ∧ (x(2, 2, 1)) ∧ (¬x(2, 3, 2) ∨ x(1, 0, 1)) ∧ (¬x(3, 0, 1) ∨ x(2, 1, 1)) ∧ (¬x(0, 3, 0) ∨ x(0, 2, 1)) ∧ (¬x(1, 1, 2) ∨ x(3, 1, 2)) ∧ (¬x(2, 3, 1) ∨ x(1, 0, 2)) ∧ (¬x(1, 3, 0) ∨ x(1, 1, 1)) ∧ (¬x(1, 0, 2) ∨ x(2, 0, 1)) ∧ (¬x(1, 1, 1) ∨ x(1, 1, 0)) ∧ (¬x(3, 1, 1) ∨ x(1, 3, 0)) ∧ (¬x(2, 0, 1)) ∧ (¬x(3, 3, 0) ∨ x(0, 0, 1)) ∧ (¬x(0, 0, 2) ∨ x(0, 0, 0)) ∧ (¬x(3, 3, 2) ∨ x(2, 2, 2)) ∧ (¬x(3, 0, 0) ∨ x(0, 1, 2)) ∧ (¬x(1, 2, 2) ∨ x(3, 3, 0)) ∧ (¬x(2, 0, 0) ∨ x(3, 0, 1)) ∧ (¬x(3, 2, 0) ∨ x(0, 3, 0)) ∧ (¬x(0, 3, 1) ∨ x(1, 2, 1)) ∧ (¬x(1, 0, 0) ∨ x(3, 1, 1)) ∧ (¬x(0, 1, 2) ∨ x(3, 0, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [32] -> (x(2, 2, 1)); matching condition number(s): [25]\n- raw clause index 1: [-32, 43] -> (¬x(2, 2, 1) ∨ x(3, 2, 0)); matching condition number(s): [5]\n- raw clause index 2: [-43, 10] -> (¬x(3, 2, 0) ∨ x(0, 3, 0)); matching condition number(s): [42]\n- raw clause index 3: [-10, 8] -> (¬x(0, 3, 0) ∨ x(0, 2, 1)); matching condition number(s): [28]\n- raw clause index 4: [-8, 7] -> (¬x(0, 2, 1) ∨ x(0, 2, 0)); matching condition number(s): [19]\n- raw clause index 5: [-7, 28] -> (¬x(0, 2, 0) ∨ x(2, 1, 0)); matching condition number(s): [12]\n- raw clause index 6: [-28, 11] -> (¬x(2, 1, 0) ∨ x(0, 3, 1)); matching condition number(s): [7]\n- raw clause index 7: [-11, 20] -> (¬x(0, 3, 1) ∨ x(1, 2, 1)); matching condition number(s): [43]\n- raw clause index 8: [-20, 18] -> (¬x(1, 2, 1) ∨ x(1, 1, 2)); matching condition number(s): [24]\n- raw clause index 9: [-18, 42] -> (¬x(1, 1, 2) ∨ x(3, 1, 2)); matching condition number(s): [29]\n- raw clause index 10: [-42, 5] -> (¬x(3, 1, 2) ∨ x(0, 1, 1)); matching condition number(s): [10]\n- raw clause index 11: [-5, 27] -> (¬x(0, 1, 1) ∨ x(2, 0, 2)); matching condition number(s): [21]\n- raw clause index 12: [-27, 25] -> (¬x(2, 0, 2) ∨ x(2, 0, 0)); matching condition number(s): [2]\n- raw clause index 13: [-25, 38] -> (¬x(2, 0, 0) ∨ x(3, 0, 1)); matching condition number(s): [41]\n- raw clause index 14: [-38, 29] -> (¬x(3, 0, 1) ∨ x(2, 1, 1)); matching condition number(s): [27]\n- raw clause index 15: [-29, 47] -> (¬x(2, 1, 1) ∨ x(3, 3, 1)); matching condition number(s): [23]\n- raw clause index 16: [-47, 3] -> (¬x(3, 3, 1) ∨ x(0, 0, 2)); matching condition number(s): [4]\n- raw clause index 17: [-3, 1] -> (¬x(0, 0, 2) ∨ x(0, 0, 0)); matching condition number(s): [37]\n- raw clause index 18: [-1, 30] -> (¬x(0, 0, 0) ∨ x(2, 1, 2)); matching condition number(s): [17]\n- raw clause index 19: [-30, 31] -> (¬x(2, 1, 2) ∨ x(2, 2, 0)); matching condition number(s): [20]\n- raw clause index 20: [-31, 21] -> (¬x(2, 2, 0) ∨ x(1, 2, 2)); matching condition number(s): [13]\n- raw clause index 21: [-21, 46] -> (¬x(1, 2, 2) ∨ x(3, 3, 0)); matching condition number(s): [40]\n- raw clause index 22: [-46, 2] -> (¬x(3, 3, 0) ∨ x(0, 0, 1)); matching condition number(s): [36]\n- raw clause index 23: [-2, 23] -> (¬x(0, 0, 1) ∨ x(1, 3, 1)); matching condition number(s): [11]\n- raw clause index 24: [-23, 40] -> (¬x(1, 3, 1) ∨ x(3, 1, 0)); matching condition number(s): [8]\n- raw clause index 25: [-40, 44] -> (¬x(3, 1, 0) ∨ x(3, 2, 1)); matching condition number(s): [3]\n- raw clause index 26: [-44, 19] -> (¬x(3, 2, 1) ∨ x(1, 2, 0)); matching condition number(s): [1]\n- raw clause index 27: [-19, 36] -> (¬x(1, 2, 0) ∨ x(2, 3, 2)); matching condition number(s): [18]\n- raw clause index 28: [-36, 14] -> (¬x(2, 3, 2) ∨ x(1, 0, 1)); matching condition number(s): [26]\n- raw clause index 29: [-14, 13] -> (¬x(1, 0, 1) ∨ x(1, 0, 0)); matching condition number(s): [9]\n- raw clause index 30: [-13, 41] -> (¬x(1, 0, 0) ∨ x(3, 1, 1)); matching condition number(s): [44]\n- raw clause index 31: [-41, 22] -> (¬x(3, 1, 1) ∨ x(1, 3, 0)); matching condition number(s): [34]\n- raw clause index 32: [-22, 17] -> (¬x(1, 3, 0) ∨ x(1, 1, 1)); matching condition number(s): [31]\n- raw clause index 33: [-17, 16] -> (¬x(1, 1, 1) ∨ x(1, 1, 0)); matching condition number(s): [33]\n- raw clause index 34: [-16, 48] -> (¬x(1, 1, 0) ∨ x(3, 3, 2)); matching condition number(s): [14]\n- raw clause index 35: [-48, 33] -> (¬x(3, 3, 2) ∨ x(2, 2, 2)); matching condition number(s): [38]\n- raw clause index 36: [-33, 34] -> (¬x(2, 2, 2) ∨ x(2, 3, 0)); matching condition number(s): [16]\n- raw clause index 37: [-34, 9] -> (¬x(2, 3, 0) ∨ x(0, 2, 2)); matching condition number(s): [15]\n- raw clause index 38: [-9, 37] -> (¬x(0, 2, 2) ∨ x(3, 0, 0)); matching condition number(s): [6]\n- raw clause index 39: [-37, 6] -> (¬x(3, 0, 0) ∨ x(0, 1, 2)); matching condition number(s): [39]\n- raw clause index 40: [-6, 39] -> (¬x(0, 1, 2) ∨ x(3, 0, 2)); matching condition number(s): [45]\n- raw clause index 41: [-39, 35] -> (¬x(3, 0, 2) ∨ x(2, 3, 1)); matching condition number(s): [22]\n- raw clause index 42: [-35, 15] -> (¬x(2, 3, 1) ∨ x(1, 0, 2)); matching condition number(s): [30]\n- raw clause index 43: [-15, 26] -> (¬x(1, 0, 2) ∨ x(2, 0, 1)); matching condition number(s): [32]\n- raw clause index 44: [-26] -> (¬x(2, 0, 1)); matching condition number(s): [35]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 2, 1)), (¬x(2, 2, 1) ∨ x(3, 2, 0)), (¬x(3, 2, 0) ∨ x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 3, 1)), (¬x(0, 3, 1) ∨ x(1, 2, 1)), (¬x(1, 2, 1) ∨ x(1, 1, 2)), (¬x(1, 1, 2) ∨ x(3, 1, 2)), (¬x(3, 1, 2) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 0, 2)), (¬x(2, 0, 2) ∨ x(2, 0, 0)), (¬x(2, 0, 0) ∨ x(3, 0, 1)), (¬x(3, 0, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(3, 3, 1)), (¬x(3, 3, 1) ∨ x(0, 0, 2)), (¬x(0, 0, 2) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(2, 1, 2)), (¬x(2, 1, 2) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(1, 2, 2)), (¬x(1, 2, 2) ∨ x(3, 3, 0)), (¬x(3, 3, 0) ∨ x(0, 0, 1)), (¬x(0, 0, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(3, 1, 0)), (¬x(3, 1, 0) ∨ x(3, 2, 1)), (¬x(3, 2, 1) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(2, 3, 2)), (¬x(2, 3, 2) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(3, 1, 1)), (¬x(3, 1, 1) ∨ x(1, 3, 0)), (¬x(1, 3, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(3, 3, 2)), (¬x(3, 3, 2) ∨ x(2, 2, 2)), (¬x(2, 2, 2) ∨ x(2, 3, 0)), (¬x(2, 3, 0) ∨ x(0, 2, 2)), (¬x(0, 2, 2) ∨ x(3, 0, 0)), (¬x(3, 0, 0) ∨ x(0, 1, 2)), (¬x(0, 1, 2) ∨ x(3, 0, 2)), (¬x(3, 0, 2) ∨ x(2, 3, 1)), (¬x(2, 3, 1) ∨ x(1, 0, 2)), (¬x(1, 0, 2) ∨ x(2, 0, 1)), (¬x(2, 0, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      4,
+      4,
+      3
+    ],
+    "num_vars": 48,
+    "num_clauses": 45,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          32
+        ],
+        "clause_structural": "(x(2, 2, 1))",
+        "condition_numbers": [
+          25
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -32,
+          43
+        ],
+        "clause_structural": "(¬x(2, 2, 1) ∨ x(3, 2, 0))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -43,
+          10
+        ],
+        "clause_structural": "(¬x(3, 2, 0) ∨ x(0, 3, 0))",
+        "condition_numbers": [
+          42
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -10,
+          8
+        ],
+        "clause_structural": "(¬x(0, 3, 0) ∨ x(0, 2, 1))",
+        "condition_numbers": [
+          28
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -8,
+          7
+        ],
+        "clause_structural": "(¬x(0, 2, 1) ∨ x(0, 2, 0))",
+        "condition_numbers": [
+          19
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -7,
+          28
+        ],
+        "clause_structural": "(¬x(0, 2, 0) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -28,
+          11
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ x(0, 3, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -11,
+          20
+        ],
+        "clause_structural": "(¬x(0, 3, 1) ∨ x(1, 2, 1))",
+        "condition_numbers": [
+          43
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          -20,
+          18
+        ],
+        "clause_structural": "(¬x(1, 2, 1) ∨ x(1, 1, 2))",
+        "condition_numbers": [
+          24
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -18,
+          42
+        ],
+        "clause_structural": "(¬x(1, 1, 2) ∨ x(3, 1, 2))",
+        "condition_numbers": [
+          29
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          -42,
+          5
+        ],
+        "clause_structural": "(¬x(3, 1, 2) ∨ x(0, 1, 1))",
+        "condition_numbers": [
+          10
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -5,
+          27
+        ],
+        "clause_structural": "(¬x(0, 1, 1) ∨ x(2, 0, 2))",
+        "condition_numbers": [
+          21
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          -27,
+          25
+        ],
+        "clause_structural": "(¬x(2, 0, 2) ∨ x(2, 0, 0))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -25,
+          38
+        ],
+        "clause_structural": "(¬x(2, 0, 0) ∨ x(3, 0, 1))",
+        "condition_numbers": [
+          41
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          -38,
+          29
+        ],
+        "clause_structural": "(¬x(3, 0, 1) ∨ x(2, 1, 1))",
+        "condition_numbers": [
+          27
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -29,
+          47
+        ],
+        "clause_structural": "(¬x(2, 1, 1) ∨ x(3, 3, 1))",
+        "condition_numbers": [
+          23
+        ]
+      },
+      {
+        "raw_clause_index": 16,
+        "clause_dimacs": [
+          -47,
+          3
+        ],
+        "clause_structural": "(¬x(3, 3, 1) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 17,
+        "clause_dimacs": [
+          -3,
+          1
+        ],
+        "clause_structural": "(¬x(0, 0, 2) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          37
+        ]
+      },
+      {
+        "raw_clause_index": 18,
+        "clause_dimacs": [
+          -1,
+          30
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(2, 1, 2))",
+        "condition_numbers": [
+          17
+        ]
+      },
+      {
+        "raw_clause_index": 19,
+        "clause_dimacs": [
+          -30,
+          31
+        ],
+        "clause_structural": "(¬x(2, 1, 2) ∨ x(2, 2, 0))",
+        "condition_numbers": [
+          20
+        ]
+      },
+      {
+        "raw_clause_index": 20,
+        "clause_dimacs": [
+          -31,
+          21
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(1, 2, 2))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 21,
+        "clause_dimacs": [
+          -21,
+          46
+        ],
+        "clause_structural": "(¬x(1, 2, 2) ∨ x(3, 3, 0))",
+        "condition_numbers": [
+          40
+        ]
+      },
+      {
+        "raw_clause_index": 22,
+        "clause_dimacs": [
+          -46,
+          2
+        ],
+        "clause_structural": "(¬x(3, 3, 0) ∨ x(0, 0, 1))",
+        "condition_numbers": [
+          36
+        ]
+      },
+      {
+        "raw_clause_index": 23,
+        "clause_dimacs": [
+          -2,
+          23
+        ],
+        "clause_structural": "(¬x(0, 0, 1) ∨ x(1, 3, 1))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 24,
+        "clause_dimacs": [
+          -23,
+          40
+        ],
+        "clause_structural": "(¬x(1, 3, 1) ∨ x(3, 1, 0))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 25,
+        "clause_dimacs": [
+          -40,
+          44
+        ],
+        "clause_structural": "(¬x(3, 1, 0) ∨ x(3, 2, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 26,
+        "clause_dimacs": [
+          -44,
+          19
+        ],
+        "clause_structural": "(¬x(3, 2, 1) ∨ x(1, 2, 0))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 27,
+        "clause_dimacs": [
+          -19,
+          36
+        ],
+        "clause_structural": "(¬x(1, 2, 0) ∨ x(2, 3, 2))",
+        "condition_numbers": [
+          18
+        ]
+      },
+      {
+        "raw_clause_index": 28,
+        "clause_dimacs": [
+          -36,
+          14
+        ],
+        "clause_structural": "(¬x(2, 3, 2) ∨ x(1, 0, 1))",
+        "condition_numbers": [
+          26
+        ]
+      },
+      {
+        "raw_clause_index": 29,
+        "clause_dimacs": [
+          -14,
+          13
+        ],
+        "clause_structural": "(¬x(1, 0, 1) ∨ x(1, 0, 0))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 30,
+        "clause_dimacs": [
+          -13,
+          41
+        ],
+        "clause_structural": "(¬x(1, 0, 0) ∨ x(3, 1, 1))",
+        "condition_numbers": [
+          44
+        ]
+      },
+      {
+        "raw_clause_index": 31,
+        "clause_dimacs": [
+          -41,
+          22
+        ],
+        "clause_structural": "(¬x(3, 1, 1) ∨ x(1, 3, 0))",
+        "condition_numbers": [
+          34
+        ]
+      },
+      {
+        "raw_clause_index": 32,
+        "clause_dimacs": [
+          -22,
+          17
+        ],
+        "clause_structural": "(¬x(1, 3, 0) ∨ x(1, 1, 1))",
+        "condition_numbers": [
+          31
+        ]
+      },
+      {
+        "raw_clause_index": 33,
+        "clause_dimacs": [
+          -17,
+          16
+        ],
+        "clause_structural": "(¬x(1, 1, 1) ∨ x(1, 1, 0))",
+        "condition_numbers": [
+          33
+        ]
+      },
+      {
+        "raw_clause_index": 34,
+        "clause_dimacs": [
+          -16,
+          48
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(3, 3, 2))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 35,
+        "clause_dimacs": [
+          -48,
+          33
+        ],
+        "clause_structural": "(¬x(3, 3, 2) ∨ x(2, 2, 2))",
+        "condition_numbers": [
+          38
+        ]
+      },
+      {
+        "raw_clause_index": 36,
+        "clause_dimacs": [
+          -33,
+          34
+        ],
+        "clause_structural": "(¬x(2, 2, 2) ∨ x(2, 3, 0))",
+        "condition_numbers": [
+          16
+        ]
+      },
+      {
+        "raw_clause_index": 37,
+        "clause_dimacs": [
+          -34,
+          9
+        ],
+        "clause_structural": "(¬x(2, 3, 0) ∨ x(0, 2, 2))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 38,
+        "clause_dimacs": [
+          -9,
+          37
+        ],
+        "clause_structural": "(¬x(0, 2, 2) ∨ x(3, 0, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 39,
+        "clause_dimacs": [
+          -37,
+          6
+        ],
+        "clause_structural": "(¬x(3, 0, 0) ∨ x(0, 1, 2))",
+        "condition_numbers": [
+          39
+        ]
+      },
+      {
+        "raw_clause_index": 40,
+        "clause_dimacs": [
+          -6,
+          39
+        ],
+        "clause_structural": "(¬x(0, 1, 2) ∨ x(3, 0, 2))",
+        "condition_numbers": [
+          45
+        ]
+      },
+      {
+        "raw_clause_index": 41,
+        "clause_dimacs": [
+          -39,
+          35
+        ],
+        "clause_structural": "(¬x(3, 0, 2) ∨ x(2, 3, 1))",
+        "condition_numbers": [
+          22
+        ]
+      },
+      {
+        "raw_clause_index": 42,
+        "clause_dimacs": [
+          -35,
+          15
+        ],
+        "clause_structural": "(¬x(2, 3, 1) ∨ x(1, 0, 2))",
+        "condition_numbers": [
+          30
+        ]
+      },
+      {
+        "raw_clause_index": 43,
+        "clause_dimacs": [
+          -15,
+          26
+        ],
+        "clause_structural": "(¬x(1, 0, 2) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          32
+        ]
+      },
+      {
+        "raw_clause_index": 44,
+        "clause_dimacs": [
+          -26
+        ],
+        "clause_structural": "(¬x(2, 0, 1))",
+        "condition_numbers": [
+          35
+        ]
+      }
+    ],
+    "unsat_reason": "Frozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 2, 1)), (¬x(2, 2, 1) ∨ x(3, 2, 0)), (¬x(3, 2, 0) ∨ x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 3, 1)), (¬x(0, 3, 1) ∨ x(1, 2, 1)), (¬x(1, 2, 1) ∨ x(1, 1, 2)), (¬x(1, 1, 2) ∨ x(3, 1, 2)), (¬x(3, 1, 2) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 0, 2)), (¬x(2, 0, 2) ∨ x(2, 0, 0)), (¬x(2, 0, 0) ∨ x(3, 0, 1)), (¬x(3, 0, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(3, 3, 1)), (¬x(3, 3, 1) ∨ x(0, 0, 2)), (¬x(0, 0, 2) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(2, 1, 2)), (¬x(2, 1, 2) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(1, 2, 2)), (¬x(1, 2, 2) ∨ x(3, 3, 0)), (¬x(3, 3, 0) ∨ x(0, 0, 1)), (¬x(0, 0, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(3, 1, 0)), (¬x(3, 1, 0) ∨ x(3, 2, 1)), (¬x(3, 2, 1) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(2, 3, 2)), (¬x(2, 3, 2) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(3, 1, 1)), (¬x(3, 1, 1) ∨ x(1, 3, 0)), (¬x(1, 3, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(3, 3, 2)), (¬x(3, 3, 2) ∨ x(2, 2, 2)), (¬x(2, 2, 2) ∨ x(2, 3, 0)), (¬x(2, 3, 0) ∨ x(0, 2, 2)), (¬x(0, 2, 2) ∨ x(3, 0, 0)), (¬x(3, 0, 0) ∨ x(0, 1, 2)), (¬x(0, 1, 2) ∨ x(3, 0, 2)), (¬x(3, 0, 2) ∨ x(2, 3, 1)), (¬x(2, 3, 1) ∨ x(1, 0, 2)), (¬x(1, 0, 2) ∨ x(2, 0, 1)), (¬x(2, 0, 1))"
+  }
+}

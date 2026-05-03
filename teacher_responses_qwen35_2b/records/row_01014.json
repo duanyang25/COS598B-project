@@ -1,0 +1,141 @@
+{
+  "index": 1014,
+  "row_index_in_prompt_file": 1014,
+  "prompt_id": "satbench_01014",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analyze the Conditions and Variables**\nThe problem defines six Boolean variables representing skills for three students (Bob, Carol, Dave) across various skills/challenges. Let's map the specific variables from the readable CNF provided in the prompt to ensure alignment with the Z3 certificate logic:\n*   $x_{2,1,0}$: Carol, Skill 1, Easy\n*   $x_{0,0,0}$: Alice, Skill 0, Easy\n*   $x_{3,2,1}$: Dave, Skill 2, Medium\n*   Note: The Z3 certificate maps indices `[23, 1, 36]` to the first variable in each clause. Based on the readable CNF:\n    *   Clause 0: $\\neg x_{2,1,0} \\lor \\neg x_{0,0,0}$\n    *   Clause 1: $\\neg x_{2,1,0} \\lor x_{0,0,0}$\n    *   Clause 2: $x_{0,0,0} \\lor \\neg x_{3,2,1}$\n    *   Clause 3: $\\neg x_{0,0,0} \\lor x_{3,2,1}$\n    *   Clause 4: $x_{2,1,0} \\lor x_{3,2,1}$\n    *   Clause 5: $\\neg x_{2,1,0} \\lor \\neg x_{3,2,1}$\n    *   Clause 6: $x_{2,1,0} \\lor \\neg x_{0,0,0}$\n\n**2. Analyze the Contradiction (The XOR Chain)**\nThe Z3 certificate explicitly identifies a contradiction involving an XOR chain on variables mapped to indices `23`, `1`, and `36`.\n*   The variables involved are $x_{2,1,0}$, $x_{0,0,0}$, and $x_{3,2,1}$.\n*   Let's look at the implications derived from the readable CNF (which corresponds directly to the Z3 clauses):\n    *   From Clauses 0 and 1:\n        *   $(\\neg x_{2,1,0} \\lor \\neg x_{0,0,0})$\n        *   $(\\neg x_{2,1,0} \\lor x_{0,0,0})$\n        *   **Deduction:** If $x_{2,1,0}$ is True, both must be false. If $x_{0,0,0}$ is True, both must be false. However, if we assume the system tries to force a specific conflict:\n        *   Consider the pair $(\\neg A \\lor \\neg B)$ and $(\\neg A \\lor B)$. This forces $\\neg A$ (A is false). If A is false, the second clause implies $B$ must be true. So, we get $\\neg x_{2,1,0} \\land x_{0,0,0}$.\n        *   Now consider Clauses 2 and 3: $(x_{0,0,0} \\lor \\neg x_{3,2,1})$ and $(\\neg x_{0,0,0} \\lor x_{3,2,1})$.\n        *   If $x_{0,0,0}$ is True (as forced above), the second clause requires $\\neg x_{3,2,1}$ to be true.\n        *   If $x_{0,0,0}$ is False, the second clause requires $x_{3,2,1}$ to be true.\n    *   Let's check the remaining clauses (4, 5, 6) against this path.\n        *   Clause 4: $x_{2,1,0} \\lor x_{3,2,1}$\n        *   Clause 5: $\\neg x_{2,1,0} \\lor \\neg x_{3,2,1}$\n        *   Clause 6: $x_{2,1,0} \\lor \\neg x_{0,0,0}$\n    *   Let's test the path $\\neg x_{2,1,0} \\land x_{0,0,0}$ (derived from Clauses 0 & 1):\n        *   Substitute into Clause 6 ($x_{2,1,0} \\lor \\neg x_{0,0,0}$): Since $x_{2,1,0}$ is False and $x_{0,0,0}$ is True, $\\text{False} \\lor \\text{False} = \\text{True}$. (Satisfied).\n        *   Substitute into Clause 4 ($x_{2,1,0} \\lor x_{3,2,1}$): Since $x_{2,1,0}$ is False, we need $x_{3,2,1}$ to be True.\n        *   Substitute into Clause 5 ($\\neg x_{2,1,0} \\lor \\neg x_{3,2,1}$): Since $x_{2,1,0}$ is False, we need $\\neg x_{3,2,1}$ to be True (i.e., $x_{3,2,1}$ is False).\n        *   **Contradiction Found:** We deduced $x_{3,2,1}$ must be True (from Clause 4) and False (from Clause 5). This creates a direct logical impossibility within the subset of variables $\\{x_{2,1,0}, x_{0,0,0}, x_{3,2,1}\\}$ constrained by the first four clauses.\n\n**3. Verification via Certificate Mapping**\nThe Z3 certificate confirms this exact contradiction.\n*   **Raw Clause Indices:** `[0, 1, 2, 3, 4, 5]` correspond to the first six clauses listed in the readable CNF.\n*   **Mapped Condition Numbers:** The certificate maps these indices to `[1, 2, 3, 5, 6, 7]`.\n    *   Index 0 -> Cond 1\n    *   Index 1 -> Cond 2\n    *   Index 2 -> Cond 3\n    *   Index 3 -> Cond 4\n    *   Index 4 -> Cond 5\n    *   Index 5 -> Cond 6\n*   The \"XOR Chain\" explanation in the certificate correctly identifies that Clauses 4 and 5 force contradictory values on $x_{3,2,1}$ (Medium, Dave) while also forcing contradictory values on $x_{2,1,0}$ (Easy, Carol) relative to $x_{0,0,0}$ (Easy, Alice). Specifically, the combination of:\n    1.  (Clause 4 & 5) forces a dependency where one variable is true and the other is false in a way that conflicts with Clause 6's interaction with $x_{0,0,0}$.\n    2.  More precisely, looking at the structure:\n        *   Clauses 4 & 5 imply: If $x_{2,1,0}$ is true, then $x_{3,2,1}$ must be true (4) AND $x_{3,2,1}$ must be false (5). This makes the set of clauses {4, 5} unsatisfiable *unless* $x_{2,1,0}$ is false.\n        *   If $x_{2,1,0}$ is false:\n            *   Clause 5 becomes $\\text{True} \\lor \\dots$, satisfied.\n            *   Clause 4 becomes $\\text{False} \\lor x_{3,2,1}$, so $x_{3,2,1}$ must be **True**.\n            *   Clause 6 becomes $\\text{False} \\lor \\neg x_{0,0,0}$, so $x_{0,0,0}$ must be **False**.\n        *   Now check Clauses 2 & 3 (involving $x_{0,0,0}$ and $x_{3,2,1}$):\n            *   Clause 2: $x_{0,0,0} \\lor \\neg x_{3,2,1}$ -> $\\text{False} \\lor \\text{False}$ -> **False**.\n            *   Clause 3: $\\neg x_{0,0,0} \\lor x_{3,2,1}$ -> $\\text{True} \\lor \\text{True}$ -> True.\n        *   Since Clause 2 is violated when $x_{2,1,0}$ is false, and Clause 2 is necessary for consistency with other parts of the logic (specifically to resolve the conflict between $x_{0,0,0}$ and $x_{3,2,1}$ which was triggered by the $x_{2,1,0}$ choice), the entire system is unsatisfiable.\n\n**Conclusion**\nThe logic holds up: The conditions create a cycle of dependencies that forces a contradiction regarding the status of variables $x_{0,0,0}$ and $x_{3,2,1}$, specifically violating Clause 2. The Z3 certificate correctly identifies this as an UNSAT core involving the XOR chain of the relevant variables.\n\n**Final Answer**\n\n**Label:**\n[UNSAT]\n\n**Reasoning Summary:**\nThe puzzle involves a logical XOR chain among the variables representing Carol/Easy/Skill1, Alice/Easy/Skill0, and Dave/Medium/Skill2.\n1.  Clauses 4 and 5 form a conflict: $x_{2,1,0} \\lor x_{3,2,1}$ AND $\\neg x_{2,1,0} \\lor \\neg x_{3,2,1}$. This implies that $x_{2,1,0}$ and $x_{3,2,1}$ cannot both be true and cannot both be false simultaneously. One must be true and the other false.\n2.  Consider Clauses 2 and 3: $x_{0,0,0} \\lor \\neg x_{3,2,1}$ AND $\\neg x_{0,0,0} \\lor x_{3,2,1}$. This implies $x_{0,0,0}$ and $x_{3,2,1}$ have opposite truth values.\n3.  Combining these: If $x_{3,2,1}$ is True (forced by Clauses 4/5 depending on $x_{2,1,0}$), then $x_{0,0,0}$ must be False (from C2/C3). If $x_{3,2,1}$ is False, then $x_{0,0,0}$ must be True.\n4.  However, Clauses 0 and 1 ($\\neg x_{2,1,0} \\lor \\neg x_{0,0,0}$ and $\\neg x_{2,1,0} \\lor x_{0,0,0}$) force $x_{2,1,0}$ to be False if $x_{0,0,0}$ is True, or vice versa.\n5.  The critical contradiction arises when checking the interaction between the groups. Specifically, if we assume $x_{2,1,0}$ is False (required to satisfy the OR structure of 4 & 5 without immediate contradiction of 6 yet):\n    *   Clause 5 is satisfied.\n    *   Clause 4 requires $x_{3,2,1}$ to be True.\n    *   Clause 6 requires $x_{0,0,0}$ to be False.\n    *   Check Clauses 2 & 3: Clause 2 ($x_{0,0,0} \\lor \\neg x_{3,2,1}$) becomes False $\\lor$ False = **False**.\n    *   Clause 3 ($\\neg x_{0,0,0} \\lor x_{3,2,1}$) becomes True $\\lor$ True = True.\n    *   Since Clause 2 is violated, the assignment fails.\n6.  The Z3 certificate confirms this deduction by identifying the contradiction in the subset of clauses [0, 1, 2, 3, 4, 5], mapping them to condition numbers [1, 2, 3, 4, 5, 6].\n\n**Assignment:** None exists.\n\n**Final Output:**\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1811,
+    "generated_tokens": 2753,
+    "batch_elapsed_seconds": 76.63942217826843,
+    "tokens_per_second_for_batch": 35.92146080637635,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777851032.3534646,
+  "slurm_job_id": "3182773",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "101",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a futuristic academy, four students—Alice, Bob, Carol, and Dave—are participating in a multi-dimensional skill assessment. Each student is being evaluated in a variety of skill domains (e.g., mathematics, science, art, etc.), represented by numbers, across different levels of challenges (easy, medium, hard). Each evaluation reflects an independent decision.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean student i demonstrates proficiency in skill j at challenge level k. Here, student 0 is Alice, student 1 is Bob, student 2 is Carol, and student 3 is Dave.\n</variable_mapping>\n\n<conditions>\n1. Either Alice doesn't demonstrate proficiency in skill 0 at the easy level, or Dave demonstrates proficiency in skill 2 at the medium level.\n2. Either Alice demonstrates proficiency in skill 0 at the easy level, or Dave doesn't demonstrate proficiency in skill 2 at the medium level.\n3. Either Carol doesn't demonstrate proficiency in skill 1 at the easy level, or Dave doesn't demonstrate proficiency in skill 2 at the medium level.\n4. Either Alice demonstrates proficiency in skill 0 at the medium level, or Alice demonstrates proficiency in skill 4 at the medium level, or Carol demonstrates proficiency in skill 1 at the easy level.\n5. Either Carol demonstrates proficiency in skill 1 at the easy level, or Dave demonstrates proficiency in skill 2 at the medium level.\n6. Either Carol doesn't demonstrate proficiency in skill 1 at the easy level, or Alice demonstrates proficiency in skill 0 at the easy level.\n7. Either Carol demonstrates proficiency in skill 1 at the easy level, or Alice doesn't demonstrate proficiency in skill 0 at the easy level.\n</conditions>\n\n<question>\nIs there a way to assign proficiency evaluations that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,5,2]\n</dims>\n\n<num_vars>\n40\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    23,\n    -1\n  ],\n  [\n    -23,\n    1\n  ],\n  [\n    1,\n    -36\n  ],\n  [\n    -1,\n    36\n  ],\n  [\n    23,\n    36\n  ],\n  [\n    -23,\n    -36\n  ],\n  [\n    2,\n    10,\n    23\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 0, 0) ∨ x(3, 2, 1)) ∧ (x(0, 0, 0) ∨ ¬x(3, 2, 1)) ∧ (¬x(2, 1, 0) ∨ ¬x(3, 2, 1)) ∧ (x(0, 0, 1) ∨ x(0, 4, 1) ∨ x(2, 1, 0)) ∧ (x(2, 1, 0) ∨ x(3, 2, 1)) ∧ (¬x(2, 1, 0) ∨ x(0, 0, 0)) ∧ (x(2, 1, 0) ∨ ¬x(0, 0, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,5,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [23, -1] -> (x(2, 1, 0) ∨ ¬x(0, 0, 0)); matching condition number(s): [7]\n- raw clause index 1: [-23, 1] -> (¬x(2, 1, 0) ∨ x(0, 0, 0)); matching condition number(s): [6]\n- raw clause index 2: [1, -36] -> (x(0, 0, 0) ∨ ¬x(3, 2, 1)); matching condition number(s): [2]\n- raw clause index 3: [-1, 36] -> (¬x(0, 0, 0) ∨ x(3, 2, 1)); matching condition number(s): [1]\n- raw clause index 4: [23, 36] -> (x(2, 1, 0) ∨ x(3, 2, 1)); matching condition number(s): [5]\n- raw clause index 5: [-23, -36] -> (¬x(2, 1, 0) ∨ ¬x(3, 2, 1)); matching condition number(s): [3]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [23, 1, 36]: (x(2, 1, 0) ∨ ¬x(0, 0, 0)), (¬x(2, 1, 0) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(3, 2, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 1)), (x(2, 1, 0) ∨ x(3, 2, 1)), (¬x(2, 1, 0) ∨ ¬x(3, 2, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a futuristic academy, four students—Alice, Bob, Carol, and Dave—are participating in a multi-dimensional skill assessment. Each student is being evaluated in a variety of skill domains (e.g., mathematics, science, art, etc.), represented by numbers, across different levels of challenges (easy, medium, hard). Each evaluation reflects an independent decision.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean student i demonstrates proficiency in skill j at challenge level k. Here, student 0 is Alice, student 1 is Bob, student 2 is Carol, and student 3 is Dave.\n</variable_mapping>\n\n<conditions>\n1. Either Alice doesn't demonstrate proficiency in skill 0 at the easy level, or Dave demonstrates proficiency in skill 2 at the medium level.\n2. Either Alice demonstrates proficiency in skill 0 at the easy level, or Dave doesn't demonstrate proficiency in skill 2 at the medium level.\n3. Either Carol doesn't demonstrate proficiency in skill 1 at the easy level, or Dave doesn't demonstrate proficiency in skill 2 at the medium level.\n4. Either Alice demonstrates proficiency in skill 0 at the medium level, or Alice demonstrates proficiency in skill 4 at the medium level, or Carol demonstrates proficiency in skill 1 at the easy level.\n5. Either Carol demonstrates proficiency in skill 1 at the easy level, or Dave demonstrates proficiency in skill 2 at the medium level.\n6. Either Carol doesn't demonstrate proficiency in skill 1 at the easy level, or Alice demonstrates proficiency in skill 0 at the easy level.\n7. Either Carol demonstrates proficiency in skill 1 at the easy level, or Alice doesn't demonstrate proficiency in skill 0 at the easy level.\n</conditions>\n\n<question>\nIs there a way to assign proficiency evaluations that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,5,2]\n</dims>\n\n<num_vars>\n40\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    23,\n    -1\n  ],\n  [\n    -23,\n    1\n  ],\n  [\n    1,\n    -36\n  ],\n  [\n    -1,\n    36\n  ],\n  [\n    23,\n    36\n  ],\n  [\n    -23,\n    -36\n  ],\n  [\n    2,\n    10,\n    23\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 0, 0) ∨ x(3, 2, 1)) ∧ (x(0, 0, 0) ∨ ¬x(3, 2, 1)) ∧ (¬x(2, 1, 0) ∨ ¬x(3, 2, 1)) ∧ (x(0, 0, 1) ∨ x(0, 4, 1) ∨ x(2, 1, 0)) ∧ (x(2, 1, 0) ∨ x(3, 2, 1)) ∧ (¬x(2, 1, 0) ∨ x(0, 0, 0)) ∧ (x(2, 1, 0) ∨ ¬x(0, 0, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,5,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [23, -1] -> (x(2, 1, 0) ∨ ¬x(0, 0, 0)); matching condition number(s): [7]\n- raw clause index 1: [-23, 1] -> (¬x(2, 1, 0) ∨ x(0, 0, 0)); matching condition number(s): [6]\n- raw clause index 2: [1, -36] -> (x(0, 0, 0) ∨ ¬x(3, 2, 1)); matching condition number(s): [2]\n- raw clause index 3: [-1, 36] -> (¬x(0, 0, 0) ∨ x(3, 2, 1)); matching condition number(s): [1]\n- raw clause index 4: [23, 36] -> (x(2, 1, 0) ∨ x(3, 2, 1)); matching condition number(s): [5]\n- raw clause index 5: [-23, -36] -> (¬x(2, 1, 0) ∨ ¬x(3, 2, 1)); matching condition number(s): [3]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [23, 1, 36]: (x(2, 1, 0) ∨ ¬x(0, 0, 0)), (¬x(2, 1, 0) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(3, 2, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 1)), (x(2, 1, 0) ∨ x(3, 2, 1)), (¬x(2, 1, 0) ∨ ¬x(3, 2, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      4,
+      5,
+      2
+    ],
+    "num_vars": 40,
+    "num_clauses": 7,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      7
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          23,
+          -1
+        ],
+        "clause_structural": "(x(2, 1, 0) ∨ ¬x(0, 0, 0))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -23,
+          1
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          1,
+          -36
+        ],
+        "clause_structural": "(x(0, 0, 0) ∨ ¬x(3, 2, 1))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -1,
+          36
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(3, 2, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          23,
+          36
+        ],
+        "clause_structural": "(x(2, 1, 0) ∨ x(3, 2, 1))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -23,
+          -36
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ ¬x(3, 2, 1))",
+        "condition_numbers": [
+          3
+        ]
+      }
+    ],
+    "unsat_reason": "XOR Chain contradiction over variables [23, 1, 36]: (x(2, 1, 0) ∨ ¬x(0, 0, 0)), (¬x(2, 1, 0) ∨ x(0, 0, 0)), (x(0, 0, 0) ∨ ¬x(3, 2, 1)), (¬x(0, 0, 0) ∨ x(3, 2, 1)), (x(2, 1, 0) ∨ x(3, 2, 1)), (¬x(2, 1, 0) ∨ ¬x(3, 2, 1))"
+  }
+}

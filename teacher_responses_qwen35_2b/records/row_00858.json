@@ -1,0 +1,103 @@
+{
+  "index": 858,
+  "row_index_in_prompt_file": 858,
+  "prompt_id": "satbench_00858",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Teacher Reasoning Trace\n\n**Step 1: Analyze the Problem Structure**\nWe have three variables per dimension: $x(i, j, k)$ where $i \\in \\{0, 1, 2\\}$ (Alice, Bob, Clara), $j \\in \\{0, 1\\}$ (navigation, engineering), and $k \\in \\{0, 1\\}$ (launch, landing). Total variables: $3 \\times 2 \\times 2 = 12$.\nTotal constraints (Clauses): 6.\nThe problem asks if there exists an assignment satisfying all 6 clauses.\n\n**Step 2: Formalize the Constraints based on Readable CNF**\nThe readable CNF provided is:\n1. $(\\neg x(0, 1, 1) \\lor x(2, 0, 1))$  $\\rightarrow$ (Alice not Eng Landing) $\\lor$ (Clara Nav Landing)\n2. $(\\neg x(2, 1, 1) \\lor x(1, 0, 1))$  $\\rightarrow$ (Clara not Eng Landing) $\\lor$ (Bob Nav Landing)\n3. $(\\neg x(1, 1, 0) \\lor x(0, 1, 1))$  $\\rightarrow$ (Bob not Eng Launch) $\\lor$ (Alice Eng Landing)\n4. $(\\neg x(2, 0, 1) \\lor x(0, 0, 1))$  $\\rightarrow$ (Clara not Nav Landing) $\\lor$ (Alice Nav Landing)\n5. $(\\neg x(1, 0, 1) \\lor x(1, 1, 0))$  $\\rightarrow$ (Bob not Nav Landing) $\\lor$ (Bob Eng Launch)\n6. $(x(2, 1, 1))$  $\\rightarrow$ **Clara Eng Landing is TRUE**.\n\n*Correction Note:* In standard CNF notation, a literal $L$ implies $\\neg L = 0$ and $L = 1$. However, the `clauses_dimacs` array shows negative indices (e.g., `-12`, `-6`). In standard SAT encoding (like `clauses_dimacs` from `python-sat` or similar libraries), a value of `-N` usually represents the clause containing variable `N` as a positive literal, or it represents the negation. Let's look at the readable string `(¬x(0, 1, 1) ∨ x(2, 0, 1))`. This is clearly a disjunction. The DMC array `[[-12, 6]]` corresponds to the first clause. Usually, this maps to `(var 12 = true OR var 6 = true)`.\nLet's verify the mapping of `dims`: `[3, 2, 2]`. Indices 0..11.\nClause 1: `¬x(0,1,1) ∨ x(2,0,1)`. In DMC, `x(2,0,1)` is index 10. `¬x(0,1,1)` is likely index 12? Wait, indices are 0..11.\nLet's re-map strictly:\nDim 0: 3 vars -> Indices 0, 1, 2\nDim 1: 2 vars -> Indices 3, 4\nDim 2: 2 vars -> Indices 5, 6\n\nTotal 12 vars.\nClause 1: `¬x(0,1,1) ∨ x(2,0,1)`\n- `x(0,1,1)` uses indices 0 (Nav) and 1 (Eng)? No, mapping says `(i,j,k)`.\n- `x(0, 1, 1)` -> Astronaut 0 (Alice), Skill 1 (Engineering), Phase 1 (Landing).\n- `x(2, 0, 1)` -> Astronaut 2 (Clara), Skill 0 (Navigation), Phase 1 (Landing).\n- In standard DMC: `x(a,b,c)` is usually mapped to `a + 2*b + c`.\n- Let's check the DMC values: `[12, -12, 6]`.\n- If `x` maps linearly: $v = a + 2b + c$.\n- `x(0, 1, 1)` -> $0 + 2(1) + 1 = 3$. Index 3.\n- `x(2, 0, 1)` -> $2 + 2(0) + 1 = 3$. Index 3.\nThis contradicts the DMC having different indices.\n\nLet's look at the `readable_cnf` again: `x(0, 1, 1)` vs `x(2, 0, 1)`.\nThe `clauses_dimacs` has `-12` and `6`.\nIf `x(i,j,k)` maps to index `i*4 + j*2 + k`?\n- `x(0,1,1)` -> $0+2+1=3$.\n- `x(2,0,1)` -> $8+0+1=9$.\nIndices don't match 12 or 6.\n\nLet's try `i*2 + j*1 + k*0`?\n- `x(0,1,1)` -> 3.\n- `x(2,0,1)` -> 4+0+1=5.\nStill doesn't match 12/6.\n\nLet's assume the prompt implies a specific encoding where:\n`x(i, j, k)` might be mapped differently.\nHowever, we can solve this logically without perfectly decoding the DMC array if the readable CNF is explicit.\n**Readable CNF is unambiguous:**\n1. $\\neg x(A, E, L) \\lor x(C, N, L)$\n2. $\\neg x(C, E, L) \\lor x(B, N, L)$\n3. $\\neg x(B, E, L) \\lor x(A, E, L)$\n4. $\\neg x(C, N, L) \\lor x(A, N, L)$\n5. $\\neg x(B, N, L) \\lor x(B, E, L)$\n6. $x(C, E, L)$ is TRUE.\n\nLet's test Clause 6: **Clara is proficient in Engineering during Landing ($x(C, E, L) = 1$).**\nSubstitute $x(C, E, L) = 1$ into the other clauses involving Clara's Engineering status.\nClause 2: $(\\neg x(C, E, L) \\lor x(B, N, L))$. Since $x(C, E, L)=1$, the first part is false. Thus, we must have **$x(B, N, L) = 1$** (Bob is proficient in Navigation during Landing).\nClause 5: $(\\neg x(B, N, L) \\lor x(B, E, L))$. We just derived $x(B, N, L) = 1$. The first part is false. Thus, we must have **$x(B, E, L) = 1$** (Bob is proficient in Engineering during Landing).\nClause 4: $(\\neg x(C, N, L) \\lor x(A, N, L))$.\nClause 1: $(\\neg x(A, E, L) \\lor x(C, N, L))$.\nClause 3: $(\\neg x(B, E, L) \\lor x(A, E, L))$. We just derived $x(B, E, L) = 1$. The first part is false. Thus, we must have **$x(A, E, L) = 1$** (Alice is proficient in Engineering during Landing).\n\nNow check Clause 3 again: $(\\neg x(B, E, L) \\lor x(A, E, L))$.\nSince $x(B, E, L) = 1$, $\\neg x(B, E, L)$ is 0. So $x(A, E, L)$ must be 1. This matches our deduction from Clause 6.\n\nNow check remaining clauses.\nWe have established:\n$x(A, E, L) = 1$\n$x(B, N, L) = 1$\n$x(B, E, L) = 1$\n\nLet's look at Clause 4: $(\\neg x(C, N, L) \\lor x(A, N, L))$.\nWe know nothing about $x(C, N, L)$ yet.\nLet's look at Clause 1: $(\\neg x(A, E, L) \\lor x(C, N, L))$.\nSince $x(A, E, L) = 1$, $\\neg x(A, E, L)$ is 0. Thus, we must have **$x(C, N, L) = 1$** (Clara is proficient in Navigation during Landing).\n\nSo far, we have a consistent assignment for the landing phase:\nAlice: Eng Landing ($T$), Nav Landing (?)\nBob: Eng Landing ($T$), Nav Landing ($T$)\nClara: Eng Landing ($T$), Nav Landing ($T$)\n\nWait, let's check Clause 4 again with $x(C, N, L) = 1$.\n$\\neg x(C, N, L)$ is 0. So $x(A, N, L)$ must be 1.\nThus: **Alice is proficient in Navigation during Landing.**\n\nSummary of Landing Phase ($k=1$):\n- Alice: Eng=$T$, Nav=$T$\n- Bob: Eng=$T$, Nav=$T$\n- Clara: Eng=$T$, Nav=$T$\n\nNow let's verify all clauses with this Landing assignment:\n1. $\\neg x(A,E,L) \\lor x(C,N,L)$ -> $\\neg T \\lor T$ -> $F \\lor T$ -> **True**.\n2. $\\neg x(C,E,L) \\lor x(B,N,L)$ -> $\\neg T \\lor T$ -> $F \\lor T$ -> **True**.\n3. $\\neg x(B,E,L) \\lor x(A,E,L)$ -> $\\neg T \\lor T$ -> $F \\lor T$ -> **True**.\n4. $\\neg x(C,N,L) \\lor x(A,N,L)$ -> $\\neg T \\lor T$ -> $F \\lor T$ -> **True**.\n5. $\\neg x(B,N,L) \\lor x(B,E,L)$ -> $\\neg T \\lor T$ -> $F \\lor T$ -> **True**.\n6. $x(C,E,L)$ -> **True**.\n\nAll clauses are satisfied by the assignment derived from Clause 6 alone.\nTherefore, the system is **SAT**.\n\n**Step 3: Construct the Final Answer**\n- **Label**: SAT\n- **Assignment**:\n  - Alice (0, 1, 1): Engineering=Landing=1, Navigation=Landing=1\n  - Bob (1, 1, 1): Engineering=Landing=1, Navigation=Landing=1\n  - Clara (2, 1, 1): Engineering=Landing=1, Navigation=Landing=1\n  - (Other variables can be set to 0 as they are not constrained).\n\n**Explanation of Logic:**\nThe proof starts with Clause 6: \"Clara is proficient in engineering during landing\" ($x(2, 1, 1)$).\nThis forces Clause 2 (\"Either Clara is not proficient... OR Bob is proficient...\") to force Bob to be proficient in navigation during landing.\nIt also forces Clause 3 to force Alice to be proficient in engineering during landing.\nWith Alice and Bob having specific skills, the remaining clauses (1 and 4) force Clara and Alice to fill the remaining slots in the landing phase to satisfy the logical disjunctions. Specifically, since Alice is Eng-Landing, Clause 1 forces Clara to be Nav-Landing. With Clara Nav-Landing, Clause 4 forces Alice to be Nav-Landing (which is consistent).\nThus, a valid assignment exists.\n\n### Final Output Generation\n\n```text\n[SAT]\n\nAssignment:\nx(0, 1, 1) = 1 (Alice, Engineering, Landing)\nx(0, 0, 1) = 1 (Alice, Navigation, Landing)\nx(1, 1, 1) = 1 (Bob, Engineering, Landing)\nx(1, 0, 1) = 1 (Bob, Navigation, Landing)\nx(2, 1, 1) = 1 (Clara, Engineering, Landing)\nx(2, 0, 1) = 1 (Clara, Navigation, Landing)\nAll other variables (k=0 phase) can be set to 0.\n\nReasoning:\nClause 6 establishes x(2, 1, 1) = 1.\nSubstituting this into Clause 2: ¬x(2, 1, 1) ∨ x(1, 0, 1) implies x(1, 0, 1) = 1 (Bob, Navigation, Landing).\nSubstituting this into Clause 3: ¬x(1, 1, 0) ∨ x(0, 1, 1) implies x(0, 1, 1) = 1 (Alice, Engineering, Landing).\nSubstituting these values back into Clause 1: ¬x(0, 1, 1) ∨ x(2, 0, 1) implies x(2, 0, 1) = 1 (Clara, Navigation, Landing).\nSubstituting x(2, 0, 1) = 1 into Clause 4: ¬x(2, 0, 1) ∨ x(0, 0, 1) implies x(0, 0, 1) = 1 (Alice, Navigation, Landing).\nAll clauses are satisfied.\n```",
+  "teacher_extracted_label": "SAT",
+  "ground_truth_label": "SAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1576,
+    "generated_tokens": 3096,
+    "batch_elapsed_seconds": 86.44395875930786,
+    "tokens_per_second_for_batch": 35.81511125167712,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777836385.9584224,
+  "slurm_job_id": "3181684",
+  "slurm_array_job_id": "3181527",
+  "slurm_array_task_id": "85",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a space expedition, three astronauts—Alice, Bob, and Clara—are evaluated in two skill areas (0 = navigation, 1 = engineering) across two mission phases (0 = launch, 1 = landing). For each astronaut, skill, and phase, a decision is being made on whether they are proficient. Each of these decisions is independent.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i is proficient in skill j during mission phase k. Here, astronaut 0 is Alice, astronaut 1 is Bob, and astronaut 2 is Clara.\n</variable_mapping>\n\n<conditions>\n1. Either Alice is not proficient in engineering during landing, or Clara is proficient in navigation during landing.\n2. Either Clara is not proficient in engineering during landing, or Bob is proficient in navigation during landing.\n3. Either Bob is not proficient in engineering during launch, or Alice is proficient in engineering during landing.\n4. Either Clara is not proficient in navigation during landing, or Alice is proficient in navigation during landing.\n5. Either Bob is not proficient in navigation during landing, or Bob is proficient in engineering during launch.\n6. Clara is proficient in engineering during landing.\n</conditions>\n\n<question>\nCan all these proficiency evaluations be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,2,2]\n</dims>\n\n<num_vars>\n12\n</num_vars>\n\n<num_clauses>\n6\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    12\n  ],\n  [\n    -12,\n    6\n  ],\n  [\n    -6,\n    7\n  ],\n  [\n    -7,\n    4\n  ],\n  [\n    -4,\n    10\n  ],\n  [\n    -10,\n    2\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 1, 1) ∨ x(2, 0, 1)) ∧ (¬x(2, 1, 1) ∨ x(1, 0, 1)) ∧ (¬x(1, 1, 0) ∨ x(0, 1, 1)) ∧ (¬x(2, 0, 1) ∨ x(0, 0, 1)) ∧ (¬x(1, 0, 1) ∨ x(1, 1, 0)) ∧ (x(2, 1, 1))\n</readable_cnf>\n\n<satisfiable>\ntrue\n</satisfiable>\n\n<label>\nSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nSAT satisfying assignment\n</certificate_type>\n\n<assignment_structured_0_1>\n[\n  [\n    [\n      0,\n      1\n    ],\n    [\n      0,\n      1\n    ]\n  ],\n  [\n    [\n      0,\n      1\n    ],\n    [\n      1,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      1\n    ],\n    [\n      0,\n      1\n    ]\n  ]\n]\n</assignment_structured_0_1>\n\n<assignment_per_variable>\n- x(0, 0, 0) = False\n- x(0, 0, 1) = True\n- x(0, 1, 0) = False\n- x(0, 1, 1) = True\n- x(1, 0, 0) = False\n- x(1, 0, 1) = True\n- x(1, 1, 0) = True\n- x(1, 1, 1) = False\n- x(2, 0, 0) = False\n- x(2, 0, 1) = True\n- x(2, 1, 0) = False\n- x(2, 1, 1) = True\n</assignment_per_variable>\n<sat_reason>\nOriginally UNSAT because: Frozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ x(0, 0, 1)), (¬x(0, 0, 1)). After removing clause (¬x(0, 0, 1)), the conflict is resolved, making the problem satisfiable.\n</sat_reason>\n\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a space expedition, three astronauts—Alice, Bob, and Clara—are evaluated in two skill areas (0 = navigation, 1 = engineering) across two mission phases (0 = launch, 1 = landing). For each astronaut, skill, and phase, a decision is being made on whether they are proficient. Each of these decisions is independent.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i is proficient in skill j during mission phase k. Here, astronaut 0 is Alice, astronaut 1 is Bob, and astronaut 2 is Clara.\n</variable_mapping>\n\n<conditions>\n1. Either Alice is not proficient in engineering during landing, or Clara is proficient in navigation during landing.\n2. Either Clara is not proficient in engineering during landing, or Bob is proficient in navigation during landing.\n3. Either Bob is not proficient in engineering during launch, or Alice is proficient in engineering during landing.\n4. Either Clara is not proficient in navigation during landing, or Alice is proficient in navigation during landing.\n5. Either Bob is not proficient in navigation during landing, or Bob is proficient in engineering during launch.\n6. Clara is proficient in engineering during landing.\n</conditions>\n\n<question>\nCan all these proficiency evaluations be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,2,2]\n</dims>\n\n<num_vars>\n12\n</num_vars>\n\n<num_clauses>\n6\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    12\n  ],\n  [\n    -12,\n    6\n  ],\n  [\n    -6,\n    7\n  ],\n  [\n    -7,\n    4\n  ],\n  [\n    -4,\n    10\n  ],\n  [\n    -10,\n    2\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 1, 1) ∨ x(2, 0, 1)) ∧ (¬x(2, 1, 1) ∨ x(1, 0, 1)) ∧ (¬x(1, 1, 0) ∨ x(0, 1, 1)) ∧ (¬x(2, 0, 1) ∨ x(0, 0, 1)) ∧ (¬x(1, 0, 1) ∨ x(1, 1, 0)) ∧ (x(2, 1, 1))\n</readable_cnf>\n\n<satisfiable>\ntrue\n</satisfiable>\n\n<label>\nSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nSAT satisfying assignment\n</certificate_type>\n\n<assignment_structured_0_1>\n[\n  [\n    [\n      0,\n      1\n    ],\n    [\n      0,\n      1\n    ]\n  ],\n  [\n    [\n      0,\n      1\n    ],\n    [\n      1,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      1\n    ],\n    [\n      0,\n      1\n    ]\n  ]\n]\n</assignment_structured_0_1>\n\n<assignment_per_variable>\n- x(0, 0, 0) = False\n- x(0, 0, 1) = True\n- x(0, 1, 0) = False\n- x(0, 1, 1) = True\n- x(1, 0, 0) = False\n- x(1, 0, 1) = True\n- x(1, 1, 0) = True\n- x(1, 1, 1) = False\n- x(2, 0, 0) = False\n- x(2, 0, 1) = True\n- x(2, 1, 0) = False\n- x(2, 1, 1) = True\n</assignment_per_variable>\n<sat_reason>\nOriginally UNSAT because: Frozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ x(0, 0, 1)), (¬x(0, 0, 1)). After removing clause (¬x(0, 0, 1)), the conflict is resolved, making the problem satisfiable.\n</sat_reason>\n\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "SAT",
+  "satisfiable": true,
+  "certificate_type": "sat_assignment",
+  "ground_truth": {
+    "dims": [
+      3,
+      2,
+      2
+    ],
+    "num_vars": 12,
+    "num_clauses": 6,
+    "satisfiable": true,
+    "label": "SAT",
+    "certificate_type": "sat_assignment",
+    "assignment_structured_0_1": [
+      [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    ],
+    "assignment_flat": {
+      "1": false,
+      "2": true,
+      "3": false,
+      "4": true,
+      "5": false,
+      "6": true,
+      "7": true,
+      "8": false,
+      "9": false,
+      "10": true,
+      "11": false,
+      "12": true
+    },
+    "sat_reason": "Originally UNSAT because: Frozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ x(0, 0, 1)), (¬x(0, 0, 1)). After removing clause (¬x(0, 0, 1)), the conflict is resolved, making the problem satisfiable."
+  }
+}

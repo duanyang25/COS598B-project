@@ -1,0 +1,141 @@
+{
+  "index": 68,
+  "row_index_in_prompt_file": 68,
+  "prompt_id": "satbench_00068",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Derivation\n\n**1. Analyze the Problem Statement and Variables:**\n*   **Variables:** $x(i, j, k)$ denotes whether Adventurer $i$ overcomes Obstacle $j$ at Checkpoint $k$.\n    *   $i \\in \\{0, 1, 2\\}$ (Alice, Bob, Charlie)\n    *   $j \\in \\{0, 1, 2\\}$ (River, Mountain, Barrier)\n    *   $k \\in \\{0, 1\\}$ (Entrance, Deep Woods)\n*   **Goal:** Determine if there exists an assignment satisfying all 7 conditions.\n\n**2. Analyze the Conditions (Clauses):**\nWe map the readable CNF provided into logical disjunctions ($A \\lor B \\lor C \\dots$) based on the variable mappings.\n\n*   **Condition 1:** $\\neg x(0, 2, 0) \\lor \\neg x(1, 1, 1)$\n    *   Alice doesn't do Barrier @ Entrance OR Bob doesn't do Mountain @ Deep Woods.\n*   **Condition 2:** $x(0, 2, 0) \\lor x(1, 1, 1)$\n    *   Alice does Barrier @ Entrance OR Bob does Mountain @ Deep Woods.\n*   **Condition 3:** $x(2, 2, 0) \\lor \\neg x(1, 1, 1)$\n    *   Charlie does Barrier @ Entrance OR Bob doesn't do Mountain @ Deep Woods.\n*   **Condition 4:** $x(0, 0, 0) \\lor x(1, 0, 1) \\lor x(2, 1, 1)$\n    *   Alice does River @ Entrance OR Bob does River @ Deep Woods OR Charlie does Mountain @ Deep Woods.\n*   **Condition 5:** $\\neg x(0, 2, 0) \\lor x(2, 2, 0)$\n    *   Alice doesn't do Barrier @ Entrance OR Charlie does Barrier @ Entrance.\n*   **Condition 6:** $\\neg x(2, 2, 0) \\lor x(1, 1, 1)$\n    *   Charlie doesn't do Barrier @ Entrance OR Bob does Mountain @ Deep Woods.\n*   **Condition 7:** $x(0, 2, 0) \\lor \\neg x(2, 2, 0)$\n    *   Alice does Barrier @ Entrance OR Charlie doesn't do Barrier @ Entrance.\n\n**3. Logical Deduction using the Certificate's Contradiction:**\nThe Z3 certificate explicitly identifies the unsatisfiability via a chain of dependencies involving indices 5, 17, and 10. Let's trace these indices back to the conditions.\n\n*   **Index 17 corresponds to Condition 3:** $x(2, 2, 0) \\lor \\neg x(1, 1, 1)$.\n*   **Index 10 corresponds to Condition 6:** $\\neg x(2, 2, 0) \\lor x(1, 1, 1)$.\n    *   *Contradiction:* If we assume $x(2, 2, 0)$ is True (Charlie does Barrier), then Index 17 is satisfied, but Index 10 forces $\\neg x(1, 1, 1)$ (Bob doesn't do Mountain). Conversely, if $x(2, 2, 0)$ is False, Index 6 requires $x(1, 1, 1)$ (Bob does Mountain). This creates a direct XOR-like constraint between Charlie's action at the entrance and Bob's action at the deep woods.\n\n*   **Index 5 corresponds to Condition 2:** $x(0, 2, 0) \\lor x(1, 1, 1)$.\n*   **Index 1 corresponds to Condition 7:** $x(0, 2, 0) \\lor \\neg x(2, 2, 0)$.\n    *   *Derivation:* Suppose $x(2, 2, 0)$ is True (Charlie does Barrier).\n        *   From Cond 7 ($x(0, 2, 0) \\lor \\text{False}$), we must have $x(0, 2, 0)$ True (Alice does Barrier).\n        *   From Cond 5 ($\\text{False} \\lor x(2, 2, 0)$), which is satisfied.\n        *   Now look at Cond 1: $\\text{False} \\lor \\neg x(1, 1, 1)$. This implies $x(1, 1, 1)$ must be False (Bob doesn't do Mountain).\n        *   Now look at Cond 3: $x(2, 2, 0) \\lor \\text{False}$, which is True.\n        *   Now look at Cond 6: $\\text{False} \\lor x(1, 1, 1)$. Since we derived $x(1, 1, 1)$ is False, this clause becomes False.\n        *   **Contradiction found.** The assumption that $x(2, 2, 0)$ is True leads to $x(1, 1, 1)$ being both True and False depending on the resolution path, specifically violating the conjunction of conditions 3 and 6 combined with 1 and 7.\n\n*   **Index 16 corresponds to Condition 4:** $x(0, 0, 0) \\lor x(1, 0, 1) \\lor x(2, 1, 1)$.\n    *   This represents the \"River\" clause for Alice, Bob, and Charlie.\n\n**4. Verification of the Unsat Core:**\nThe provided certificate lists conditions 1, 2, 3, 5, 6, and 7 as the core of the contradiction.\n*   The core includes pairs like $(Cond 3 \\land Cond 6)$ and $(Cond 1 \\land Cond 7)$.\n*   As deduced above:\n    *   $Cond 3 \\implies \\neg Cond 6$ (if we fix the specific values derived from the XOR structure).\n    *   Specifically, the certificate's reasoning highlights an XOR chain: $A \\leftrightarrow \\neg B$ relationships forced by conditions 3 and 6, and similarly conditions 1 and 7 forcing $C \\leftrightarrow \\neg D$.\n    *   The specific conflict arises because conditions 3, 6, 1, and 7 collectively create a parity constraint (like $x_1 + x_2 = 1$) for the pair (Bob_Mountain, Charlie_Barrier_Entrance) and (Alice_Barrier_Entrance, Charlie_Barrier_Entrance).\n    *   Actually, looking closely at the provided unsat core mapping:\n        *   Clause 5 (Cond 2) + Clause 1 (Cond 7) $\\to$ $(x_{0,2,0} \\oplus x_{1,1,1})$? No, they are ORs.\n        *   However, the *reasoning* section states: \"XOR Chain contradiction\".\n        *   Let's re-evaluate strictly:\n            *   Assume $x(1, 1, 1)$ is True (Bob does Mountain).\n                *   Then Cond 2 is satisfied.\n                *   Cond 1 requires $\\neg x(0, 2, 0)$, so $x(0, 2, 0)$ is False.\n                *   Cond 3 requires $x(2, 2, 0) \\lor \\text{True}$ (Satisfied).\n                *   Cond 6 requires $\\neg x(2, 2, 0) \\lor \\text{True}$ (Satisfied).\n                *   Cond 7 requires $x(0, 2, 0) \\lor \\neg x(2, 2, 0)$. Since $x(0, 2, 0)$ is False, we need $\\neg x(2, 2, 0)$. So $x(2, 2, 0)$ is False.\n                *   So far: Bob=M, Alice=NoBarrier, Charlie=NoBarrier.\n                *   Check Cond 3 again: $x(2,2,0) \\lor \\neg x(1,1,1)$. False $\\lor$ False = **False**.\n                *   Contradiction! We assumed Bob does Mountain, but this forces Charlie NOT to do Barrier (which is allowed) AND forces Alice NOT to do Barrier (allowed). Wait, the contradiction was in the previous branch.\n            *   Let's try assuming $x(2, 2, 0)$ is True (Charlie does Barrier).\n                *   Cond 7: $x(0, 2, 0) \\lor \\text{False} \\to x(0, 2, 0)$ must be True.\n                *   Cond 5: $\\text{False} \\lor x(2, 2, 0) \\to$ True.\n                *   Cond 1: $\\text{False} \\lor \\neg x(1, 1, 1) \\to \\neg x(1, 1, 1)$ must be True. So $x(1, 1, 1)$ is False.\n                *   Cond 6: $\\text{False} \\lor x(1, 1, 1)$. Since $x(1, 1, 1)$ is False, this clause evaluates to **False**.\n                *   Contradiction confirmed.\n\n**5. Constructing the Final Answer:**\n*   **Status:** UNSAT.\n*   **Core Reason:** The combination of conditions creates a logical inconsistency regarding the state of \"Bob overcomes the mountain\" vs \"Charlie overcomes the barrier at the entrance\". Specifically, the set of conditions 3, 6, 1, and 7 forces a contradictory assignment for these two variables under the constraint of the other variables, rendering the system unsatisfiable.\n*   **Assignments:** None required since it is unsatisfiable.\n*   **Final Label:** UNSAT\n\n### Teacher Output\n\n**Solution Status:** UNSAT\n\n**Reasoning:**\nThe puzzle asks if there is an assignment of boolean values for the variables $x(0, j, k)$ (where $i$ represents Alice, Bob, Charlie; $j$ represents River/Mountain/Barrier; $k$ represents Entrance/Deep Woods) that satisfies all 7 conditions.\n\nBy analyzing the logical implications of the conditions:\n1.  Consider the interaction between **Condition 3** ($x(2, 2, 0) \\lor \\neg x(1, 1, 1)$) and **Condition 6** ($\\neg x(2, 2, 0) \\lor x(1, 1, 1)$). These two clauses form a classic XOR relationship. If $x(1, 1, 1)$ is true, $x(2, 2, 0)$ must be false; if $x(1, 1, 1)$ is false, $x(2, 2, 0)$ must be true.\n2.  Now consider **Condition 1** ($\\neg x(0, 2, 0) \\lor \\neg x(1, 1, 1)$) and **Condition 7** ($x(0, 2, 0) \\lor \\neg x(2, 2, 0)$). These establish a similar dependency chain.\n3.  Combining these constraints reveals a structural impossibility (a contradiction core). Specifically, the certificate indicates that assuming the negation of one variable triggers a falsification of another clause within the same set of conditions. For instance, if we attempt to satisfy the system, the logical flow leads to a state where a clause evaluates to False (e.g., if Charlie overcomes the barrier, it forces Alice to not overcome the barrier, which subsequently forces Bob to not overcome the mountain, contradicting the requirement that Charlie overcomes the barrier).\n\nMore formally, the unsat core analysis identifies a chain of dependencies:\n*   Clauses 1 and 7 force a relationship between Alice's barrier action and Charlie's barrier action.\n*   Clauses 3 and 6 force a relationship between Charlie's barrier action and Bob's mountain action.\n*   Clauses 2 and 4 introduce additional dependencies that close the loop into a contradiction when all conditions are enforced simultaneously.\n\nTherefore, the system of equations has no solution.\n\n**Assignment:**\nSince the system is unsatisfiable, no valid assignment exists.\n\n**Final Label:**\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1771,
+    "generated_tokens": 2813,
+    "batch_elapsed_seconds": 75.72570204734802,
+    "tokens_per_second_for_batch": 37.14722906419741,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777776040.191929,
+  "slurm_job_id": "3179713",
+  "slurm_array_job_id": "3179672",
+  "slurm_array_task_id": "6",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nThree adventurers—Alice, Bob, and Charlie—are exploring a mystical forest, where they face various challenges, represented by obstacles. There are three types of obstacles (0 = river, 1 = mountain, 2 = magical barrier) at different checkpoints (0 = entrance, 1 = deep woods). Each adventurer can choose to overcome any obstacle independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean adventurer i overcomes obstacle type j at checkpoint k. Here, adventurer 0 is Alice, adventurer 1 is Bob, and adventurer 2 is Charlie.\n</variable_mapping>\n\n<conditions>\n1. Either Alice does not overcome the magical barrier at the entrance, or Bob does not overcome the mountain in the deep woods.\n2. Either Alice overcomes the magical barrier at the entrance, or Bob overcomes the mountain in the deep woods.\n3. Either Charlie overcomes the magical barrier at the entrance, or Bob does not overcome the mountain in the deep woods.\n4. Either Alice overcomes the river at the entrance, or Bob overcomes the river in the deep woods, or Charlie overcomes the mountain in the deep woods.\n5. Either Alice does not overcome the magical barrier at the entrance, or Charlie overcomes the magical barrier at the entrance.\n6. Either Charlie does not overcome the magical barrier at the entrance, or Bob overcomes the mountain in the deep woods.\n7. Either Alice overcomes the magical barrier at the entrance, or Charlie does not overcome the magical barrier at the entrance.\n</conditions>\n\n<question>\nIs there a way for the adventurers to overcome the obstacles such that all these conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    5,\n    -17\n  ],\n  [\n    -5,\n    17\n  ],\n  [\n    17,\n    -10\n  ],\n  [\n    -17,\n    10\n  ],\n  [\n    5,\n    10\n  ],\n  [\n    -5,\n    -10\n  ],\n  [\n    1,\n    8,\n    16\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 2, 0) ∨ ¬x(1, 1, 1)) ∧ (x(0, 2, 0) ∨ x(1, 1, 1)) ∧ (x(2, 2, 0) ∨ ¬x(1, 1, 1)) ∧ (x(0, 0, 0) ∨ x(1, 0, 1) ∨ x(2, 1, 1)) ∧ (¬x(0, 2, 0) ∨ x(2, 2, 0)) ∧ (¬x(2, 2, 0) ∨ x(1, 1, 1)) ∧ (x(0, 2, 0) ∨ ¬x(2, 2, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,5,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [5, -17] -> (x(0, 2, 0) ∨ ¬x(2, 2, 0)); matching condition number(s): [7]\n- raw clause index 1: [-5, 17] -> (¬x(0, 2, 0) ∨ x(2, 2, 0)); matching condition number(s): [5]\n- raw clause index 2: [17, -10] -> (x(2, 2, 0) ∨ ¬x(1, 1, 1)); matching condition number(s): [3]\n- raw clause index 3: [-17, 10] -> (¬x(2, 2, 0) ∨ x(1, 1, 1)); matching condition number(s): [6]\n- raw clause index 4: [5, 10] -> (x(0, 2, 0) ∨ x(1, 1, 1)); matching condition number(s): [2]\n- raw clause index 5: [-5, -10] -> (¬x(0, 2, 0) ∨ ¬x(1, 1, 1)); matching condition number(s): [1]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [5, 17, 10]: (x(0, 2, 0) ∨ ¬x(2, 2, 0)), (¬x(0, 2, 0) ∨ x(2, 2, 0)), (x(2, 2, 0) ∨ ¬x(1, 1, 1)), (¬x(2, 2, 0) ∨ x(1, 1, 1)), (x(0, 2, 0) ∨ x(1, 1, 1)), (¬x(0, 2, 0) ∨ ¬x(1, 1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nThree adventurers—Alice, Bob, and Charlie—are exploring a mystical forest, where they face various challenges, represented by obstacles. There are three types of obstacles (0 = river, 1 = mountain, 2 = magical barrier) at different checkpoints (0 = entrance, 1 = deep woods). Each adventurer can choose to overcome any obstacle independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean adventurer i overcomes obstacle type j at checkpoint k. Here, adventurer 0 is Alice, adventurer 1 is Bob, and adventurer 2 is Charlie.\n</variable_mapping>\n\n<conditions>\n1. Either Alice does not overcome the magical barrier at the entrance, or Bob does not overcome the mountain in the deep woods.\n2. Either Alice overcomes the magical barrier at the entrance, or Bob overcomes the mountain in the deep woods.\n3. Either Charlie overcomes the magical barrier at the entrance, or Bob does not overcome the mountain in the deep woods.\n4. Either Alice overcomes the river at the entrance, or Bob overcomes the river in the deep woods, or Charlie overcomes the mountain in the deep woods.\n5. Either Alice does not overcome the magical barrier at the entrance, or Charlie overcomes the magical barrier at the entrance.\n6. Either Charlie does not overcome the magical barrier at the entrance, or Bob overcomes the mountain in the deep woods.\n7. Either Alice overcomes the magical barrier at the entrance, or Charlie does not overcome the magical barrier at the entrance.\n</conditions>\n\n<question>\nIs there a way for the adventurers to overcome the obstacles such that all these conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    5,\n    -17\n  ],\n  [\n    -5,\n    17\n  ],\n  [\n    17,\n    -10\n  ],\n  [\n    -17,\n    10\n  ],\n  [\n    5,\n    10\n  ],\n  [\n    -5,\n    -10\n  ],\n  [\n    1,\n    8,\n    16\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 2, 0) ∨ ¬x(1, 1, 1)) ∧ (x(0, 2, 0) ∨ x(1, 1, 1)) ∧ (x(2, 2, 0) ∨ ¬x(1, 1, 1)) ∧ (x(0, 0, 0) ∨ x(1, 0, 1) ∨ x(2, 1, 1)) ∧ (¬x(0, 2, 0) ∨ x(2, 2, 0)) ∧ (¬x(2, 2, 0) ∨ x(1, 1, 1)) ∧ (x(0, 2, 0) ∨ ¬x(2, 2, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,5,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [5, -17] -> (x(0, 2, 0) ∨ ¬x(2, 2, 0)); matching condition number(s): [7]\n- raw clause index 1: [-5, 17] -> (¬x(0, 2, 0) ∨ x(2, 2, 0)); matching condition number(s): [5]\n- raw clause index 2: [17, -10] -> (x(2, 2, 0) ∨ ¬x(1, 1, 1)); matching condition number(s): [3]\n- raw clause index 3: [-17, 10] -> (¬x(2, 2, 0) ∨ x(1, 1, 1)); matching condition number(s): [6]\n- raw clause index 4: [5, 10] -> (x(0, 2, 0) ∨ x(1, 1, 1)); matching condition number(s): [2]\n- raw clause index 5: [-5, -10] -> (¬x(0, 2, 0) ∨ ¬x(1, 1, 1)); matching condition number(s): [1]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [5, 17, 10]: (x(0, 2, 0) ∨ ¬x(2, 2, 0)), (¬x(0, 2, 0) ∨ x(2, 2, 0)), (x(2, 2, 0) ∨ ¬x(1, 1, 1)), (¬x(2, 2, 0) ∨ x(1, 1, 1)), (x(0, 2, 0) ∨ x(1, 1, 1)), (¬x(0, 2, 0) ∨ ¬x(1, 1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      3,
+      2
+    ],
+    "num_vars": 18,
+    "num_clauses": 7,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      7
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          5,
+          -17
+        ],
+        "clause_structural": "(x(0, 2, 0) ∨ ¬x(2, 2, 0))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -5,
+          17
+        ],
+        "clause_structural": "(¬x(0, 2, 0) ∨ x(2, 2, 0))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          17,
+          -10
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ ¬x(1, 1, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -17,
+          10
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(1, 1, 1))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          5,
+          10
+        ],
+        "clause_structural": "(x(0, 2, 0) ∨ x(1, 1, 1))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -5,
+          -10
+        ],
+        "clause_structural": "(¬x(0, 2, 0) ∨ ¬x(1, 1, 1))",
+        "condition_numbers": [
+          1
+        ]
+      }
+    ],
+    "unsat_reason": "XOR Chain contradiction over variables [5, 17, 10]: (x(0, 2, 0) ∨ ¬x(2, 2, 0)), (¬x(0, 2, 0) ∨ x(2, 2, 0)), (x(2, 2, 0) ∨ ¬x(1, 1, 1)), (¬x(2, 2, 0) ∨ x(1, 1, 1)), (x(0, 2, 0) ∨ x(1, 1, 1)), (¬x(0, 2, 0) ∨ ¬x(1, 1, 1))"
+  }
+}

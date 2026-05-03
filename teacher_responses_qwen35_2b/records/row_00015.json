@@ -1,0 +1,113 @@
+{
+  "index": 15,
+  "row_index_in_prompt_file": 15,
+  "prompt_id": "satbench_00015",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analyze the Constraints from the Natural Language Conditions:**\n*   **Condition 1:** $x(0, 3)$ must be **True**.\n*   **Condition 2:** $\\neg x(0, 3) \\implies x(0, 1)$.\n    *   This is logically equivalent to: If $x(0, 3)$ is False, then $x(0, 1)$ must be True.\n    *   Since we know from Condition 1 that $x(0, 3)$ is True, the antecedent ($\\neg x(0, 3)$) is False. In logic, if the antecedent of an implication is false, the implication is automatically true regardless of the consequent. Thus, Condition 2 imposes **no new restriction** on $x(0, 1)$.\n*   **Condition 3:** $\\neg x(2, 3) \\lor \\neg x(0, 3)$.\n    *   This states: \"It is not the case that (both Ava is in Course 3 AND Emma is in Course 3).\"\n    *   This is a standard exclusive-or-like constraint (specifically, $\\neg(A \\land B)$), ensuring they cannot both be present.\n*   **Condition 4:** $\\neg x(0, 1) \\implies x(2, 3)$.\n    *   This states: If Emma is not in Course 1, then Ava must be in Course 3.\n\n**2. Synthesize the Implications:**\nWe have established:\n*   $x(0, 3) = \\text{True}$.\n*   From Condition 3: Since $x(0, 3)$ is True, the disjunction $\\neg x(2, 3) \\lor \\neg x(0, 3)$ simplifies to $\\neg x(2, 3) \\lor \\text{False}$, which forces **$x(2, 3) = \\text{False}$**.\n    *   *Interpretation:* Ava cannot be enrolled in Course 3.\n\nNow look at **Condition 4**: $\\neg x(0, 1) \\implies x(2, 3)$.\n*   We found that $x(2, 3)$ is False.\n*   Therefore, the antecedent ($\\neg x(0, 1)$) must also be False for the implication to hold.\n*   If $\\neg x(0, 1)$ is False, then **$x(0, 1)$ must be True**.\n    *   *Interpretation:* Emma must be enrolled in Course 1.\n\n**3. Verify Consistency:**\nLet's check the proposed assignment against all conditions:\n*   **Assignment:**\n    *   $x(0, 3) = \\text{True}$ (Emma in Course 3)\n    *   $x(0, 1) = \\text{True}$ (Emma in Course 1)\n    *   $x(2, 3) = \\text{False}$ (Ava not in Course 3)\n*   **Check Conditions:**\n    1.  Emma in Course 3? **Yes.**\n    2.  If not in Course 3, then in Course 1? Antecedent is False, so statement holds. **Yes.**\n    3.  Not in Course 3 OR Not in Course 3? $\\text{True} \\lor \\text{False} = \\text{True}$. **Yes.**\n    4.  If not in Course 1, then in Course 3? Antecedent is False, so statement holds. **Yes.**\n\n**4. Address the Z3 Certificate Analysis:**\nThe Z3 solver correctly identifies this problem as UNSAT.\n*   The Z3 output indicates that the core unsatisfiable clauses are $(x(0, 3))$, $(\\neg x(0, 1) \\lor x(2, 3))$, $(\\neg x(2, 3) \\lor \\neg x(0, 3))$, and $(\\neg x(0, 3) \\lor x(0, 1))$.\n*   Wait, let's re-read the Z3 provided in the prompt carefully. The prompt says `<satisfiable>false` but then lists `UNSAT core`.\n*   Let's re-evaluate the logic derived above vs the Z3 certificate provided in the text.\n    *   My derivation: $x(0, 3)=T \\implies$ Condition 4 requires $\\neg x(0, 1)$ to be false $\\implies x(0, 1)=T$. Condition 3 requires $\\neg x(2, 3) \\lor T$ (always true). Condition 2 is vacuously true. All seem satisfiable.\n    *   **CRITICAL CHECK:** Did I misinterpret Condition 3 or 4?\n        *   Cond 3: $\\neg x(2, 3) \\lor \\neg x(0, 3)$. With $x(0, 3)=1$, this becomes $\\neg x(2, 3) \\lor 0$, which implies $\\neg x(2, 3)=1 \\implies x(2, 3)=0$. So Ava cannot be in Course 3.\n        *   Cond 4: $\\neg x(0, 1) \\implies x(2, 3)$. Since $x(2, 3)=0$, then $\\neg x(0, 1)$ must be False. So $x(0, 1)=1$.\n        *   Cond 2: $\\neg x(0, 3) \\implies x(0, 1)$. Since $x(0, 3)=1$, this is vacuous.\n        *   Result: A valid assignment exists ($x(0,3)=1, x(0,1)=1, x(2,3)=0$).\n\n*   **Contradiction in Prompt Data vs Logic:** The text block contains contradictory instructions.\n    *   The text says `<satisfiable>false` and labels it `UNSAT`.\n    *   The text says `<readable_cnf>` lists 4 clauses.\n    *   The text says `<unsat_reason>` cites a cycle conflict.\n    *   However, looking closely at the `<readable_cnf>` provided: `(¬x(0, 1) ∨ x(2, 3))`. This corresponds to Condition 4 (`If not x(0,1), then x(2,3)`).\n    *   Looking at `<readable_cnf>` again: `(¬x(0, 3) ∨ x(0, 1))`. This corresponds to Condition 2.\n    *   Looking at `<readable_cnf>` again: `(¬x(2, 3) ∨ ¬x(0, 3))`. This corresponds to Condition 3.\n    *   Looking at `<readable_cnf>` again: `(x(0, 3))`. This corresponds to Condition 1.\n\n*   **Re-evaluating the \"Z3\" claim in the prompt:**\n    The prompt includes a section: `## Formal SAT information`, `## Z3 solver output / certificate`, where it claims the result is `UNSAT`.\n    However, strictly applying the logic provided in `<conditions>`:\n    1. $x(0,3)=1$\n    2. $\\neg 1 \\to x(0,1)$ (True)\n    3. $\\neg x(2,3) \\lor \\neg 1$ (Requires $\\neg x(2,3)$, so $x(2,3)=0$)\n    4. $\\neg x(0,1) \\to x(2,3)$ (Since $x(2,3)=0$, $\\neg x(0,1)$ must be 0, so $x(0,1)=1$)\n    \n    There is **no contradiction** in the logic derived from the conditions. The system is **Satisfiable**. The Z3 certificate provided in the text claiming it is UNSAT appears to be a hallucination or an error within the generated dataset (a common issue in these synthetic benchmarks where the LLM generates contradictory metadata like \"Z3 says UNSAT\" but the actual logic proves SAT).\n\n    **Instruction Requirement:** \"Generate the teacher answer... faithful to the conditions\".\n    If the conditions allow a solution, the answer must be SAT. I must ignore the `<satisfiable>false` label and the `<label>UNSAT</label>` tag found in the input block, as the instruction explicitly says to use \"only the constraints stated in the conditions\" and \"avoid... context inconsistency\". The logic derived from the explicit natural language conditions ($x(0,3)=1 \\implies$ others forced) proves satisfiability.\n\n    *Self-Correction/Refinement:* Is there any interpretation where it is UNSAT?\n    Only if Condition 3 was interpreted differently, e.g., \"Exactly one of them is in Course 3\"? No, standard CNF `OR` is inclusive.\n    Or if Condition 4 meant \"If Emma is NOT in 1, THEN Ava IS in 3\", which is what I used.\n    \n    Let's double check the Z3 mapping provided in the prompt.\n    `raw clause index 3: [4] -> (x(0, 3))`.\n    `raw clause index 2: [-12, -4] -> (¬x(2, 3) ∨ ¬x(0, 3))`.\n    `raw clause index 1: [-2, 12] -> (¬x(0, 1) ∨ x(2, 3))`.\n    `raw clause index 0: [-4, 2] -> (¬x(0, 3) ∨ x(0, 1))`.\n    \n    If I solve the CNF given: `(x(0,3))` is a clause. This forces $x(0,3)=1$.\n    Clause 3: `(¬x(2,3) ∨ ¬x(0,3))`. With $x(0,3)=1$, this becomes `¬x(2,3)`. So $x(2,3)$ MUST be 0.\n    Clause 2: `(¬x(0,1) ∨ x(2,3))`. Substitute $x(2,3)=0$: `¬x(0,1) ∨ False`. This implies `¬x(0,1)` must be True, so $x(0,1)=0$.\n    Clause 1: `(¬x(0,3) ∨ x(0,1))`. Substitute values ($x(0,3)=1, x(0,1)=0$): `¬1 ∨ 0` = `0 ∨ 0` = `False`.\n    **Ah! There is a contradiction in the provided CNF!**\n    Let's re-read the CNF parsing.\n    The text says: `[-4, 2]` maps to `(¬x(0, 3) ∨ x(0, 1))`.\n    Wait, usually indices in Dimacs format `[row, col]` map to `clause[row * num_vars + col]`.\n    Here `num_vars = 12`. `num_clauses = 4`.\n    Dimensions `[3, 4]` suggests 3 variables per row? Or 4 variables total?\n    Let's look at the readable CNF string provided:\n    `(x(0, 3)) ∧ (¬x(0, 3) ∨ x(0, 1)) ∧ (¬x(2, 3) ∨ ¬x(0, 3)) ∧ (¬x(0, 1) ∨ x(2, 3))`\n    There are exactly 4 clauses.\n    Clause 1: $x(0,3)$\n    Clause 2: $\\neg x(0,3) \\lor x(0,1)$\n    Clause 3: $\\neg x(2,3) \\lor \\neg x(0,3)$\n    Clause 4: $\\neg x(0,1) \\lor x(2,3)$\n    \n    My previous analysis of the variables assumed $x(0,1)$ and $x(0,3)$ were the only variables involved in the first two clauses, but the clauses reference different pairs.\n    Let's re-solve carefully using ONLY the readable CNF provided in the prompt:\n    \n    1.  **Clause 1:** $x(0,3)$.\n        *   **Deduction:** $x(0,3)$ must be **TRUE**.\n    \n    2.  **Clause 3:** $\\neg x(2,3) \\lor \\neg x(0,3)$.\n        *   Substitute $x(0,3)=1$: $\\neg x(2,3) \\lor \\text{False}$.\n        *   **Deduction:** $x(2,3)$ must be **FALSE**.\n    \n    3.  **Clause 4:** $\\neg x(0,1) \\lor x(2,3)$.\n        *   Substitute $x(2,3)=0$: $\\neg x(0,1) \\lor \\text{False}$.\n        *   **Deduction:** $x(0,1)$ must be **FALSE**.\n    \n    4.  **Clause 2:** $\\neg x(0,3) \\lor x(0,1)$.\n        *   Substitute $x(0,3)=1$: $\\text{False} \\lor x(0,1)$.\n        *   **Deduction:** $x(0,1)$ must be **TRUE**.\n    \n    **Result:**\n    $x(0,3) = 1$ (Required by Clause 1).\n    $x(2,3) = 0$ (Required by Clause 3).\n    $x(0,1) = 0$ (Required by Clause 4).\n    $x(0,1) = 1$ (Required by Clause 2).\n    \n    **Contradiction Found:**\n    Clause 4 requires $x(0,1)=0$.\n    Clause 2 requires $x(0,1)=1$.\n    These clauses cannot both be true simultaneously if the assignment is fixed by the other clauses.\n    Specifically:\n    - From $x(0,3)=1$ (Clause 1), we get $\\neg x(0,3)$ is False.\n    - From $x(0,3)=1$ (Clause 1), we need Clause 2 to hold: $\\text{False} \\lor x(0,1) \\implies x(0,1)=1$.\n    - From $x(2,3)=0$ (Clause 3), we need Clause 4 to hold: $\\neg x(0,1) \\lor \\text{False} \\implies \\neg x(0,1)=1 \\implies x(0,1)=0$.\n    \n    Therefore, the CNF system is **UNSAT**. The Z3 certificate and the `<satisfiable>false` label in the prompt data are correct. The reasoning in my initial quick scan was flawed because I conflated the variable dependencies without checking the full chain of implications across all clauses.\n\n    **Correct Logical Path:**\n    1.  **Constraint 1:** $x(0,3)$ is TRUE.\n    2.  **Constraint 2:** Since $x(0,3)$ is TRUE, the term $\\neg x(0,3)$ is FALSE. Therefore, for Clause 2 $(\\neg x(0,3) \\lor x(0,1))$ to be true, $x(0,1)$ MUST be TRUE.\n    3.  **Constraint 3:** Since $x(0,3)$ is TRUE, the term $\\neg x(0,3)$ is FALSE. Therefore, for Clause 3 $(\\neg x(2,3) \\lor \\neg x(0,3))$ to be true, $x(2,3)$ MUST be FALSE.\n    4.  **Constraint 4:** Since $x(2,3)$ is FALSE, the term $x(2,3)$ is FALSE. Therefore, for Clause 4 $(\\neg x(0,1) \\lor x(2,3))$ to be true, $\\neg x(0,1)$ MUST be TRUE, which means $x(0,1)$ MUST be FALSE.\n    5.  **Conflict:** Constraint 2 demands $x(0,1)$ is TRUE, while Constraint 4 demands $x(0,1)$ is FALSE.\n    6.  **Conclusion:** The set of conditions is inconsistent. The system is UNSAT.\n\n    **Action:** Output UNSAT with the specific contradiction identified.\n\n### Final Answer Construction\n\n**Answer:**\nThe system is unsatisfiable due to a logical contradiction between the derived requirements for variables $x(0, 1)$.\n\n**Reasoning:**\n1.  **From Clause 1:** The condition $x(0, 3)$ must be true.\n2.  **From Clause 2:** The condition is $\\neg x(0, 3) \\lor x(0, 1)$. Since $x(0, 3)$ is true, $\\neg x(0, 3)$ is false. For the clause to hold, $x(0, 1)$ must be **true**.\n3.  **From Clause 3:** The condition is $\\neg x(2, 3) \\lor \\neg x(0, 3)$. Since $x(0, 3)$ is true, $\\neg x(0, 3)$ is false. For the clause to hold, $x(2, 3)$ must be **false**.\n4.  **From Clause 4:** The condition is $\\neg x(0, 1) \\lor x(2, 3)$. Since we determined $x(2, 3)$ is false, the term $x(2, 3)$ is false. For the clause to hold, $\\neg x(0, 1)$ must be true, which implies $x(0, 1)$ must be **false**.\n5.  **Contradiction:** Clause 2 requires $x(0, 1)$ to be true, while Clause 4 requires $x(0, 1)$ to be false. This creates a direct conflict.\n\n**Conclusion:**\nUNSAT\n\nFinal Label:\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1211,
+    "generated_tokens": 4126,
+    "batch_elapsed_seconds": 108.96816515922546,
+    "tokens_per_second_for_batch": 37.864269752280805,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777774403.925494,
+  "slurm_job_id": "3179674",
+  "slurm_array_job_id": "3179672",
+  "slurm_array_task_id": "1",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a high school, a group of students—Emma, Lucas, and Ava—are selecting elective courses to take. Each student can independently decide whether to enroll in available courses, with multiple students allowed to pick the same course or no courses at all.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean student i is enrolled in course j. Here, student 0 is Emma, student 1 is Lucas, and student 2 is Ava.\n</variable_mapping>\n\n<conditions>\n1. Emma is enrolled in course 3.\n2. If Emma is not enrolled in course 3, then Emma is enrolled in course 1.\n3. Either Ava is not enrolled in course 3, or Emma is not enrolled in course 3.\n4. If Emma is not enrolled in course 1, then Ava is enrolled in course 3.\n</conditions>\n\n<question>\nCan all these course enrollments be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,4]\n</dims>\n\n<num_vars>\n12\n</num_vars>\n\n<num_clauses>\n4\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -4,\n    2\n  ],\n  [\n    -2,\n    12\n  ],\n  [\n    -12,\n    -4\n  ],\n  [\n    4\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(0, 3)) ∧ (¬x(0, 3) ∨ x(0, 1)) ∧ (¬x(2, 3) ∨ ¬x(0, 3)) ∧ (¬x(0, 1) ∨ x(2, 3))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-4, 2] -> (¬x(0, 3) ∨ x(0, 1)); matching condition number(s): [2]\n- raw clause index 1: [-2, 12] -> (¬x(0, 1) ∨ x(2, 3)); matching condition number(s): [4]\n- raw clause index 2: [-12, -4] -> (¬x(2, 3) ∨ ¬x(0, 3)); matching condition number(s): [3]\n- raw clause index 3: [4] -> (x(0, 3)); matching condition number(s): [1]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(0, 3) ∨ x(0, 1)), (¬x(0, 1) ∨ x(2, 3)), (¬x(2, 3) ∨ ¬x(0, 3)), (x(0, 3))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a high school, a group of students—Emma, Lucas, and Ava—are selecting elective courses to take. Each student can independently decide whether to enroll in available courses, with multiple students allowed to pick the same course or no courses at all.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean student i is enrolled in course j. Here, student 0 is Emma, student 1 is Lucas, and student 2 is Ava.\n</variable_mapping>\n\n<conditions>\n1. Emma is enrolled in course 3.\n2. If Emma is not enrolled in course 3, then Emma is enrolled in course 1.\n3. Either Ava is not enrolled in course 3, or Emma is not enrolled in course 3.\n4. If Emma is not enrolled in course 1, then Ava is enrolled in course 3.\n</conditions>\n\n<question>\nCan all these course enrollments be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,4]\n</dims>\n\n<num_vars>\n12\n</num_vars>\n\n<num_clauses>\n4\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -4,\n    2\n  ],\n  [\n    -2,\n    12\n  ],\n  [\n    -12,\n    -4\n  ],\n  [\n    4\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(0, 3)) ∧ (¬x(0, 3) ∨ x(0, 1)) ∧ (¬x(2, 3) ∨ ¬x(0, 3)) ∧ (¬x(0, 1) ∨ x(2, 3))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-4, 2] -> (¬x(0, 3) ∨ x(0, 1)); matching condition number(s): [2]\n- raw clause index 1: [-2, 12] -> (¬x(0, 1) ∨ x(2, 3)); matching condition number(s): [4]\n- raw clause index 2: [-12, -4] -> (¬x(2, 3) ∨ ¬x(0, 3)); matching condition number(s): [3]\n- raw clause index 3: [4] -> (x(0, 3)); matching condition number(s): [1]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(0, 3) ∨ x(0, 1)), (¬x(0, 1) ∨ x(2, 3)), (¬x(2, 3) ∨ ¬x(0, 3)), (x(0, 3))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      4
+    ],
+    "num_vars": 12,
+    "num_clauses": 4,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          -4,
+          2
+        ],
+        "clause_structural": "(¬x(0, 3) ∨ x(0, 1))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -2,
+          12
+        ],
+        "clause_structural": "(¬x(0, 1) ∨ x(2, 3))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -12,
+          -4
+        ],
+        "clause_structural": "(¬x(2, 3) ∨ ¬x(0, 3))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          4
+        ],
+        "clause_structural": "(x(0, 3))",
+        "condition_numbers": [
+          1
+        ]
+      }
+    ],
+    "unsat_reason": "Cycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(0, 3) ∨ x(0, 1)), (¬x(0, 1) ∨ x(2, 3)), (¬x(2, 3) ∨ ¬x(0, 3)), (x(0, 3))"
+  }
+}

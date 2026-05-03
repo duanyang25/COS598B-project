@@ -1,0 +1,178 @@
+{
+  "index": 316,
+  "row_index_in_prompt_file": 316,
+  "prompt_id": "satbench_00316",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analyze the Variables and Constraints**\n*   **Variables:** $x(i, j)$ represents whether Adventurer $i$ finds Artifact $j$.\n    *   $i \\in \\{0, 1, 2\\}$ (Liam, Noah, Emma)\n    *   $j \\in \\{0, 1, 2\\}$ (Artifact 0, Artifact 1, Artifact 2)\n*   **Total Variables:** $3 \\times 3 = 9$. (The prompt mentions 12 variables in `<num_vars>` but only defines 3 adventurers and 3 artifacts, totaling 9 unique combinations. The `<clauses_dimacs>` list has indices up to 11, implying 11 distinct variable slots might exist if the mapping was different, but the `<readable_cnf>` clearly lists only 3 variables per term and 3 artifacts total. We must strictly follow the logical conditions provided in the text rather than the potentially misleading metadata counts if they contradict the explicit CNF structure).\n*   **Conditions:**\n    1.  $x(1, 1)$ (Noah finds Artifact 1)\n    2.  $\\neg x(2, 2) \\lor x(0, 0)$ (Either Emma doesn't find Artifact 2 OR Liam finds Artifact 0)\n    3.  $\\neg x(2, 1) \\lor \\neg x(1, 1)$ (Either Emma doesn't find Artifact 1 OR Noah doesn't find Artifact 1)\n    4.  $\\neg x(0, 0) \\lor x(1, 0)$ (Either Liam doesn't find Artifact 0 OR Noah finds Artifact 0)\n    5.  $\\neg x(2, 0) \\lor x(2, 2)$ (Either Emma doesn't find Artifact 0 OR Emma finds Artifact 2)\n    6.  $\\neg x(1, 0) \\lor x(0, 1)$ (Either Noah doesn't find Artifact 0 OR Liam finds Artifact 1)\n    7.  $\\neg x(1, 1) \\lor x(2, 0)$ (Either Noah doesn't find Artifact 1 OR Emma finds Artifact 0)\n    8.  $\\neg x(0, 1) \\lor x(0, 2)$ (Either Liam doesn't find Artifact 1 OR Liam finds Artifact 2)\n    9.  $\\neg x(0, 2) \\lor x(2, 1)$ (Either Liam doesn't find Artifact 2 OR Emma finds Artifact 1)\n\n**2. Evaluate the Conflict**\nLet's look closely at the implications of Condition 1 and Condition 3 together, combined with Condition 9.\n\n*   **Condition 1:** $x(1, 1)$ is True. (Noah finds Artifact 1).\n*   **Condition 3:** $\\neg x(2, 1) \\lor \\neg x(1, 1)$. Since we know $x(1, 1)$ is True, $\\neg x(1, 1)$ is False. Therefore, $\\neg x(2, 1)$ must be True.\n    *   **Result:** $x(2, 1)$ is False (Emma does NOT find Artifact 1).\n*   **Condition 9:** $\\neg x(0, 2) \\lor x(2, 1)$. Since we just established $x(2, 1)$ is False, $\\neg x(0, 2)$ must be True.\n    *   **Result:** $x(0, 2)$ is False (Liam does NOT find Artifact 2).\n*   **Condition 8:** $\\neg x(0, 1) \\lor x(0, 2)$. Since we just established $x(0, 2)$ is False, $\\neg x(0, 1)$ must be True.\n    *   **Result:** $x(0, 1)$ is False (Liam does NOT find Artifact 1).\n*   **Condition 6:** $\\neg x(1, 0) \\lor x(0, 1)$. Since we just established $x(0, 1)$ is False, $\\neg x(1, 0)$ must be True.\n    *   **Result:** $x(1, 0)$ is False (Noah does NOT find Artifact 0).\n*   **Condition 4:** $\\neg x(0, 0) \\lor x(1, 0)$. Since we just established $x(1, 0)$ is False, $\\neg x(0, 0)$ must be True.\n    *   **Result:** $x(0, 0)$ is False (Liam does NOT find Artifact 0).\n\n**3. Identify the Contradiction**\nNow let's check Condition 5 against our findings regarding Emma's discoveries.\n*   **Condition 5:** $\\neg x(2, 0) \\lor x(2, 2)$. This says \"Either Emma doesn't find Artifact 0 OR Emma finds Artifact 2\".\n*   Let's check the values we derived for Emma ($x(2, j)$):\n    *   From Condition 3 analysis: $x(2, 1)$ is False (Emma doesn't find Artifact 1).\n    *   From Condition 5 analysis: If $x(2, 1)$ is False, then for Condition 5 to hold, $x(2, 2)$ **MUST** be True.\n*   Now check Condition 2 again:\n    *   **Condition 2:** $\\neg x(2, 2) \\lor x(0, 0)$.\n    *   We found $x(0, 0)$ is False (from Condition 4).\n    *   Therefore, for Condition 2 to hold, $\\neg x(2, 2)$ **MUST** be True.\n    *   This implies $x(2, 2)$ **MUST** be False.\n\n**Conclusion:**\nCondition 5 forces $x(2, 2)$ to be True.\nCondition 2 forces $x(2, 2)$ to be False.\nThese two conditions are contradictory.\n\nLet's verify this using the Z3 unsat core provided in the prompt data:\n*   The `unsat_core_clauses` list includes `[6]` which is `(x(1, 1))`. Wait, looking closer at the provided text:\n    *   `raw clause index 8: [6] -> (x(1, 1)); matching condition number(s): [1]`\n    *   Wait, the certificate claims `unsat_core_clauses` include `(x(1, 1))`. But earlier I deduced that $x(1, 1)$ being true is required to satisfy everything? No, let's re-read my deduction carefully.\n    *   My deduction: $x(1, 1)$ is True.\n    *   The Certificate says: Clause 8 is `(x(1, 1))`.\n    *   Ah, the certificate labels `x(1, 1)` as a positive literal. In standard SAT encoding, a positive literal $P$ usually corresponds to a clause $(P)$ which is just $P$. However, the \"unsat core\" logic usually involves resolving.\n    *   Let's re-evaluate the contradiction path based on the Certificate's interpretation of the variables.\n    *   The Certificate states the unsat core contains `x(1, 1)`.\n    *   My previous deduction showed that if we assume $x(1, 1)$ is True (Condition 1), we derived contradictions.\n    *   Wait, the prompt asks me to solve it. The `<satisfiable>` tag is `false`, and the `<label>` is `UNSAT`. The Z3 certificate confirms it is UNSAT.\n    *   The question is \"Can all these conditions be satisfied?\". The answer is No.\n    *   The prompt requires me to act as a teacher explaining this.\n\n**Refining the Teacher Explanation:**\nI need to construct a narrative that leads to the conclusion \"No\" without relying on external knowledge about the artifact types, purely on the logic of the constraints.\n\n1.  Start with Condition 1: Noah finds Artifact 1 ($x_{N1} = T$).\n2.  Apply Condition 3: $\\neg x_{E1} \\lor \\neg x_{N1}$. Since $x_{N1}$ is True, $\\neg x_{N1}$ is False, forcing $\\neg x_{E1}$ to be True. So Emma does **not** find Artifact 1 ($x_{E1} = F$).\n3.  Apply Condition 7: $\\neg x_{N1} \\lor x_{E0}$. Since $x_{N1}$ is True, $\\neg x_{N1}$ is False, forcing $x_{E0}$ to be True. So Emma **does** find Artifact 0 ($x_{E0} = T$).\n4.  Apply Condition 5: $\\neg x_{E0} \\lor x_{E2}$. Since $x_{E0}$ is True, $\\neg x_{E0}$ is False, forcing $x_{E2}$ to be True. So Emma **does** find Artifact 2 ($x_{E2} = T$).\n5.  Apply Condition 2: $\\neg x_{E2} \\lor x_{L0}$. Since $x_{E2}$ is True, $\\neg x_{E2}$ is False, forcing $x_{L0}$ to be True. So Liam **does** find Artifact 0 ($x_{L0} = T$).\n6.  Apply Condition 4: $\\neg x_{L0} \\lor x_{N0}$. Since $x_{L0}$ is True, $\\neg x_{L0}$ is False, forcing $x_{N0}$ to be True. So Noah **does** find Artifact 0 ($x_{N0} = T$).\n7.  Apply Condition 6: $\\neg x_{N0} \\lor x_{L1}$. Since $x_{N0}$ is True, $\\neg x_{N0}$ is False, forcing $x_{L1}$ to be True. So Liam **does** find Artifact 1 ($x_{L1} = T$).\n8.  Apply Condition 8: $\\neg x_{L1} \\lor x_{L2}$. Since $x_{L1}$ is True, $\\neg x_{L1}$ is False, forcing $x_{L2}$ to be True. So Liam **does** find Artifact 2 ($x_{L2} = T$).\n9.  Check Condition 9: $\\neg x_{L2} \\lor x_{E1}$.\n    *   We found $x_{L2} = T$, so $\\neg x_{L2}$ is False.\n    *   We found $x_{E1} = F$ (from step 2).\n    *   The clause becomes: False $\\lor$ False = False.\n    *   Condition 9 is violated.\n\nAlternatively, use Condition 1 and 9 directly?\n*   Cond 1: $x_{N1} = T$.\n*   Cond 9: $\\neg x_{L2} \\lor x_{E1}$.\n*   Cond 7: $\\neg x_{N1} \\lor x_{E0}$. Since $x_{N1}=T$, $\\neg x_{N1}=F$, so $x_{E0}=T$.\n*   Cond 5: $\\neg x_{E0} \\lor x_{E2}$. Since $x_{E0}=T$, $\\neg x_{E0}=F$, so $x_{E2}=T$.\n*   Cond 2: $\\neg x_{E2} \\lor x_{L0}$. Since $x_{E2}=T$, $\\neg x_{E2}=F$, so $x_{L0}=T$.\n*   Cond 4: $\\neg x_{L0} \\lor x_{N0}$. Since $x_{L0}=T$, $\\neg x_{L0}=F$, so $x_{N0}=T$.\n*   Cond 6: $\\neg x_{N0} \\lor x_{L1}$. Since $x_{N0}=T$, $\\neg x_{N0}=F$, so $x_{L1}=T$.\n*   Cond 8: $\\neg x_{L1} \\lor x_{L2}$. Since $x_{L1}=T$, $\\neg x_{L1}=F$, so $x_{L2}=T$.\n*   Now back to Cond 9: $\\neg x_{L2} \\lor x_{E1}$.\n    *   We have $x_{L2}=T$ (so $\\neg x_{L2}=F$) and $x_{E1}=F$ (from Cond 7 logic).\n    *   $F \\lor F = F$.\n*   Contradiction confirmed.\n\nWait, did I miss something? Is the system actually satisfiable?\nLet's re-read the prompt's `<satisfiable>` tag. It says `false`.\nAnd the `<label>` is `UNSAT`.\nSo the answer is definitely UNSAT.\n\nThe explanation above holds up logically.\n\n### Final Output Construction\n\n**Answer:** UNSAT\n\n**Teacher's Explanation:**\nBased on the logical constraints provided in the puzzle, it is impossible to satisfy all conditions simultaneously. A step-by-step derivation shows a direct contradiction:\n1.  Start with **Condition 1**: Noah discovers Artifact 1.\n2.  Using **Condition 3**, since Noah finds Artifact 1, Emma must *not* find Artifact 1.\n3.  Using **Condition 7**, since Noah does *not* find Artifact 1 (wait, Condition 7 is $\\neg x_{N1} \\lor x_{E0}$. If $x_{N1}$ is true, $\\neg x_{N1}$ is false, so $x_{E0}$ must be true). So Emma finds Artifact 0.\n4.  Using **Condition 5**, since Emma finds Artifact 0, she must *not* find Artifact 2 (to satisfy the OR, if E0=T, then E2 can be anything? No, if E0=T, $\\neg E0$ is False. So $x_{E2}$ MUST be True). So Emma finds Artifact 2.\n5.  Using **Condition 2**, since Emma does *not* find Artifact 2 (wait, $x_{E2}$ is True, so $\\neg x_{E2}$ is False), Liam must find Artifact 0.\n6.  Using **Condition 4**, since Liam finds Artifact 0, Noah must find Artifact 0.\n7.  Using **Condition 6**, since Noah does *not* find Artifact 0 (wait, $x_{N0}$ is True, so $\\neg x_{N0}$ is False), Liam must find Artifact 1.\n8.  Using **Condition 8**, since Liam finds Artifact 1, Liam must find Artifact 2.\n9.  Now check **Condition 9**: \"Either Liam does not discover artifact 2, or Emma discovers artifact 1.\"\n    *   From steps 5 and 8, Liam *does* discover Artifact 2. So the first part is false.\n    *   From step 2, Emma *does not* discover Artifact 1. So the second part is false.\n    *   The condition becomes False OR False, which is False.\n\nTherefore, the set of conditions is unsatisfiable.\n\n**Label:**\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1787,
+    "generated_tokens": 3476,
+    "batch_elapsed_seconds": 92.13920950889587,
+    "tokens_per_second_for_batch": 37.72552443771941,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777798603.2871628,
+  "slurm_job_id": "3180400",
+  "slurm_array_job_id": "3179795",
+  "slurm_array_task_id": "31",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nThree adventurers—Liam, Noah, and Emma—are exploring a series of mystical ruins that contain three hidden artifacts (0, 1, 2). Each adventurer independently searches for these artifacts, with each decision representing whether they found a specific artifact in their exploration.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean adventurer i discovers artifact j. Here, adventurer 0 is Liam, adventurer 1 is Noah, and adventurer 2 is Emma.\n</variable_mapping>\n\n<conditions>\n1. Noah discovers artifact 1.\n2. Either Emma does not discover artifact 2, or Liam discovers artifact 0.\n3. Either Emma does not discover artifact 1, or Noah does not discover artifact 1.\n4. Either Liam does not discover artifact 0, or Noah discovers artifact 0.\n5. Either Emma does not discover artifact 0, or Emma discovers artifact 2.\n6. Either Noah does not discover artifact 0, or Liam discovers artifact 1.\n7. Either Noah does not discover artifact 1, or Emma discovers artifact 0.\n8. Either Liam does not discover artifact 1, or Liam discovers artifact 2.\n9. Either Liam does not discover artifact 2, or Emma discovers artifact 1.\n</conditions>\n\n<question>\nCan all these conditions be satisfied at the same time?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,4]\n</dims>\n\n<num_vars>\n12\n</num_vars>\n\n<num_clauses>\n9\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -6,\n    9\n  ],\n  [\n    -9,\n    11\n  ],\n  [\n    -11,\n    1\n  ],\n  [\n    -1,\n    5\n  ],\n  [\n    -5,\n    2\n  ],\n  [\n    -2,\n    3\n  ],\n  [\n    -3,\n    10\n  ],\n  [\n    -10,\n    -6\n  ],\n  [\n    6\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(1, 1)) ∧ (¬x(2, 2) ∨ x(0, 0)) ∧ (¬x(2, 1) ∨ ¬x(1, 1)) ∧ (¬x(0, 0) ∨ x(1, 0)) ∧ (¬x(2, 0) ∨ x(2, 2)) ∧ (¬x(1, 0) ∨ x(0, 1)) ∧ (¬x(1, 1) ∨ x(2, 0)) ∧ (¬x(0, 1) ∨ x(0, 2)) ∧ (¬x(0, 2) ∨ x(2, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-6, 9] -> (¬x(1, 1) ∨ x(2, 0)); matching condition number(s): [7]\n- raw clause index 1: [-9, 11] -> (¬x(2, 0) ∨ x(2, 2)); matching condition number(s): [5]\n- raw clause index 2: [-11, 1] -> (¬x(2, 2) ∨ x(0, 0)); matching condition number(s): [2]\n- raw clause index 3: [-1, 5] -> (¬x(0, 0) ∨ x(1, 0)); matching condition number(s): [4]\n- raw clause index 4: [-5, 2] -> (¬x(1, 0) ∨ x(0, 1)); matching condition number(s): [6]\n- raw clause index 5: [-2, 3] -> (¬x(0, 1) ∨ x(0, 2)); matching condition number(s): [8]\n- raw clause index 6: [-3, 10] -> (¬x(0, 2) ∨ x(2, 1)); matching condition number(s): [9]\n- raw clause index 7: [-10, -6] -> (¬x(2, 1) ∨ ¬x(1, 1)); matching condition number(s): [3]\n- raw clause index 8: [6] -> (x(1, 1)); matching condition number(s): [1]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(1, 1) ∨ x(2, 0)), (¬x(2, 0) ∨ x(2, 2)), (¬x(2, 2) ∨ x(0, 0)), (¬x(0, 0) ∨ x(1, 0)), (¬x(1, 0) ∨ x(0, 1)), (¬x(0, 1) ∨ x(0, 2)), (¬x(0, 2) ∨ x(2, 1)), (¬x(2, 1) ∨ ¬x(1, 1)), (x(1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nThree adventurers—Liam, Noah, and Emma—are exploring a series of mystical ruins that contain three hidden artifacts (0, 1, 2). Each adventurer independently searches for these artifacts, with each decision representing whether they found a specific artifact in their exploration.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean adventurer i discovers artifact j. Here, adventurer 0 is Liam, adventurer 1 is Noah, and adventurer 2 is Emma.\n</variable_mapping>\n\n<conditions>\n1. Noah discovers artifact 1.\n2. Either Emma does not discover artifact 2, or Liam discovers artifact 0.\n3. Either Emma does not discover artifact 1, or Noah does not discover artifact 1.\n4. Either Liam does not discover artifact 0, or Noah discovers artifact 0.\n5. Either Emma does not discover artifact 0, or Emma discovers artifact 2.\n6. Either Noah does not discover artifact 0, or Liam discovers artifact 1.\n7. Either Noah does not discover artifact 1, or Emma discovers artifact 0.\n8. Either Liam does not discover artifact 1, or Liam discovers artifact 2.\n9. Either Liam does not discover artifact 2, or Emma discovers artifact 1.\n</conditions>\n\n<question>\nCan all these conditions be satisfied at the same time?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,4]\n</dims>\n\n<num_vars>\n12\n</num_vars>\n\n<num_clauses>\n9\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -6,\n    9\n  ],\n  [\n    -9,\n    11\n  ],\n  [\n    -11,\n    1\n  ],\n  [\n    -1,\n    5\n  ],\n  [\n    -5,\n    2\n  ],\n  [\n    -2,\n    3\n  ],\n  [\n    -3,\n    10\n  ],\n  [\n    -10,\n    -6\n  ],\n  [\n    6\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(1, 1)) ∧ (¬x(2, 2) ∨ x(0, 0)) ∧ (¬x(2, 1) ∨ ¬x(1, 1)) ∧ (¬x(0, 0) ∨ x(1, 0)) ∧ (¬x(2, 0) ∨ x(2, 2)) ∧ (¬x(1, 0) ∨ x(0, 1)) ∧ (¬x(1, 1) ∨ x(2, 0)) ∧ (¬x(0, 1) ∨ x(0, 2)) ∧ (¬x(0, 2) ∨ x(2, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-6, 9] -> (¬x(1, 1) ∨ x(2, 0)); matching condition number(s): [7]\n- raw clause index 1: [-9, 11] -> (¬x(2, 0) ∨ x(2, 2)); matching condition number(s): [5]\n- raw clause index 2: [-11, 1] -> (¬x(2, 2) ∨ x(0, 0)); matching condition number(s): [2]\n- raw clause index 3: [-1, 5] -> (¬x(0, 0) ∨ x(1, 0)); matching condition number(s): [4]\n- raw clause index 4: [-5, 2] -> (¬x(1, 0) ∨ x(0, 1)); matching condition number(s): [6]\n- raw clause index 5: [-2, 3] -> (¬x(0, 1) ∨ x(0, 2)); matching condition number(s): [8]\n- raw clause index 6: [-3, 10] -> (¬x(0, 2) ∨ x(2, 1)); matching condition number(s): [9]\n- raw clause index 7: [-10, -6] -> (¬x(2, 1) ∨ ¬x(1, 1)); matching condition number(s): [3]\n- raw clause index 8: [6] -> (x(1, 1)); matching condition number(s): [1]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(1, 1) ∨ x(2, 0)), (¬x(2, 0) ∨ x(2, 2)), (¬x(2, 2) ∨ x(0, 0)), (¬x(0, 0) ∨ x(1, 0)), (¬x(1, 0) ∨ x(0, 1)), (¬x(0, 1) ∨ x(0, 2)), (¬x(0, 2) ∨ x(2, 1)), (¬x(2, 1) ∨ ¬x(1, 1)), (x(1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      4
+    ],
+    "num_vars": 12,
+    "num_clauses": 9,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          -6,
+          9
+        ],
+        "clause_structural": "(¬x(1, 1) ∨ x(2, 0))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -9,
+          11
+        ],
+        "clause_structural": "(¬x(2, 0) ∨ x(2, 2))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -11,
+          1
+        ],
+        "clause_structural": "(¬x(2, 2) ∨ x(0, 0))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -1,
+          5
+        ],
+        "clause_structural": "(¬x(0, 0) ∨ x(1, 0))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -5,
+          2
+        ],
+        "clause_structural": "(¬x(1, 0) ∨ x(0, 1))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -2,
+          3
+        ],
+        "clause_structural": "(¬x(0, 1) ∨ x(0, 2))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -3,
+          10
+        ],
+        "clause_structural": "(¬x(0, 2) ∨ x(2, 1))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -10,
+          -6
+        ],
+        "clause_structural": "(¬x(2, 1) ∨ ¬x(1, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          6
+        ],
+        "clause_structural": "(x(1, 1))",
+        "condition_numbers": [
+          1
+        ]
+      }
+    ],
+    "unsat_reason": "Cycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(1, 1) ∨ x(2, 0)), (¬x(2, 0) ∨ x(2, 2)), (¬x(2, 2) ∨ x(0, 0)), (¬x(0, 0) ∨ x(1, 0)), (¬x(1, 0) ∨ x(0, 1)), (¬x(0, 1) ∨ x(0, 2)), (¬x(0, 2) ∨ x(2, 1)), (¬x(2, 1) ∨ ¬x(1, 1)), (x(1, 1))"
+  }
+}

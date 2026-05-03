@@ -1,0 +1,121 @@
+{
+  "index": 788,
+  "row_index_in_prompt_file": 788,
+  "prompt_id": "satbench_00788",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Derivation\n\n**1. Analyze the Problem Setup and Variables**\n*   **Agents**: Agent X ($i=0$), Agent Y ($i=1$), Agent Z ($i=2$).\n*   **Operations**: Reconnaissance (0), Infiltration (1), Extraction (2).\n*   **Conditions**: There are 5 logical conditions labeled (1) through (5).\n*   **Goal**: Determine if there exists an assignment of operations for each agent under each condition that satisfies all 5 conditions simultaneously.\n\n**2. Map Conditions to the SAT Variables**\nThe `readable_cnf` and `clauses_dimacs` define the logical structure. Let's break down the implications of each condition based on the provided CNF representation:\n*   **Clause 1**: $\\neg x(0, 2, 0) \\lor \\neg x(1, 2, 0) \\lor \\neg x(2, 0, 0)$\n    *   *Meaning*: At least one of (X extraction/Night, Y extraction/Night, Z reconnaissance/Night) must be false.\n    *   *CNF Digits*: Clauses `[13, 9]`, `[-13, -9]` map to literals involving index 2 (Agent Z) in dimension 0 (Condition 0). Specifically, it involves $x(0,2,0)$, $x(1,2,0)$, $x(2,0,0)$.\n*   **Clause 2**: $x(1, 1, 1) \\lor x(2, 0, 0) \\lor \\neg x(1, 0, 1)$\n    *   *Meaning*: Y infiltrates Day OR Z does NOT do anything on Condition 1? No, wait. Standard CNF interpretation: $(x \\lor y \\lor \\neg z)$.\n    *   *Correction based on standard encoding*: Usually $x$ represents positive, $\\neg x$ negative.\n    *   Let's look at `clauses_dimacs`: `[10, 13, -8]`. These correspond to clauses containing indices 10, 13, 8.\n    *   Let's re-evaluate the mapping from `readable_cnf` vs `clauses_dimacs`.\n        *   `readable_cnf`: `(¬x(0, 2, 0) ∨ ¬x(1, 2, 0) ∨ ¬x(2, 0, 0))` -> Matches Condition 1.\n        *   `readable_cnf`: `(x(1, 1, 1) ∨ x(2, 0, 0) ∨ ¬x(1, 0, 1))` -> Matches Condition 2.\n        *   `readable_cnf`: `(x(2, 0, 0) ∨ x(1, 1, 0))` -> Matches Condition 3.\n        *   `readable_cnf`: `(x(2, 0, 0) ∨ ¬x(1, 1, 0))` -> Matches Condition 4.\n        *   `readable_cnf`: `(¬x(2, 0, 0) ∨ ¬x(1, 1, 0))` -> Matches Condition 5.\n\n**3. Logical Simplification and Contradiction Check**\nLet's analyze the constraints specifically on **Agent Z (Index 2)** regarding **Reconnaissance (Condition 0)**.\n*   **Condition 3**: $x(2, 0, 0) \\lor x(1, 1, 0)$\n    *   Interpretation: Either Z participates in Recon at Night OR Y participates in Infiltration at Night.\n    *   Note: $x(1, 1, 0)$ implies Y participates in Infiltration (Day/1, Night/0)? Or is it just \"Y participates in Infiltration\"? The variable name is $x(1, 1, 0)$. Based on the problem description: \"spy 0 is Agent X... spy 1 is Agent Y\". The second number usually indicates the operation type or condition. Given the structure of similar puzzles, let's assume standard boolean algebra where $x(i, j, k)$ is true if Spy $i$ is in Op $j$ at Cond $k$.\n    *   Wait, the prompt says \"Each spy is being assigned to various covert operations... categorized into three types... 0, 1, 2\".\n    *   Variable: $x(1, 1, 0)$ likely means Agent Y does Operation 1 (Infiltration) at Condition 0 (Night).\n    *   Let's check Condition 5: $(\\neg x(2, 0, 0) \\lor \\neg x(1, 1, 0))$.\n        *   This means: (Z does NOT do Recon at Night) OR (Y does NOT do Infiltration at Night).\n        *   By De Morgan's Law, this is equivalent to: **(Z DOES do Recon at Night) AND (Y DOES do Infiltration at Night)**.\n    *   Now look at Condition 4: $(x(2, 0, 0) \\lor \\neg x(1, 1, 0))$.\n        *   This means: (Z DOES do Recon at Night) OR (Y does NOT do Infiltration at Night).\n        *   Equivalent to: **(NOT (Z DOES do Recon at Night)) OR (NOT (NOT (Y DOES do Infiltration at Night)))**?\n        *   Logic: $A \\lor \\neg B \\equiv \\neg(\\neg A \\land B)$. So Condition 4 requires: **(NOT (Z Recon Night) AND NOT (Y Infiltrate Night))** is FALSE? No.\n        *   Let's stick to the literal logic.\n        *   C4: $Z_{rec} \\lor \\neg Y_{inf}$.\n        *   C5: $\\neg Z_{rec} \\lor \\neg Y_{inf}$.\n        *   Combining C4 and C5: $Z_{rec} \\lor (\\neg Z_{rec} \\lor \\neg Y_{inf})$ is a tautology.\n        *   However, look at the specific interaction between C3 and C5.\n        *   C3: $Z_{rec} \\lor Y_{inf}$.\n        *   C5: $\\neg Z_{rec} \\lor \\neg Y_{inf}$.\n        *   From C5, either $Z_{rec}$ is false OR $Y_{inf}$ is false.\n        *   From C3, we need $Z_{rec}$ true OR $Y_{inf}$ true.\n        *   Does this create a contradiction?\n            *   Case A: $Z_{rec}$ is True. Then C3 is satisfied regardless of $Y_{inf}$. C5 is satisfied regardless of $Y_{inf}$ (since first term is true).\n            *   Case B: $Z_{rec}$ is False. Then C3 forces $Y_{inf}$ to be True. C5 is satisfied (second term is true).\n        *   So C3 and C5 do *not* force a direct contradiction between them alone. They force a joint requirement: **It is impossible that both $Z_{rec}$ is False AND $Y_{inf}$ is False.** (Which is what C3+C5 imply: At least one must be active).\n\n**Wait, let's re-read the prompt carefully.**\nThe prompt contains a section `<sat_reason>` which claims: \"Originally UNSAT because: Full block: all 4 possible combinations forbidden...\".\nHowever, the `<label>` explicitly says **SAT**.\nThe `<certificate>` shows a valid assignment:\n`x(2, 0, 0)` is **True**.\nAll other variables in the certificate are **False**.\nSpecifically, `x(1, 1, 0)` (Y Infiltrate Night) is False. `x(0, 2, 0)` etc are False.\n\nLet's verify this assignment against the CNF manually.\nAssignment: **Only Agent Z participates in Reconnaissance at Night.** All others False.\n1.  **C1**: $\\neg x(0, 2, 0) \\lor \\neg x(1, 2, 0) \\lor \\neg x(2, 0, 0)$\n    *   Values: $\\text{True} \\lor \\dots \\lor \\text{False}$.\n    *   Result: **True**. (Satisfied)\n2.  **C2**: $x(1, 1, 1) \\lor x(2, 0, 0) \\lor \\neg x(1, 0, 1)$\n    *   Values: $\\text{False} \\lor \\text{True} \\lor \\text{True}$ (Assuming $x(2,0,0)$ is true).\n    *   Result: **True**. (Satisfied)\n3.  **C3**: $x(2, 0, 0) \\lor x(1, 1, 0)$\n    *   Values: $\\text{True} \\lor \\text{False}$.\n    *   Result: **True**. (Satisfied)\n4.  **C4**: $x(2, 0, 0) \\lor \\neg x(1, 1, 0)$\n    *   Values: $\\text{True} \\lor \\text{True}$.\n    *   Result: **True**. (Satisfied)\n5.  **C5**: $\\neg x(2, 0, 0) \\lor \\neg x(1, 1, 0)$\n    *   Values: $\\text{False} \\lor \\text{True}$.\n    *   Result: **True**. (Satisfied)\n\nThe assignment exists. The claim in the `<sat_reason>` text (\"Originally UNSAT...\") appears to be part of the system metadata or a previous failed attempt in the dataset generation, but the explicit label is **SAT** and the certificate provides a working truth table assignment. As a teacher solving this based on the provided evidence, I must follow the explicit instruction to use the Z3 certificate and the derived logic.\n\n**Conclusion:** The puzzle is satisfiable. The configuration where Agent Z performs the Reconnaissance operation at Night (and no one else does the conflicting specific actions listed in the negative clauses) satisfies all logical constraints.\n\n**Final Answer Formulation:**\n1.  **Label**: SAT\n2.  **Justification**: The logical constraints derived from the CNF allow for a solution. Specifically, setting Agent Z to participate in the Reconnaissance operation at Night satisfies the disjunctions required by Conditions 3, 4, and 5 without violating the requirements of Conditions 1, 2, and 5.\n3.  **Assignment**: Provide the specific boolean values found in the certificate.\n\n```text\nAnswer Label: SAT\nExplanation: The provided Z3 certificate confirms the existence of a satisfying assignment. By assigning `x(2, 0, 0) = True` (Agent Z participates in Reconnaissance at Night) and all other variables to False, all 5 logical conditions are satisfied.\n    - Condition 1: Satisfied because x(0,2,0), x(1,2,0), x(2,0,0) are not all true. (Since x(2,0,0) is T, the third disjunct is F, but x(0,2,0) and x(1,2,0) are F, making the whole OR statement True).\n    - Condition 2: Satisfied because x(2,0,0) is True.\n    - Condition 3: Satisfied because x(2,0,0) is True.\n    - Condition 4: Satisfied because x(2,0,0) is True.\n    - Condition 5: Satisfied because x(1,1,0) is False (so negation is True).\nThe certificate assignment is verified.\n```\n\n```text\nAssignment:\nx(0, 0, 0) = False\nx(0, 0, 1) = False\nx(0, 1, 0) = False\nx(0, 1, 1) = False\nx(0, 2, 0) = False\nx(0, 2, 1) = False\nx(1, 0, 0) = False\nx(1, 0, 1) = False\nx(1, 1, 0) = False\nx(1, 1, 1) = False\nx(1, 2, 0) = False\nx(1, 2, 1) = False\nx(2, 0, 0) = True\nx(2, 0, 1) = False\nx(2, 1, 0) = False\nx(2, 1, 1) = False\nx(2, 2, 0) = False\nx(2, 2, 1) = False\n```\n\nFinal Label:\nSAT",
+  "teacher_extracted_label": "SAT",
+  "ground_truth_label": "SAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1749,
+    "generated_tokens": 2919,
+    "batch_elapsed_seconds": 77.4322075843811,
+    "tokens_per_second_for_batch": 37.69749166480943,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777825971.2234087,
+  "slurm_job_id": "3181429",
+  "slurm_array_job_id": "3179795",
+  "slurm_array_task_id": "78",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a secretive organization, there are three spies—Agent X, Agent Y, and Agent Z. Each spy is being assigned to various covert operations. The operations are categorized into three types: reconnaissance (0), infiltration (1), and extraction (2). Each type of operation might occur under different conditions, such as night (0) or day (1). Each assignment is an independent decision, meaning any spy may participate in multiple operations, and operations may involve multiple spies or none.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean spy i participates in operation type j under condition k. Here, spy 0 is Agent X, spy 1 is Agent Y, and spy 2 is Agent Z.\n</variable_mapping>\n\n<conditions>\n1. Either Agent X does not participate in extraction at night, or Agent Y does not participate in extraction at night, or Agent Z does not participate in reconnaissance at night.\n2. Either Agent Y participates in infiltration during the day, or Agent Z participates in reconnaissance at night, or Agent Y does not participate in reconnaissance during the day.\n3. Either Agent Z participates in reconnaissance at night, or Agent Y participates in infiltration at night.\n4. Either Agent Z participates in reconnaissance at night, or Agent Y does not participate in infiltration at night.\n5. Either Agent Z does not participate in reconnaissance at night, or Agent Y does not participate in infiltration at night.\n</conditions>\n\n<question>\nIs there a way to assign operations to the agents so that all these conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n5\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    13,\n    9\n  ],\n  [\n    13,\n    -9\n  ],\n  [\n    -13,\n    -9\n  ],\n  [\n    -5,\n    -11,\n    -13\n  ],\n  [\n    10,\n    13,\n    -8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 2, 0) ∨ ¬x(1, 2, 0) ∨ ¬x(2, 0, 0)) ∧ (x(1, 1, 1) ∨ x(2, 0, 0) ∨ ¬x(1, 0, 1)) ∧ (x(2, 0, 0) ∨ x(1, 1, 0)) ∧ (x(2, 0, 0) ∨ ¬x(1, 1, 0)) ∧ (¬x(2, 0, 0) ∨ ¬x(1, 1, 0))\n</readable_cnf>\n\n<satisfiable>\ntrue\n</satisfiable>\n\n<label>\nSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nSAT satisfying assignment\n</certificate_type>\n\n<assignment_structured_0_1>\n[\n  [\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      1,\n      0\n    ],\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ]\n  ]\n]\n</assignment_structured_0_1>\n\n<assignment_per_variable>\n- x(0, 0, 0) = False\n- x(0, 0, 1) = False\n- x(0, 1, 0) = False\n- x(0, 1, 1) = False\n- x(0, 2, 0) = False\n- x(0, 2, 1) = False\n- x(1, 0, 0) = False\n- x(1, 0, 1) = False\n- x(1, 1, 0) = False\n- x(1, 1, 1) = False\n- x(1, 2, 0) = False\n- x(1, 2, 1) = False\n- x(2, 0, 0) = True\n- x(2, 0, 1) = False\n- x(2, 1, 0) = False\n- x(2, 1, 1) = False\n- x(2, 2, 0) = False\n- x(2, 2, 1) = False\n</assignment_per_variable>\n<sat_reason>\nOriginally UNSAT because: Full block: all 4 possible combinations forbidden for variables [13, 9]: (x(2, 0, 0) ∨ x(1, 1, 0)), (¬x(2, 0, 0) ∨ x(1, 1, 0)), (x(2, 0, 0) ∨ ¬x(1, 1, 0)), (¬x(2, 0, 0) ∨ ¬x(1, 1, 0)). After removing clause (¬x(2, 0, 0) ∨ x(1, 1, 0)), the conflict is resolved, making the problem satisfiable.\n</sat_reason>\n\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a secretive organization, there are three spies—Agent X, Agent Y, and Agent Z. Each spy is being assigned to various covert operations. The operations are categorized into three types: reconnaissance (0), infiltration (1), and extraction (2). Each type of operation might occur under different conditions, such as night (0) or day (1). Each assignment is an independent decision, meaning any spy may participate in multiple operations, and operations may involve multiple spies or none.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean spy i participates in operation type j under condition k. Here, spy 0 is Agent X, spy 1 is Agent Y, and spy 2 is Agent Z.\n</variable_mapping>\n\n<conditions>\n1. Either Agent X does not participate in extraction at night, or Agent Y does not participate in extraction at night, or Agent Z does not participate in reconnaissance at night.\n2. Either Agent Y participates in infiltration during the day, or Agent Z participates in reconnaissance at night, or Agent Y does not participate in reconnaissance during the day.\n3. Either Agent Z participates in reconnaissance at night, or Agent Y participates in infiltration at night.\n4. Either Agent Z participates in reconnaissance at night, or Agent Y does not participate in infiltration at night.\n5. Either Agent Z does not participate in reconnaissance at night, or Agent Y does not participate in infiltration at night.\n</conditions>\n\n<question>\nIs there a way to assign operations to the agents so that all these conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n5\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    13,\n    9\n  ],\n  [\n    13,\n    -9\n  ],\n  [\n    -13,\n    -9\n  ],\n  [\n    -5,\n    -11,\n    -13\n  ],\n  [\n    10,\n    13,\n    -8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 2, 0) ∨ ¬x(1, 2, 0) ∨ ¬x(2, 0, 0)) ∧ (x(1, 1, 1) ∨ x(2, 0, 0) ∨ ¬x(1, 0, 1)) ∧ (x(2, 0, 0) ∨ x(1, 1, 0)) ∧ (x(2, 0, 0) ∨ ¬x(1, 1, 0)) ∧ (¬x(2, 0, 0) ∨ ¬x(1, 1, 0))\n</readable_cnf>\n\n<satisfiable>\ntrue\n</satisfiable>\n\n<label>\nSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nSAT satisfying assignment\n</certificate_type>\n\n<assignment_structured_0_1>\n[\n  [\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      1,\n      0\n    ],\n    [\n      0,\n      0\n    ],\n    [\n      0,\n      0\n    ]\n  ]\n]\n</assignment_structured_0_1>\n\n<assignment_per_variable>\n- x(0, 0, 0) = False\n- x(0, 0, 1) = False\n- x(0, 1, 0) = False\n- x(0, 1, 1) = False\n- x(0, 2, 0) = False\n- x(0, 2, 1) = False\n- x(1, 0, 0) = False\n- x(1, 0, 1) = False\n- x(1, 1, 0) = False\n- x(1, 1, 1) = False\n- x(1, 2, 0) = False\n- x(1, 2, 1) = False\n- x(2, 0, 0) = True\n- x(2, 0, 1) = False\n- x(2, 1, 0) = False\n- x(2, 1, 1) = False\n- x(2, 2, 0) = False\n- x(2, 2, 1) = False\n</assignment_per_variable>\n<sat_reason>\nOriginally UNSAT because: Full block: all 4 possible combinations forbidden for variables [13, 9]: (x(2, 0, 0) ∨ x(1, 1, 0)), (¬x(2, 0, 0) ∨ x(1, 1, 0)), (x(2, 0, 0) ∨ ¬x(1, 1, 0)), (¬x(2, 0, 0) ∨ ¬x(1, 1, 0)). After removing clause (¬x(2, 0, 0) ∨ x(1, 1, 0)), the conflict is resolved, making the problem satisfiable.\n</sat_reason>\n\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "SAT",
+  "satisfiable": true,
+  "certificate_type": "sat_assignment",
+  "ground_truth": {
+    "dims": [
+      3,
+      3,
+      2
+    ],
+    "num_vars": 18,
+    "num_clauses": 5,
+    "satisfiable": true,
+    "label": "SAT",
+    "certificate_type": "sat_assignment",
+    "assignment_structured_0_1": [
+      [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    ],
+    "assignment_flat": {
+      "1": false,
+      "2": false,
+      "3": false,
+      "4": false,
+      "5": false,
+      "6": false,
+      "7": false,
+      "8": false,
+      "9": false,
+      "10": false,
+      "11": false,
+      "12": false,
+      "13": true,
+      "14": false,
+      "15": false,
+      "16": false,
+      "17": false,
+      "18": false
+    },
+    "sat_reason": "Originally UNSAT because: Full block: all 4 possible combinations forbidden for variables [13, 9]: (x(2, 0, 0) ∨ x(1, 1, 0)), (¬x(2, 0, 0) ∨ x(1, 1, 0)), (x(2, 0, 0) ∨ ¬x(1, 1, 0)), (¬x(2, 0, 0) ∨ ¬x(1, 1, 0)). After removing clause (¬x(2, 0, 0) ∨ x(1, 1, 0)), the conflict is resolved, making the problem satisfiable."
+  }
+}
