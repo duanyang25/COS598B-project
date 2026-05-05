@@ -1,0 +1,245 @@
+{
+  "index": 1442,
+  "row_index_in_prompt_file": 1442,
+  "prompt_id": "satbench_01442",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Teacher Answer\n\n**Solution Status:** UNSAT\n\n**Reasoning Trace:**\nThe provided SATBench problem involves finding a truth assignment for variables $x(i, j, k)$ representing whether scientist $i$ conducts experiment $j$ in lab $k$. The conditions are derived from a CNF formula containing 15 clauses and 30 variables.\n\n1.  **Analyze the Contradiction Pattern**:\n    The provided Z3 certificate and the `unsat_reason` indicate a logical XOR chain involving specific variables. Let's trace the dependencies found in the unsat core:\n    *   Clause 0 (ID 11): $(\\neg x(1, 3, 1) \\lor x(2, 1, 0))$ AND Clause 13 (ID 10): $(\\neg x(1, 3, 1) \\lor \\neg x(2, 1, 0))$\n        *   Together, these force: $\\neg x(1, 3, 1)$ must be true (so $x(1, 3, 1) = \\text{False}$) and $x(2, 1, 0)$ must be true (so $x(2, 1, 0) = \\text{True}$).\n    *   Clause 1 (ID 7): $(\\neg x(1, 3, 1) \\lor x(2, 0, 1))$\n        *   Since we established $x(1, 3, 1) = \\text{False}$, this clause is satisfied regardless of $x(2, 0, 1)$.\n    *   Clause 12 (ID 8): $(x(1, 3, 1) \\lor x(2, 1, 0))$\n        *   We have $x(1, 3, 1) = \\text{False}$ and $x(2, 1, 0) = \\text{True}$. This clause is satisfied ($\\text{False} \\lor \\text{True} = \\text{True}$).\n    *   Clause 4 (ID 3): $(\\neg x(2, 0, 1) \\lor x(2, 3, 1))$\n    *   Clause 5 (ID 4): $(x(2, 3, 1) \\lor \\neg x(2, 1, 1))$\n    *   Clause 15 (ID 12): $(x(2, 1, 1) \\lor \\neg x(1, 4, 0))$\n    *   Clause 2 (ID 6): $(x(1, 4, 0) \\lor \\neg x(0, 2, 0))$\n    *   Clause 9 (ID 2): $(\\neg x(1, 4, 0) \\lor x(0, 2, 0))$\n    *   Clause 10 (ID 5): $(x(0, 2, 0) \\lor \\neg x(2, 1, 0))$\n    *   Clause 14 (ID 11): $(\\neg x(0, 2, 0) \\lor x(2, 1, 0))$\n    *   Clause 16 (ID 13): $(x(2, 1, 0) \\lor \\neg x(2, 3, 1))$\n    *   Clause 17 (ID 14): $(\\neg x(2, 1, 0) \\lor x(2, 3, 1))$\n\n    Looking closely at the unsat reason provided in the prompt, it lists a set of clauses. However, the prompt explicitly states `<satisfiable> false </satisfiable>` and provides a `Z3 solver output / certificate` section which lists the unsat core clauses. The logic within the \"unsat_reason\" text appears to contain some hallucinations or incorrect clause-to-variable mappings compared to the explicit list of clauses below them (e.g., it mentions clauses like ID 16 and 17 in the reason but lists their indices differently than the explicit `unsat_core_clauses` list at the bottom).\n\n    Let's re-evaluate the system based strictly on the explicit `unsat_core_clauses` list provided at the end of the prompt, as this is the definitive ground truth from the Z3 certificate structure:\n    \n    *   **Variables Involved**: $x(1, 3, 1), x(2, 0, 1), x(2, 3, 1), x(2, 1, 1), x(1, 4, 0), x(0, 2, 0), x(2, 1, 0)$.\n    *   **Constraints derived from the Unsat Core List**:\n        1.  From Clauses (ID 7 & 1): $x(1, 3, 1) = F$, $x(2, 0, 1) = T$.\n        2.  From Clauses (ID 10 & 14): $x(2, 1, 0) = T$.\n        3.  From Clauses (ID 12 & 16): $x(2, 1, 0) = T$. (Consistent).\n        4.  From Clauses (ID 3, 5, 15, 17): This creates a cycle or conflict on $x(2, 3, 1)$.\n            *   Clue 3: $\\neg x(2, 0, 1) \\lor x(2, 3, 1)$ -> $F \\lor x(2, 3, 1)$ -> **$x(2, 3, 1) = F$**.\n            *   Clue 5: $\\neg x(2, 3, 1) \\lor x(2, 1, 1)$ -> $T \\lor x(2, 1, 1)$ -> Satisfied.\n            *   Clue 15: $x(2, 1, 1) \\lor \\neg x(1, 4, 0)$.\n            *   Clue 17: $\\neg x(2, 1, 0) \\lor x(2, 3, 1)$ -> $\\neg T \\lor F$ -> $F \\lor F$ -> **Contradiction**.\n            \n    Wait, let's look closer at Clues 17 and 3 again.\n    *   Clue 3 (Index 2 in dimacs, ID 15): $(x(2, 3, 1) \\lor \\neg x(2, 1, 1))$ ? No, looking at `unsat_core_clauses`:\n        *   Index 4 (raw): `[28, -24]` -> `x(2, 3, 1) ∨ ¬x(2, 1, 1)` (ID 3)\n        *   Index 6 (raw): `[-28, 24]` -> `¬x(2, 3, 1) ∨ x(2, 1, 1)` (ID 13)\n        *   Index 2 (raw): `[-18, 22]` -> `¬x(1, 3, 1) ∨ x(2, 0, 1)` (ID 7)\n        *   Index 1 (raw): `[-22, 18]` -> `¬x(1, 3, 1) ∨ ¬x(2, 0, 1)` (ID 10)\n        \n    Let's re-read the `unsat_core_clauses` list carefully against the standard implication pattern usually seen in SAT puzzles.\n    The list includes pairs like:\n    *   `(x(2, 0, 1) ∨ ¬x(2, 3, 1))` [Raw Index 2: `[22, -28]`? No, `[22, -28]` is `x(2,0,1) ∨ ¬x(2,3,1)`].\n    *   `(¬x(2, 0, 1) ∨ x(2, 3, 1))` [Raw Index 3: `[-22, 28]`].\n    \n    These two form a contradiction if both are required.\n    *   Clause A: `x(2, 0, 1) ∨ ¬x(2, 3, 1)`\n    *   Clause B: `¬x(2, 0, 1) ∨ x(2, 3, 1)`\n    If we assume the variables are independent (as per the prompt instructions \"Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise\"), satisfying these two requires neither to be true. But they cover all possibilities:\n    *   If `x(2, 0, 1) = True`, A is true, B is true.\n    *   If `x(2, 0, 1) = False`, A is true, B is true.\n    Actually, `P ∨ ¬Q` and `¬P ∨ Q` are equivalent to `P ↔ Q`. They do NOT imply a contradiction unless we have `P ∨ Q` and `¬P ∨ ¬Q`.\n    \n    **Correction on Interpretation**:\n    The `unsat_core_clauses` provided in the prompt seem to map to the `unsat_core_raw_clause_indices` provided immediately above them.\n    Let's check the mapping in the `unsat_core_clauses` section again:\n    *   Index 0 (Raw 0): `[18, -22]` -> `x(1, 3, 1) ∨ ¬x(2, 0, 1)` (Matches Condition 11/10?)\n    *   Index 1 (Raw 1): `[-18, 22]` -> `¬x(1, 3, 1) ∨ x(2, 0, 1)` (Matches Condition 7?)\n    *   Index 2 (Raw 2): `[22, -28]` -> `x(2, 0, 1) ∨ ¬x(2, 3, 1)` (Matches Condition 15?)\n    *   Index 3 (Raw 3): `[-22, 28]` -> `¬x(2, 0, 1) ∨ x(2, 3, 1)` (Matches Condition 3?)\n    \n    If we have:\n    1. `x(2, 0, 1) ∨ ¬x(2, 3, 1)`\n    2. `¬x(2, 0, 1) ∨ x(2, 3, 1)`\n    This is consistent. It says $x(2, 0, 1) \\iff x(2, 3, 1)$. It does not force a contradiction.\n    \n    However, the `unsat_reason` claims \"XOR Chain contradiction\".\n    Let's look at the raw indices again.\n    Raw Index 4: `[28, -24]` -> `x(2, 3, 1) ∨ ¬x(2, 1, 1)`\n    Raw Index 5: `[-28, 24]` -> `¬x(2, 3, 1) ∨ x(2, 1, 1)`\n    These two are also equivalent ($x(2, 3, 1) \\iff x(2, 1, 1)$).\n    \n    Is it possible the prompt contains a trick where the `unsat_core_clauses` list *is* the contradiction proof?\n    Let's look at the full list of `unsat_core_clauses` again.\n    There are 15 clauses listed.\n    Are there any clauses that force a specific variable to be BOTH True and False?\n    The list includes:\n    *   `(x(1, 3, 1) ∨ ¬x(2, 0, 1))`\n    *   `(¬x(1, 3, 1) ∨ x(2, 0, 1))` -> This implies $x(1, 3, 1) \\iff x(2, 0, 1)$.\n    *   `(x(2, 0, 1) ∨ ¬x(2, 3, 1))`\n    *   `(¬x(2, 0, 1) ∨ x(2, 3, 1))` -> Implies $x(2, 0, 1) \\iff x(2, 3, 1)$.\n    \n    Combining these chains:\n    $x(1, 3, 1) \\iff x(2, 0, 1) \\iff x(2, 3, 1)$.\n    This is a consistent relationship. No contradiction yet.\n    \n    Let's re-examine the `unsat_reason` text specifically.\n    \"XOR Chain contradiction over variables [18, 22, 28, 24, 19, 5, 23]\".\n    The indices listed correspond to:\n    *   18, 22: $x(1, 3, 1)$\n    *   28, 24: $x(2, 3, 1)$\n    *   19, 5: $x(2, 1, 1)$\n    *   23: $x(1, 4, 0)$\n    *   18, 23: $x(1, 4, 0)$ vs $x(0, 2, 0)$? No, `18` is used twice.\n    *   19, 5: Used again.\n    \n    Actually, looking at the `unsat_core_clauses` list at the very end, it contains **15 distinct clauses**.\n    Clause 0: `x(1, 3, 1) ∨ ¬x(2, 0, 1)`\n    Clause 1: `¬x(1, 3, 1) ∨ x(2, 0, 1)`\n    Clause 2: `x(2, 0, 1) ∨ ¬x(2, 3, 1)`\n    Clause 3: `¬x(2, 0, 1) ∨ x(2, 3, 1)`\n    Clause 4: `x(2, 3, 1) ∨ ¬x(2, 1, 1)`\n    Clause 5: `¬x(2, 3, 1) ∨ x(2, 1, 1)`\n    Clause 6: `x(2, 1, 1) ∨ ¬x(1, 4, 0)`\n    Clause 7: `¬x(2, 1, 1) ∨ x(1, 4, 0)`\n    Clause 8: `x(1, 4, 0) ∨ ¬x(0, 2, 0)`\n    Clause 9: `¬x(1, 4, 0) ∨ x(0, 2, 0)`\n    Clause 10: `x(0, 2, 0) ∨ ¬x(2, 1, 0)`\n    Clause 11: `¬x(0, 2, 0) ∨ x(2, 1, 0)`\n    Clause 12: `x(1, 3, 1) ∨ x(2, 1, 0)`\n    Clause 13: `¬x(1, 3, 1) ∨ ¬x(2, 1, 0)`\n    Clause 14: `x(2, 1, 0) ∨ ¬x(2, 3, 1)` (Wait, checking raw index 12: `[-18, -23]` -> `¬x(1, 3, 1) ∨ ¬x(2, 1, 0)`)\n    Clause 15: `x(2, 1, 0) ∨ ¬x(2, 3, 1)` (Wait, checking raw index 13: `[-18, 23]` -> `x(1, 3, 1) ∨ x(2, 1, 0)`)\n    \n    Hold on, the indices in the `unsat_core_clauses` list do not match the raw indices in the `unsat_core_raw_clause_indices` list correctly.\n    Raw Index 12 is `[-18, -23]` which maps to `¬x(1, 3, 1) ∨ ¬x(2, 1, 0)`.\n    Raw Index 13 is `[-18, 23]` which maps to `x(1, 3, 1) ∨ x(2, 1, 0)`.\n    Raw Index 14 is `[5, -23]` which maps to `x(0, 2, 0) ∨ ¬x(2, 1, 0)`.\n    Raw Index 15 is `[-5, 23]` which maps to `¬x(0, 2, 0) ∨ x(2, 1, 0)`.\n    \n    Let's check for contradictions among these derived literals:\n    We need to satisfy ALL 15 clauses.\n    Consider Clauses involving $x(1, 3, 1)$:\n    1. `x(1, 3, 1) ∨ ¬x(2, 0, 1)`\n    2. `¬x(1, 3, 1) ∨ x(2, 0, 1)`\n    3. `x(1, 3, 1) ∨ x(2, 1, 0)`\n    4. `¬x(1, 3, 1) ∨ ¬x(2, 1, 0)`\n    From 1 & 2: $x(1, 3, 1) \\iff x(2, 0, 1)$.\n    From 3 & 4: $x(1, 3, 1) \\iff x(2, 1, 0)$.\n    Therefore, $x(2, 0, 1) \\iff x(2, 1, 0)$.\n    \n    Now consider clauses involving $x(2, 1, 0)$:\n    5. `x(2, 1, 0) ∨ ¬x(2, 3, 1)`\n    6. `¬x(0, 2, 0) ∨ x(2, 1, 0)`\n    7. `x(2, 1, 0) ∨ ¬x(2, 3, 1)` (Duplicate of 5?)\n    \n    Let's look at the raw indices again to ensure I haven't misread the `unsat_core_clauses` content.\n    The `unsat_core_clauses` section has 15 entries.\n    Entry 1: `[-18, 22]` -> `¬x(1, 3, 1) ∨ x(2, 0, 1)` (Cond 7)\n    Entry 2: `[-22, 18]` -> `¬x(1, 3, 1) ∨ ¬x(2, 0, 1)` (Cond 10)\n    Entry 3: `[22, -28]` -> `x(2, 0, 1) ∨ ¬x(2, 3, 1)` (Cond 15)\n    Entry 4: `[-28, 22]` -> `¬x(2, 0, 1) ∨ x(2, 3, 1)` (Cond 3)\n    \n    Wait, `[-28, 22]` and `[-28, 18]`?\n    Let's look at the mapping in the text:\n    \"raw clause index 0: [18, -22] -> ... Cond 11\"\n    \"raw clause index 1: [-18, 22] -> ... Cond 7\"\n    \"raw clause index 2: [22, -28] -> ... Cond 15\"\n    \"raw clause index 3: [-22, 28] -> ... Cond 3\"\n    \n    Okay, let's solve the system of equations based on the 15 clauses provided:\n    C1: $x_{131} \\lor \\neg x_{201}$\n    C2: $\\neg x_{131} \\lor x_{201}$\n    C3: $\\neg x_{201} \\lor x_{231}$\n    C4: $x_{201} \\lor \\neg x_{231}$\n    C5: $\\neg x_{210} \\lor x_{231}$\n    C6: $x_{210} \\lor \\neg x_{020}$\n    C7: $x_{210} \\lor \\neg x_{231}$ (Wait, looking at list item 6: `[-28, 24]` -> `¬x(2, 3, 1) ∨ x(2, 1, 1)`. Item 5 was `[-28, 24]`? No.)\n    \n    Let's list the 15 clauses clearly from the text block:\n    1. `(¬x(1, 3, 1) ∨ x(2, 0, 1))`\n    2. `(¬x(1, 3, 1) ∨ ¬x(2, 0, 1))`\n    3. `(x(2, 0, 1) ∨ ¬x(2, 3, 1))`\n    4. `(¬x(2, 0, 1) ∨ x(2, 3, 1))`\n    5. `(¬x(2, 3, 1) ∨ x(2, 1, 1))`\n    6. `(x(2, 1, 1) ∨ ¬x(1, 4, 0))`\n    7. `(¬x(2, 1, 1) ∨ x(1, 4, 0))`\n    8. `(x(1, 4, 0) ∨ ¬x(0, 2, 0))`\n    9. `(¬x(1, 4, 0) ∨ x(0, 2, 0))`\n    10. `(x(0, 2, 0) ∨ ¬x(2, 1, 0))`\n    11. `(¬x(0, 2, 0) ∨ x(2, 1, 0))`\n    12. `(x(1, 3, 1) ∨ x(2, 1, 0))`\n    13. `(¬x(1, 3, 1) ∨ ¬x(2, 1, 0))`\n    14. `(x(2, 1, 0) ∨ ¬x(2, 3, 1))`\n    15. `(¬x(2, 1, 0) ∨ x(2, 3, 1))`\n\n    **Analysis**:\n    Take C1 and C2:\n    $(\\neg A \\lor B)$ AND $(\\neg A \\lor \\neg B)$ where $A=x_{131}, B=x_{201}$.\n    If $A=T$, C1=T, C2=T. If $A=F$, then $B=T$.\n    So $A \\implies B$ (from C1, C2? No).\n    $A \\lor \\neg B$. $\\neg A \\lor B$.\n    Possibilities for $(A, B)$: $(T, T), (F, T), (T, F), (F, F)$.\n    If $(T, F)$: C1=T, C2=T.\n    If $(F, T)$: C1=T, C2=T.\n    If $(T, T)$: C1=T, C2=T.\n    If $(F, F)$: C1=T, C2=T.\n    Wait, $A \\lor \\neg B$ is always true if $B=T$.\n    $\\neg A \\lor B$ is always true if $A=F$.\n    The only case where they might conflict is if... actually, let's look at C4 and C3.\n    C3: $B \\lor \\neg C$\n    C4: $\\neg B \\lor C$\n    Where $C=x_{231}$.\n    If $B=T, C=F$: C3=T, C4=T.\n    If $B=F, C=T$: C3=T, C4=T.\n    If $B=T, C=T$: C3=F, C4=T.\n    If $B=F, C=F$: C3=T, C4=T.\n    So $(B, C)$ can be $(T, T)$ or $(F, F)$? No, if $(T, T)$, C3 is $T \\lor F = T$, C4 is $F \\lor T = T$. Valid.\n    So C3 and C4 do not force a contradiction on their own.\n    \n    Now look at C5, C6, C7...\n    C5: $\\neg C' \\lor D'$ ($C'=x_{231}, D'=x_{211}$)\n    C6: $D \\lor \\neg E'$ ($D=x_{211}, E'=x_{020}$)\n    C7: $\\neg D \\lor E$ ($D=x_{211}, E=x_{140}$)\n    C8: $E \\lor \\neg F'$ ($E=x_{140}, F'=x_{020}$)\n    C9: $\\neg E \\lor F$\n    C10: $F \\lor \\neg G'$ ($F=x_{140}, G'=x_{210}$)\n    C11: $\\neg F \\lor G$\n    C12: $H \\lor G'$ ($H=x_{131}, G'=x_{210}$)\n    C13: $\\neg H \\lor \\neg G'$\n    C14: $G \\lor \\neg C'$\n    C15: $\\neg G \\lor C'$\n\n    Let's test a potential solution: **All False**.\n    All variables = False.\n    C1: $T \\lor T$ = True.\n    C2: $T \\lor T$ = True.\n    C3: $T \\lor T$ = True.\n    C4: $T \\lor T$ = True.\n    C5: $T \\lor T$ = True.\n    C6: $T \\lor T$ = True.\n    C7: $T \\lor T$ = True.\n    C8: $T \\lor T$ = True.\n    C9: $T \\lor T$ = True.\n    C10: $T \\lor T$ = True.\n    C11: $T \\lor T$ = True.\n    C12: $T \\lor T$ = True.\n    C13: $T \\lor T$ = True.\n    C14: $T \\lor T$ = True.\n    C15: $T \\lor T$ = True.\n    \n    Wait, if all variables are False, ALL clauses are True because of the OR operators and the fact that a clause has at least one literal that is True? No.\n    A clause is a disjunction. If all variables are False, every term in a clause is False.\n    Example: Clause `x(1, 3, 1)`. If `x=0`, Clause is False.\n    My previous check assumed \"OR\" meant \"At least one is true\". Yes.\n    If I assign **ALL FALSE**, every clause evaluates to False because every literal in every clause is False.\n    Therefore, the system is **UNSAT**.\n\n    **Why?**\n    The system imposes constraints that force specific relationships between variables.\n    Specifically, C12 (`x(1, 3, 1) ∨ x(2, 1, 0)`) and C13 (`¬x(1, 3, 1) ∨ ¬x(2, 1, 0)`) force $x(1, 3, 1) \\iff x(2, 1, 0)$.\n    C1 (`¬x(1, 3, 1) ∨ x(2, 0, 1)`) and C2 (`¬x(1, 3, 1) ∨ ¬x(2, 0, 1)`) force $x(1, 3, 1) \\iff x(2, 0, 1)$.\n    This doesn't force a contradiction yet.\n    \n    However, look at the last two clauses involving $x_{210}$ (let's call it $Z$):\n    C10: $x_{020} \\lor \\neg Z$\n    C11: $\\neg x_{020} \\lor Z$\n    This forces $x_{020} \\iff Z$.\n    \n    Look at C14: $Z \\lor \\neg C'$\n    Look at C15: $\\neg Z \\lor C'$\n    This forces $Z \\iff C'$.\n    \n    Look at C5: $\\neg C' \\lor D'$\n    Look at C6: $D \\lor \\neg E'$\n    Look at C7: $\\neg D \\lor E$\n    Look at C8: $E \\lor \\neg F'$\n    Look at C9: $\\neg E \\lor F$\n    \n    Let's try to find a contradiction in the chain of equivalences.\n    $x_{131} = x_{201}$ (from C1/C2)\n    $x_{131} = x_{210}$ (from C12/C13)\n    So $x_{201} = x_{210}$.\n    \n    From C14/C15: $Z = x_{210}$.\n    So $x_{201} = x_{210} = Z$.\n    \n    From C10/C11: $x_{020} = Z$.\n    \n    Now look at C8/C9:\n    C8: $E \\lor \\neg F'$\n    C9: $\\neg E \\lor F$\n    This is an XOR constraint on $E, F'$.\n    \n    Now look at C6/C7:\n    C6: $D \\lor \\neg E'$\n    C7: $\\neg D \\lor E$\n    XOR constraint on $D, E'$.\n    \n    Now look at C5:\n    C5: $\\neg C' \\lor D'$\n    XOR constraint on $C', D'$.\n    \n    Now look at C3/C4:\n    C3: $B \\lor \\neg C$\n    C4: $\\neg B \\lor C$\n    This is an XOR constraint on $B, C$.\n    \n    So we have:\n    1. $x_{131} = x_{201} = x_{210} = x_{020}$.\n    2. $C' = x_{140}$.\n    3. $E' = x_{211}$.\n    4. $D' = x_{140}$. (Wait, C5 uses $D'$ where $D=x_{211}, D'=x_{140}$? No, C5 is `¬x(2, 3, 1) ∨ x(2, 1, 1)`? No.)\n       Let's re-parse C5 from the list:\n       \"raw clause index 4: [28, -24] -> x(2, 3, 1) ∨ ¬x(2, 1, 1)\"\n       \"raw clause index 5: [-28, 24] -> ¬x(2, 3, 1) ∨ x(2, 1, 1)\"\n       These are the same pair as C3/C4 but with indices 2,1,1 and 2,3,1.\n       So $x_{231} \\iff x_{211}$.\n       \n       Now look at C14/C15 again.\n       C14: `x(2, 1, 0) ∨ ¬x(2, 3, 1)`\n       C15: `¬x(2, 1, 0) ∨ x(2, 3, 1)`\n       These imply $x_{210} \\iff x_{231}$.\n       \n       Combining $x_{231} \\iff x_{211}$ and $x_{231} \\iff x_{210}$:\n       $x_{210} \\iff x_{211} \\iff x_{231}$.\n       \n       Now look at C10/C11: $x_{020} \\iff x_{210}$.\n       So $x_{020} \\iff x_{210}$.\n       \n       Now look at C8/C9:\n       C8: `x(1, 4, 0) ∨ ¬x(0, 2, 0)`\n       C9: `¬x(1, 4, 0) ∨ x(0, 2, 0)`\n       These imply $x_{140} \\iff x_{020}$.\n       \n       Now look at C6/C7:\n       C6: `x(2, 1, 1) ∨ ¬x(1, 4, 0)`\n       C7: `¬x(2, 1, 1) ∨ x(1, 4, 0)`\n       These imply $x_{211} \\iff x_{140}$.\n       \n       Now look at C5/C5b:\n       C5: `x(2, 1, 1) ∨ ¬x(1, 4, 0)`\n       C5b: `¬x(1, 4, 0) ∨ x(0, 2, 0)` (From raw index 8: `[-24, 19]`? No, index 8 is `x(1, 4, 0) ∨ ¬x(0, 2, 0)`).\n       Let's re-map the indices carefully.\n       \n       **Correct Mapping from `unsat_core_clauses`**:\n       0: `x(1, 3, 1) ∨ ¬x(2, 0, 1)` (Cond 11)\n       1: `¬x(1, 3, 1) ∨ x(2, 0, 1)` (Cond 7)\n       2: `x(2, 0, 1) ∨ ¬x(2, 3, 1)` (Cond 15)\n       3: `¬x(2, 0, 1) ∨ x(2, 3, 1)` (Cond 3)\n       4: `",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 3074,
+    "generated_tokens": 8192,
+    "batch_elapsed_seconds": 225.3806803226471,
+    "tokens_per_second_for_batch": 36.3473922799089,
+    "likely_truncated_by_max_new_tokens": true,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777888719.9478579,
+  "slurm_job_id": "3185304",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "144",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a futuristic research facility, three scientists—Dr. Vega, Dr. Yang, and Dr. Sanchez—are working on five different experiments, each of which can be conducted in two different labs (lab 0 or lab 1). For each scientist, experiment, and lab, there is a decision on whether the scientist will conduct that specific experiment in the given lab. These decisions are independent, meaning a scientist can choose multiple experiments across different labs or opt for none at all.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean scientist i conducts experiment j in lab k. Here, scientist 0 is Dr. Vega, scientist 1 is Dr. Yang, and scientist 2 is Dr. Sanchez.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Sanchez does not conduct experiment 1 in lab 1, or Dr. Yang conducts experiment 4 in lab 0.\n2. Either Dr. Yang does not conduct experiment 4 in lab 0, or Dr. Vega conducts experiment 2 in lab 0.\n3. Either Dr. Sanchez conducts experiment 3 in lab 1, or Dr. Sanchez does not conduct experiment 1 in lab 1.\n4. Either Dr. Sanchez does not conduct experiment 0 in lab 1, or Dr. Sanchez conducts experiment 3 in lab 1.\n5. Either Dr. Vega conducts experiment 2 in lab 0, or Dr. Sanchez does not conduct experiment 1 in lab 0.\n6. Either Dr. Yang conducts experiment 4 in lab 0, or Dr. Vega does not conduct experiment 2 in lab 0.\n7. Either Dr. Yang does not conduct experiment 3 in lab 1, or Dr. Sanchez conducts experiment 0 in lab 1.\n8. Either Dr. Yang conducts experiment 3 in lab 1, or Dr. Sanchez conducts experiment 1 in lab 0.\n9. Either Dr. Vega conducts experiment 3 in lab 1, or Dr. Vega conducts experiment 4 in lab 1, or Dr. Yang conducts experiment 2 in lab 1.\n10. Either Dr. Yang does not conduct experiment 3 in lab 1, or Dr. Sanchez does not conduct experiment 1 in lab 0.\n11. Either Dr. Yang conducts experiment 3 in lab 1, or Dr. Sanchez does not conduct experiment 0 in lab 1.\n12. Either Dr. Sanchez conducts experiment 1 in lab 1, or Dr. Yang does not conduct experiment 4 in lab 0.\n13. Either Dr. Sanchez does not conduct experiment 3 in lab 1, or Dr. Sanchez conducts experiment 1 in lab 1.\n14. Either Dr. Vega does not conduct experiment 2 in lab 0, or Dr. Sanchez conducts experiment 1 in lab 0.\n15. Either Dr. Sanchez conducts experiment 0 in lab 1, or Dr. Sanchez does not conduct experiment 3 in lab 1.\n</conditions>\n\n<question>\nIs there a way to assign values that makes this work?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5,2]\n</dims>\n\n<num_vars>\n30\n</num_vars>\n\n<num_clauses>\n15\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    18,\n    -22\n  ],\n  [\n    -18,\n    22\n  ],\n  [\n    22,\n    -28\n  ],\n  [\n    -22,\n    28\n  ],\n  [\n    28,\n    -24\n  ],\n  [\n    -28,\n    24\n  ],\n  [\n    24,\n    -19\n  ],\n  [\n    -24,\n    19\n  ],\n  [\n    19,\n    -5\n  ],\n  [\n    -19,\n    5\n  ],\n  [\n    5,\n    -23\n  ],\n  [\n    -5,\n    23\n  ],\n  [\n    18,\n    23\n  ],\n  [\n    -18,\n    -23\n  ],\n  [\n    8,\n    10,\n    16\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(2, 1, 1) ∨ x(1, 4, 0)) ∧ (¬x(1, 4, 0) ∨ x(0, 2, 0)) ∧ (x(2, 3, 1) ∨ ¬x(2, 1, 1)) ∧ (¬x(2, 0, 1) ∨ x(2, 3, 1)) ∧ (x(0, 2, 0) ∨ ¬x(2, 1, 0)) ∧ (x(1, 4, 0) ∨ ¬x(0, 2, 0)) ∧ (¬x(1, 3, 1) ∨ x(2, 0, 1)) ∧ (x(1, 3, 1) ∨ x(2, 1, 0)) ∧ (x(0, 3, 1) ∨ x(0, 4, 1) ∨ x(1, 2, 1)) ∧ (¬x(1, 3, 1) ∨ ¬x(2, 1, 0)) ∧ (x(1, 3, 1) ∨ ¬x(2, 0, 1)) ∧ (x(2, 1, 1) ∨ ¬x(1, 4, 0)) ∧ (¬x(2, 3, 1) ∨ x(2, 1, 1)) ∧ (¬x(0, 2, 0) ∨ x(2, 1, 0)) ∧ (x(2, 0, 1) ∨ ¬x(2, 3, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,10,11,12,13,14,15]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [18, -22] -> (x(1, 3, 1) ∨ ¬x(2, 0, 1)); matching condition number(s): [11]\n- raw clause index 1: [-18, 22] -> (¬x(1, 3, 1) ∨ x(2, 0, 1)); matching condition number(s): [7]\n- raw clause index 2: [22, -28] -> (x(2, 0, 1) ∨ ¬x(2, 3, 1)); matching condition number(s): [15]\n- raw clause index 3: [-22, 28] -> (¬x(2, 0, 1) ∨ x(2, 3, 1)); matching condition number(s): [4]\n- raw clause index 4: [28, -24] -> (x(2, 3, 1) ∨ ¬x(2, 1, 1)); matching condition number(s): [3]\n- raw clause index 5: [-28, 24] -> (¬x(2, 3, 1) ∨ x(2, 1, 1)); matching condition number(s): [13]\n- raw clause index 6: [24, -19] -> (x(2, 1, 1) ∨ ¬x(1, 4, 0)); matching condition number(s): [12]\n- raw clause index 7: [-24, 19] -> (¬x(2, 1, 1) ∨ x(1, 4, 0)); matching condition number(s): [1]\n- raw clause index 8: [19, -5] -> (x(1, 4, 0) ∨ ¬x(0, 2, 0)); matching condition number(s): [6]\n- raw clause index 9: [-19, 5] -> (¬x(1, 4, 0) ∨ x(0, 2, 0)); matching condition number(s): [2]\n- raw clause index 10: [5, -23] -> (x(0, 2, 0) ∨ ¬x(2, 1, 0)); matching condition number(s): [5]\n- raw clause index 11: [-5, 23] -> (¬x(0, 2, 0) ∨ x(2, 1, 0)); matching condition number(s): [14]\n- raw clause index 12: [18, 23] -> (x(1, 3, 1) ∨ x(2, 1, 0)); matching condition number(s): [8]\n- raw clause index 13: [-18, -23] -> (¬x(1, 3, 1) ∨ ¬x(2, 1, 0)); matching condition number(s): [10]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [18, 22, 28, 24, 19, 5, 23]: (x(1, 3, 1) ∨ ¬x(2, 0, 1)), (¬x(1, 3, 1) ∨ x(2, 0, 1)), (x(2, 0, 1) ∨ ¬x(2, 3, 1)), (¬x(2, 0, 1) ∨ x(2, 3, 1)), (x(2, 3, 1) ∨ ¬x(2, 1, 1)), (¬x(2, 3, 1) ∨ x(2, 1, 1)), (x(2, 1, 1) ∨ ¬x(1, 4, 0)), (¬x(2, 1, 1) ∨ x(1, 4, 0)), (x(1, 4, 0) ∨ ¬x(0, 2, 0)), (¬x(1, 4, 0) ∨ x(0, 2, 0)), (x(0, 2, 0) ∨ ¬x(2, 1, 0)), (¬x(0, 2, 0) ∨ x(2, 1, 0)), (x(1, 3, 1) ∨ x(2, 1, 0)), (¬x(1, 3, 1) ∨ ¬x(2, 1, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a futuristic research facility, three scientists—Dr. Vega, Dr. Yang, and Dr. Sanchez—are working on five different experiments, each of which can be conducted in two different labs (lab 0 or lab 1). For each scientist, experiment, and lab, there is a decision on whether the scientist will conduct that specific experiment in the given lab. These decisions are independent, meaning a scientist can choose multiple experiments across different labs or opt for none at all.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean scientist i conducts experiment j in lab k. Here, scientist 0 is Dr. Vega, scientist 1 is Dr. Yang, and scientist 2 is Dr. Sanchez.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Sanchez does not conduct experiment 1 in lab 1, or Dr. Yang conducts experiment 4 in lab 0.\n2. Either Dr. Yang does not conduct experiment 4 in lab 0, or Dr. Vega conducts experiment 2 in lab 0.\n3. Either Dr. Sanchez conducts experiment 3 in lab 1, or Dr. Sanchez does not conduct experiment 1 in lab 1.\n4. Either Dr. Sanchez does not conduct experiment 0 in lab 1, or Dr. Sanchez conducts experiment 3 in lab 1.\n5. Either Dr. Vega conducts experiment 2 in lab 0, or Dr. Sanchez does not conduct experiment 1 in lab 0.\n6. Either Dr. Yang conducts experiment 4 in lab 0, or Dr. Vega does not conduct experiment 2 in lab 0.\n7. Either Dr. Yang does not conduct experiment 3 in lab 1, or Dr. Sanchez conducts experiment 0 in lab 1.\n8. Either Dr. Yang conducts experiment 3 in lab 1, or Dr. Sanchez conducts experiment 1 in lab 0.\n9. Either Dr. Vega conducts experiment 3 in lab 1, or Dr. Vega conducts experiment 4 in lab 1, or Dr. Yang conducts experiment 2 in lab 1.\n10. Either Dr. Yang does not conduct experiment 3 in lab 1, or Dr. Sanchez does not conduct experiment 1 in lab 0.\n11. Either Dr. Yang conducts experiment 3 in lab 1, or Dr. Sanchez does not conduct experiment 0 in lab 1.\n12. Either Dr. Sanchez conducts experiment 1 in lab 1, or Dr. Yang does not conduct experiment 4 in lab 0.\n13. Either Dr. Sanchez does not conduct experiment 3 in lab 1, or Dr. Sanchez conducts experiment 1 in lab 1.\n14. Either Dr. Vega does not conduct experiment 2 in lab 0, or Dr. Sanchez conducts experiment 1 in lab 0.\n15. Either Dr. Sanchez conducts experiment 0 in lab 1, or Dr. Sanchez does not conduct experiment 3 in lab 1.\n</conditions>\n\n<question>\nIs there a way to assign values that makes this work?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5,2]\n</dims>\n\n<num_vars>\n30\n</num_vars>\n\n<num_clauses>\n15\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    18,\n    -22\n  ],\n  [\n    -18,\n    22\n  ],\n  [\n    22,\n    -28\n  ],\n  [\n    -22,\n    28\n  ],\n  [\n    28,\n    -24\n  ],\n  [\n    -28,\n    24\n  ],\n  [\n    24,\n    -19\n  ],\n  [\n    -24,\n    19\n  ],\n  [\n    19,\n    -5\n  ],\n  [\n    -19,\n    5\n  ],\n  [\n    5,\n    -23\n  ],\n  [\n    -5,\n    23\n  ],\n  [\n    18,\n    23\n  ],\n  [\n    -18,\n    -23\n  ],\n  [\n    8,\n    10,\n    16\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(2, 1, 1) ∨ x(1, 4, 0)) ∧ (¬x(1, 4, 0) ∨ x(0, 2, 0)) ∧ (x(2, 3, 1) ∨ ¬x(2, 1, 1)) ∧ (¬x(2, 0, 1) ∨ x(2, 3, 1)) ∧ (x(0, 2, 0) ∨ ¬x(2, 1, 0)) ∧ (x(1, 4, 0) ∨ ¬x(0, 2, 0)) ∧ (¬x(1, 3, 1) ∨ x(2, 0, 1)) ∧ (x(1, 3, 1) ∨ x(2, 1, 0)) ∧ (x(0, 3, 1) ∨ x(0, 4, 1) ∨ x(1, 2, 1)) ∧ (¬x(1, 3, 1) ∨ ¬x(2, 1, 0)) ∧ (x(1, 3, 1) ∨ ¬x(2, 0, 1)) ∧ (x(2, 1, 1) ∨ ¬x(1, 4, 0)) ∧ (¬x(2, 3, 1) ∨ x(2, 1, 1)) ∧ (¬x(0, 2, 0) ∨ x(2, 1, 0)) ∧ (x(2, 0, 1) ∨ ¬x(2, 3, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,10,11,12,13,14,15]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [18, -22] -> (x(1, 3, 1) ∨ ¬x(2, 0, 1)); matching condition number(s): [11]\n- raw clause index 1: [-18, 22] -> (¬x(1, 3, 1) ∨ x(2, 0, 1)); matching condition number(s): [7]\n- raw clause index 2: [22, -28] -> (x(2, 0, 1) ∨ ¬x(2, 3, 1)); matching condition number(s): [15]\n- raw clause index 3: [-22, 28] -> (¬x(2, 0, 1) ∨ x(2, 3, 1)); matching condition number(s): [4]\n- raw clause index 4: [28, -24] -> (x(2, 3, 1) ∨ ¬x(2, 1, 1)); matching condition number(s): [3]\n- raw clause index 5: [-28, 24] -> (¬x(2, 3, 1) ∨ x(2, 1, 1)); matching condition number(s): [13]\n- raw clause index 6: [24, -19] -> (x(2, 1, 1) ∨ ¬x(1, 4, 0)); matching condition number(s): [12]\n- raw clause index 7: [-24, 19] -> (¬x(2, 1, 1) ∨ x(1, 4, 0)); matching condition number(s): [1]\n- raw clause index 8: [19, -5] -> (x(1, 4, 0) ∨ ¬x(0, 2, 0)); matching condition number(s): [6]\n- raw clause index 9: [-19, 5] -> (¬x(1, 4, 0) ∨ x(0, 2, 0)); matching condition number(s): [2]\n- raw clause index 10: [5, -23] -> (x(0, 2, 0) ∨ ¬x(2, 1, 0)); matching condition number(s): [5]\n- raw clause index 11: [-5, 23] -> (¬x(0, 2, 0) ∨ x(2, 1, 0)); matching condition number(s): [14]\n- raw clause index 12: [18, 23] -> (x(1, 3, 1) ∨ x(2, 1, 0)); matching condition number(s): [8]\n- raw clause index 13: [-18, -23] -> (¬x(1, 3, 1) ∨ ¬x(2, 1, 0)); matching condition number(s): [10]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [18, 22, 28, 24, 19, 5, 23]: (x(1, 3, 1) ∨ ¬x(2, 0, 1)), (¬x(1, 3, 1) ∨ x(2, 0, 1)), (x(2, 0, 1) ∨ ¬x(2, 3, 1)), (¬x(2, 0, 1) ∨ x(2, 3, 1)), (x(2, 3, 1) ∨ ¬x(2, 1, 1)), (¬x(2, 3, 1) ∨ x(2, 1, 1)), (x(2, 1, 1) ∨ ¬x(1, 4, 0)), (¬x(2, 1, 1) ∨ x(1, 4, 0)), (x(1, 4, 0) ∨ ¬x(0, 2, 0)), (¬x(1, 4, 0) ∨ x(0, 2, 0)), (x(0, 2, 0) ∨ ¬x(2, 1, 0)), (¬x(0, 2, 0) ∨ x(2, 1, 0)), (x(1, 3, 1) ∨ x(2, 1, 0)), (¬x(1, 3, 1) ∨ ¬x(2, 1, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      5,
+      2
+    ],
+    "num_vars": 30,
+    "num_clauses": 15,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          18,
+          -22
+        ],
+        "clause_structural": "(x(1, 3, 1) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -18,
+          22
+        ],
+        "clause_structural": "(¬x(1, 3, 1) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          22,
+          -28
+        ],
+        "clause_structural": "(x(2, 0, 1) ∨ ¬x(2, 3, 1))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -22,
+          28
+        ],
+        "clause_structural": "(¬x(2, 0, 1) ∨ x(2, 3, 1))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          28,
+          -24
+        ],
+        "clause_structural": "(x(2, 3, 1) ∨ ¬x(2, 1, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -28,
+          24
+        ],
+        "clause_structural": "(¬x(2, 3, 1) ∨ x(2, 1, 1))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          24,
+          -19
+        ],
+        "clause_structural": "(x(2, 1, 1) ∨ ¬x(1, 4, 0))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -24,
+          19
+        ],
+        "clause_structural": "(¬x(2, 1, 1) ∨ x(1, 4, 0))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          19,
+          -5
+        ],
+        "clause_structural": "(x(1, 4, 0) ∨ ¬x(0, 2, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -19,
+          5
+        ],
+        "clause_structural": "(¬x(1, 4, 0) ∨ x(0, 2, 0))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          5,
+          -23
+        ],
+        "clause_structural": "(x(0, 2, 0) ∨ ¬x(2, 1, 0))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -5,
+          23
+        ],
+        "clause_structural": "(¬x(0, 2, 0) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          18,
+          23
+        ],
+        "clause_structural": "(x(1, 3, 1) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -18,
+          -23
+        ],
+        "clause_structural": "(¬x(1, 3, 1) ∨ ¬x(2, 1, 0))",
+        "condition_numbers": [
+          10
+        ]
+      }
+    ],
+    "unsat_reason": "XOR Chain contradiction over variables [18, 22, 28, 24, 19, 5, 23]: (x(1, 3, 1) ∨ ¬x(2, 0, 1)), (¬x(1, 3, 1) ∨ x(2, 0, 1)), (x(2, 0, 1) ∨ ¬x(2, 3, 1)), (¬x(2, 0, 1) ∨ x(2, 3, 1)), (x(2, 3, 1) ∨ ¬x(2, 1, 1)), (¬x(2, 3, 1) ∨ x(2, 1, 1)), (x(2, 1, 1) ∨ ¬x(1, 4, 0)), (¬x(2, 1, 1) ∨ x(1, 4, 0)), (x(1, 4, 0) ∨ ¬x(0, 2, 0)), (¬x(1, 4, 0) ∨ x(0, 2, 0)), (x(0, 2, 0) ∨ ¬x(2, 1, 0)), (¬x(0, 2, 0) ∨ x(2, 1, 0)), (x(1, 3, 1) ∨ x(2, 1, 0)), (¬x(1, 3, 1) ∨ ¬x(2, 1, 0))"
+  }
+}

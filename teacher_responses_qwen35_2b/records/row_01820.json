@@ -1,0 +1,178 @@
+{
+  "index": 1820,
+  "row_index_in_prompt_file": 1820,
+  "prompt_id": "satbench_01820",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analyze the Problem Setup**\nWe have three astronauts (Elena, Raj, Mia) and two experiments (Chemical=0, Physical=1) across two planets (Planet X=0, Planet Y=1).\nThe total number of possible combinations for one astronaut is $2 \\times 2 \\times 2 = 8$.\nThe problem defines a set of 9 logical constraints (Clauses) involving the truth values of specific variables like $x(0, i, j)$ etc.\nThe provided SAT information explicitly states the system is **UNSAT**. Our task is to verify this using the provided Z3-derived proof and reconstruct the logical contradiction.\n\n**2. Extract and Formalize the Conditions**\nBased on the `readable_cnf` and `unsat_core_clauses`, we can map the English conditions directly to the logical structure. Note that `x(i,j,k)` likely corresponds to the variable name used in the Z3 output (e.g., `x(1,1,1)` represents \"Raj, Physical, Planet X\").\n\n*   **Condition 1:** `(¬x(1,1,0) ∨ x(2,0,1))` $\\rightarrow$ \"Either Raj does not perform physical on X OR Mia does chemical on Y\".\n*   **Condition 2:** `¬x(2,0,1)` $\\rightarrow$ \"Mia does not perform chemical on Y\".\n*   **Condition 3:** `(¬x(1,1,1) ∨ x(1,0,0))` $\\rightarrow$ \"Either Raj does not perform physical on Y OR Raj does chemical on X\".\n*   **Condition 4:** `x(1,1,1)` $\\rightarrow$ \"Raj performs physical on Planet Y\". **(Crucial Constraint)**\n*   **Condition 5:** `(¬x(0,1,1) ∨ x(0,0,0))` $\\rightarrow$ \"Either Elena does not perform physical on Y OR Elena does chemical on X\".\n*   **Condition 6:** `(¬x(0,0,0) ∨ x(1,0,1))` $\\rightarrow$ \"Either Elena does not do chemical on X OR Raj does chemical on Y\".\n*   **Condition 7:** `(¬x(1,0,0) ∨ x(2,1,0))` $\\rightarrow$ \"Either Raj does not do chemical on X OR Mia does physical on X\".\n*   **Condition 8:** `(¬x(2,1,0) ∨ x(0,1,1))` $\\rightarrow$ \"Either Mia does not do physical on X OR Elena does physical on Y\".\n*   **Condition 9:** `(¬x(1,0,1) ∨ x(1,1,0))` $\\rightarrow$ \"Either Raj does not do chemical on Y OR Raj does physical on X\".\n\n**3. Trace the Logical Contradiction (The Proof)**\nThe `unsat_reason` provides a \"Frozen conflict chain.\" Let's trace the forced assignments:\n\n1.  From **Condition 4**: We must assign `x(1,1,1)` = **True** (Raj, Physical, Planet Y).\n2.  Substitute this into **Condition 1**:\n    *   Clause: `¬x(1,1,0) ∨ x(2,0,1)`\n    *   Since `x(1,1,0)` is false (because `x(1,1,1)` is true), the first part is false.\n    *   Therefore, `x(2,0,1)` **must be True**. (Mia, Chemical, Planet Y).\n3.  Substitute this into **Condition 2**:\n    *   Clause: `¬x(2,0,1)`\n    *   Since `x(2,0,1)` is true, this clause is satisfied. No new constraint on `x(2,0,1)` other than it being true. (Note: This doesn't create a contradiction yet, just confirms the value).\n4.  Substitute this into **Condition 3**:\n    *   Clause: `¬x(1,1,1) ∨ x(1,0,0)`\n    *   Since `x(1,1,1)` is true, the first part is false.\n    *   Therefore, `x(1,0,0)` **must be True**. (Raj, Chemical, Planet X).\n5.  Substitute this into **Condition 6**:\n    *   Clause: `¬x(0,0,0) ∨ x(1,0,1)`\n    *   This creates a dependency between Elena and Raj regarding Chemistry/Planets X/Y. It implies that if Elena does chemical on X (`x(0,0,0)` is false), then Raj must do chemical on Y (`x(1,0,1)` is true).\n6.  Substitute this into **Condition 9**:\n    *   Clause: `¬x(1,0,1) ∨ x(1,1,0)`\n    *   This connects Raj's chemistry on Y with his physics on X.\n7.  Now look at **Condition 7**:\n    *   Clause: `¬x(1,0,0) ∨ x(2,1,0)`\n    *   We found `x(1,0,0)` is **True** in step 4.\n    *   In a disjunction `(A ∨ B)`, if A is true, B is unconstrained *unless* the clause structure forces B. Wait, let's re-evaluate the implication flow carefully.\n    *   Actually, Condition 7 says: `(NOT x(1,0,0) OR x(2,1,0))`.\n    *   Since `x(1,0,0)` is TRUE, the term `¬x(1,0,0)` is FALSE.\n    *   Therefore, the second term `x(2,1,0)` **must be True**. (Mia, Physical, Planet X).\n8.  Substitute this into **Condition 8**:\n    *   Clause: `¬x(2,1,0) ∨ x(0,1,1)`\n    *   We just derived `x(2,1,0)` is **True**.\n    *   The first term `¬x(2,1,0)` becomes **False**.\n    *   Therefore, the second term `x(0,1,1)` **must be True**. (Elena, Physical, Planet Y).\n9.  Now look at **Condition 5**:\n    *   Clause: `¬x(0,1,1) ∨ x(0,0,0)`\n    *   We just derived `x(0,1,1)` is **True**.\n    *   The first term `¬x(0,1,1)` becomes **False**.\n    *   Therefore, the second term `x(0,0,0)` **must be True**. (Elena, Chemical, Planet X).\n10. Now check **Condition 6** again with the new value:\n    *   Clause: `¬x(0,0,0) ∨ x(1,0,1)`\n    *   We just derived `x(0,0,0)` is **True**.\n    *   The first term `¬x(0,0,0)` becomes **False**.\n    *   Therefore, the second term `x(1,0,1)` **must be True**. (Raj, Chemical, Planet Y).\n\n**Conclusion of the Chain:**\n*   Step 4: `x(1,1,1)` = T\n*   Step 2: `x(2,0,1)` = T\n*   Step 3: `x(1,0,0)` = T\n*   Step 6: `x(0,1,1)` = T\n*   Step 9: `x(0,0,0)` = T\n*   Step 10: `x(1,0,1)` = T\n*   Step 7: `x(2,1,0)` = T (derived from `x(1,0,0)=T`)\n*   Check Condition 4: `x(1,1,1)` is T. (Satisfied)\n*   Check Condition 9: `¬x(1,0,1) ∨ x(1,1,0)`. We have `x(1,0,1)`=T. So `x(1,1,0)` must be T.\n*   Check Condition 1: `¬x(1,1,0) ∨ x(2,0,1)`. We have `x(1,1,0)`=T. So `x(2,0,1)` must be T. (Already known).\n\nThe chain holds together logically. However, we must look closer at **Condition 7** and **Condition 9** interaction to see if a simpler contradiction exists or if my trace missed a direct implication.\n\nLet's re-read the `unsat_reason` path specifically:\n1. `x(1,1,1)` forced (Cond 4).\n2. `¬x(1,1,0)` becomes False $\\to$ `x(2,0,1)` forced True (Cond 1).\n3. `¬x(1,1,1)` becomes False $\\to$ `x(1,0,0)` forced True (Cond 3).\n4. `¬x(1,0,0)` becomes False $\\to$ `x(2,1,0)` forced True (Cond 7).\n5. `¬x(2,1,0)` becomes False $\\to$ `x(0,1,1)` forced True (Cond 8).\n6. `¬x(0,1,1)` becomes False $\\to$ `x(0,0,0)` forced True (Cond 5).\n7. `¬x(0,0,0)` becomes False $\\to$ `x(1,0,1)` forced True (Cond 6).\n8. `¬x(1,0,1)` becomes False $\\to$ `x(1,1,0)` forced True (Cond 9).\n\nWait, let's check Condition 2 again.\nCond 2: `¬x(2,0,1)`.\nFrom Step 2, `x(2,0,1)` is forced **True**.\nTherefore `¬x(2,0,1)` is **False**.\nThis means **Condition 2 is violated**.\n\n**Contradiction Identified:**\n*   **Condition 2** requires `x(2,0,1)` to be **False** (\"Mia does not perform chemical on Planet Y\").\n*   **Conditions 1, 3, 7, 8, 9** form a logical dependency chain that, starting from Condition 4, forces `x(2,0,1)` to be **True**.\n    *   Start: Cond 4 $\\implies$ `x(1,1,1)` = T.\n    *   Cond 1 ($\\neg x(1,1,0) \\lor x(2,0,1)$): Since `x(1,1,0)` is F, `x(2,0,1)` must be T.\n    *   Cond 7 ($\\neg x(1,0,0) \\lor x(2,1,0)$): This forces `x(2,1,0)`. It does NOT force `x(2,0,1)` directly.\n    *   Cond 3 ($\\neg x(1,1,1) \\lor x(1,0,0)$): Since `x(1,1,1)` is T, `x(1,0,0)` must be T.\n    *   Cond 7 again: Since `x(1,0,0)` is T, `x(2,1,0)` must be T.\n    *   Cond 8 ($\\neg x(2,1,0) \\lor x(0,1,1)$): Since `x(2,1,0)` is T, `x(0,1,1)` must be T.\n    *   Cond 5 ($\\neg x(0,1,1) \\lor x(0,0,0)$): Since `x(0,1,1)` is T, `x(0,0,0)` must be T.\n    *   Cond 6 ($\\neg x(0,0,0) \\lor x(1,0,1)$): Since `x(0,0,0)` is T, `x(1,0,1)` must be T.\n    *   Cond 9 ($\\neg x(1,0,1) \\lor x(1,1,0)$): Since `x(1,0,1)` is T, `x(1,1,0)` must be T.\n\nNow apply **Condition 2** (`¬x(2,0,1)`) against our deduction.\nOur deduction forced `x(2,0,1)` to be **True** via Condition 1.\nCondition 2 states `x(2,0,1)` must be **False**.\nThis is a direct contradiction.\n\n**4. Verification of the Certificate**\nThe Z3 certificate lists `unsat_core_mapped_condition_numbers` as `[1, 2, 3, 4, 5, 6, 7, 8, 9]`.\nThis confirms that the entire set of 9 clauses leads to a conflict. Specifically, Conditions 1 through 9 are inconsistent with each other.\n\n**5. Final Answer Formulation**\nSince the puzzle is UNSAT, we must report the reason based on the logical deduction. The root cause is the interaction between the \"Physical on Y\" requirement and the \"Chemical on Y\" requirements.\n\n*   **Constraint A (from Cond 4):** Raj must do Physical on Planet Y.\n*   **Constraint B (from Cond 1 & Chain):** Doing Physical on Planet Y (by Raj) triggers a chain of implications that forces `x(2,0,1)` (Mia doing Chemical on Planet Y) to be true due to the logical flow of other conditions forcing `x(1,0,0)`, `x(2,1,0)`, `x(0,1,1)`, `x(0,0,0)`, `x(1,0,1)`, and finally `x(1,1,0)`.\n*   **Constraint C (from Cond 2):** Mia must NOT do Chemical on Planet Y.\n*   **Conflict:** Constraint B forces Mia to do Chemical on Planet Y; Constraint C forbids it.\n\n**Answer:**\nThe system is unsatisfiable because a sequence of constraints forces the assignment of \"Mia performs chemical experiment on Planet Y\" to be true, while another constraint explicitly forbids this assignment.\n\nLabel: [UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1967,
+    "generated_tokens": 3329,
+    "batch_elapsed_seconds": 60.185941219329834,
+    "tokens_per_second_for_batch": 55.31192056743693,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777900372.0196643,
+  "slurm_job_id": "3186105",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "182",
+  "hostname": "adroit-h11g1",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn an interstellar mission, three astronauts—Elena, Raj, and Mia—are each tasked with performing two types of experiments (0 = chemical, 1 = physical) across two different planetary environments (0 = Planet X, 1 = Planet Y). For each astronaut, experiment type, and planetary context, we decide whether the experiment is conducted. Each decision is independent from the others.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i conducts experiment type j on environment k. Here, astronaut 0 is Elena, astronaut 1 is Raj, and astronaut 2 is Mia.\n</variable_mapping>\n\n<conditions>\n1. Either Raj does not perform the physical experiment on Planet X, or Mia performs the chemical experiment on Planet Y.\n2. Mia does not perform the chemical experiment on Planet Y.\n3. Either Raj does not perform the physical experiment on Planet Y, or Raj performs the chemical experiment on Planet X.\n4. Raj performs the physical experiment on Planet Y.\n5. Either Elena does not perform the physical experiment on Planet Y, or Elena performs the chemical experiment on Planet X.\n6. Either Elena does not perform the chemical experiment on Planet X, or Raj performs the chemical experiment on Planet Y.\n7. Either Raj does not perform the chemical experiment on Planet X, or Mia performs the physical experiment on Planet X.\n8. Either Mia does not perform the physical experiment on Planet X, or Elena performs the physical experiment on Planet Y.\n9. Either Raj does not perform the chemical experiment on Planet Y, or Raj performs the physical experiment on Planet X.\n</conditions>\n\n<question>\nIs there a way to assign values that makes all these conditions hold true?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,2,2]\n</dims>\n\n<num_vars>\n12\n</num_vars>\n\n<num_clauses>\n9\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    8\n  ],\n  [\n    -8,\n    5\n  ],\n  [\n    -5,\n    11\n  ],\n  [\n    -11,\n    4\n  ],\n  [\n    -4,\n    1\n  ],\n  [\n    -1,\n    6\n  ],\n  [\n    -6,\n    7\n  ],\n  [\n    -7,\n    10\n  ],\n  [\n    -10\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 1, 0) ∨ x(2, 0, 1)) ∧ (¬x(2, 0, 1)) ∧ (¬x(1, 1, 1) ∨ x(1, 0, 0)) ∧ (x(1, 1, 1)) ∧ (¬x(0, 1, 1) ∨ x(0, 0, 0)) ∧ (¬x(0, 0, 0) ∨ x(1, 0, 1)) ∧ (¬x(1, 0, 0) ∨ x(2, 1, 0)) ∧ (¬x(2, 1, 0) ∨ x(0, 1, 1)) ∧ (¬x(1, 0, 1) ∨ x(1, 1, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [8] -> (x(1, 1, 1)); matching condition number(s): [4]\n- raw clause index 1: [-8, 5] -> (¬x(1, 1, 1) ∨ x(1, 0, 0)); matching condition number(s): [3]\n- raw clause index 2: [-5, 11] -> (¬x(1, 0, 0) ∨ x(2, 1, 0)); matching condition number(s): [7]\n- raw clause index 3: [-11, 4] -> (¬x(2, 1, 0) ∨ x(0, 1, 1)); matching condition number(s): [8]\n- raw clause index 4: [-4, 1] -> (¬x(0, 1, 1) ∨ x(0, 0, 0)); matching condition number(s): [5]\n- raw clause index 5: [-1, 6] -> (¬x(0, 0, 0) ∨ x(1, 0, 1)); matching condition number(s): [6]\n- raw clause index 6: [-6, 7] -> (¬x(1, 0, 1) ∨ x(1, 1, 0)); matching condition number(s): [9]\n- raw clause index 7: [-7, 10] -> (¬x(1, 1, 0) ∨ x(2, 0, 1)); matching condition number(s): [1]\n- raw clause index 8: [-10] -> (¬x(2, 0, 1)); matching condition number(s): [2]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(2, 0, 1)), (¬x(2, 0, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn an interstellar mission, three astronauts—Elena, Raj, and Mia—are each tasked with performing two types of experiments (0 = chemical, 1 = physical) across two different planetary environments (0 = Planet X, 1 = Planet Y). For each astronaut, experiment type, and planetary context, we decide whether the experiment is conducted. Each decision is independent from the others.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i conducts experiment type j on environment k. Here, astronaut 0 is Elena, astronaut 1 is Raj, and astronaut 2 is Mia.\n</variable_mapping>\n\n<conditions>\n1. Either Raj does not perform the physical experiment on Planet X, or Mia performs the chemical experiment on Planet Y.\n2. Mia does not perform the chemical experiment on Planet Y.\n3. Either Raj does not perform the physical experiment on Planet Y, or Raj performs the chemical experiment on Planet X.\n4. Raj performs the physical experiment on Planet Y.\n5. Either Elena does not perform the physical experiment on Planet Y, or Elena performs the chemical experiment on Planet X.\n6. Either Elena does not perform the chemical experiment on Planet X, or Raj performs the chemical experiment on Planet Y.\n7. Either Raj does not perform the chemical experiment on Planet X, or Mia performs the physical experiment on Planet X.\n8. Either Mia does not perform the physical experiment on Planet X, or Elena performs the physical experiment on Planet Y.\n9. Either Raj does not perform the chemical experiment on Planet Y, or Raj performs the physical experiment on Planet X.\n</conditions>\n\n<question>\nIs there a way to assign values that makes all these conditions hold true?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,2,2]\n</dims>\n\n<num_vars>\n12\n</num_vars>\n\n<num_clauses>\n9\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    8\n  ],\n  [\n    -8,\n    5\n  ],\n  [\n    -5,\n    11\n  ],\n  [\n    -11,\n    4\n  ],\n  [\n    -4,\n    1\n  ],\n  [\n    -1,\n    6\n  ],\n  [\n    -6,\n    7\n  ],\n  [\n    -7,\n    10\n  ],\n  [\n    -10\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 1, 0) ∨ x(2, 0, 1)) ∧ (¬x(2, 0, 1)) ∧ (¬x(1, 1, 1) ∨ x(1, 0, 0)) ∧ (x(1, 1, 1)) ∧ (¬x(0, 1, 1) ∨ x(0, 0, 0)) ∧ (¬x(0, 0, 0) ∨ x(1, 0, 1)) ∧ (¬x(1, 0, 0) ∨ x(2, 1, 0)) ∧ (¬x(2, 1, 0) ∨ x(0, 1, 1)) ∧ (¬x(1, 0, 1) ∨ x(1, 1, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [8] -> (x(1, 1, 1)); matching condition number(s): [4]\n- raw clause index 1: [-8, 5] -> (¬x(1, 1, 1) ∨ x(1, 0, 0)); matching condition number(s): [3]\n- raw clause index 2: [-5, 11] -> (¬x(1, 0, 0) ∨ x(2, 1, 0)); matching condition number(s): [7]\n- raw clause index 3: [-11, 4] -> (¬x(2, 1, 0) ∨ x(0, 1, 1)); matching condition number(s): [8]\n- raw clause index 4: [-4, 1] -> (¬x(0, 1, 1) ∨ x(0, 0, 0)); matching condition number(s): [5]\n- raw clause index 5: [-1, 6] -> (¬x(0, 0, 0) ∨ x(1, 0, 1)); matching condition number(s): [6]\n- raw clause index 6: [-6, 7] -> (¬x(1, 0, 1) ∨ x(1, 1, 0)); matching condition number(s): [9]\n- raw clause index 7: [-7, 10] -> (¬x(1, 1, 0) ∨ x(2, 0, 1)); matching condition number(s): [1]\n- raw clause index 8: [-10] -> (¬x(2, 0, 1)); matching condition number(s): [2]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(2, 0, 1)), (¬x(2, 0, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      2,
+      2
+    ],
+    "num_vars": 12,
+    "num_clauses": 9,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          8
+        ],
+        "clause_structural": "(x(1, 1, 1))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -8,
+          5
+        ],
+        "clause_structural": "(¬x(1, 1, 1) ∨ x(1, 0, 0))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -5,
+          11
+        ],
+        "clause_structural": "(¬x(1, 0, 0) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -11,
+          4
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ x(0, 1, 1))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -4,
+          1
+        ],
+        "clause_structural": "(¬x(0, 1, 1) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -1,
+          6
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(1, 0, 1))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -6,
+          7
+        ],
+        "clause_structural": "(¬x(1, 0, 1) ∨ x(1, 1, 0))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -7,
+          10
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          -10
+        ],
+        "clause_structural": "(¬x(2, 0, 1))",
+        "condition_numbers": [
+          2
+        ]
+      }
+    ],
+    "unsat_reason": "Frozen conflict chain: sequential forced assignments leading to contradiction: (x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(0, 1, 1)), (¬x(0, 1, 1) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(2, 0, 1)), (¬x(2, 0, 1))"
+  }
+}

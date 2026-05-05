@@ -1,0 +1,261 @@
+{
+  "index": 1404,
+  "row_index_in_prompt_file": 1404,
+  "prompt_id": "satbench_01404",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "**Label:** SAT\n\n### Step-by-Step Reasoning\n\n**1. Analyze the Variable Space and Constraints**\n*   **Variables:** There are 72 variables ($x_{i,j,k}$), representing Scientist $i$ ($0..3$) in Domain $j$ ($0..5$) under Environment $k$ ($0..2$).\n*   **Domains:** The puzzle defines 6 domains (0 through 5).\n*   **Environments:** The puzzle defines 3 environments (Laboratory, Field, Virtual Simulation).\n*   **Scenarios:** Each variable maps to a triplet $(i, j, k)$. Since there are 72 total variables and the prompt states \"four scientists... across six different research domains... each experiment... in one of three environments,\" a naive calculation suggests $4 \\times 6 \\times 3 = 72$ potential experiments.\n*   **Key Observation from CNF:** The CNF contains 35 clauses covering 72 literals. This implies that almost every possible experiment is explicitly constrained or excluded. Specifically, the presence of the literal $\\neg x(0, 0, 0)$ (Albert, Domain 0, Lab) and $\\neg x(3, 5, 0)$ (Diana, Domain 5, Field) suggests a dense coverage of the 72 dimensions.\n\n**2. Verify Satisfiability based on the Certificate**\nThe provided Z3 certificate explicitly returns `<label> SAT </label>` and provides a valid assignment. Let's break down what the assignment implies:\n*   **Assignment Structure:** The `assignment_structured_0_1` shows 4 arrays (one for each scientist). Each array has length 6 (domains 0-5). Inside each domain, the values correspond to environments (indices 0-2).\n*   **Example Entry:** The first entry for Albert (Index 0) is `[1, 0, 0]`.\n    *   Domain 0: Environment 1 (Field) -> Value 1.\n    *   Domain 1: Environment 0 (Lab) -> Value 0.\n    *   Domain 2: Environment 0 (Lab) -> Value 0.\n    *   Domain 3: Environment 0 (Lab) -> Value 0.\n    *   Domain 4: Environment 0 (Lab) -> Value 0.\n    *   Domain 5: Environment 0 (Lab) -> Value 0.\n*   **Checking Specific Conditions against this Assignment:**\n    *   *Condition 7:* \"Charlie is not conducting research in domain 2 under field.\"\n        *   Charlie ($i=2$): The 3rd array in the structured output (Index 2).\n        *   Environment 1 (Field) for Charlie corresponds to index 1 in the 3-element tuple.\n        *   The value is 0. Condition satisfied.\n    *   *Condition 12:* \"Diana is not conducting research in domain 5 under laboratory.\"\n        *   Diana ($i=3$): The 4th array.\n        *   Domain 5 ($j=5$): Index 5 in the 6-element tuple.\n        *   Environment 0 (Lab): Index 0 in the 3-element tuple.\n        *   The value is 0. Condition satisfied.\n    *   *Condition 15:* \"Diana is not conducting research in domain 1 under field.\"\n        *   Diana: Domain 1 ($j=1$) -> Index 1.\n        *   Environment 1 ($k=1$) -> Index 1.\n        *   Value is 0. Condition satisfied.\n    *   *Condition 20:* \"Either Albert is not conducting research in domain 0 under laboratory, or Albert is not conducting research in domain 4 under laboratory.\"\n        *   Albert ($i=0$): Domain 0 ($j=0$) -> Index 0. Lab ($k=0$) -> Index 0. Value 1 (False, not Lab). Condition satisfied via the first disjunct.\n    *   *Condition 25:* \"Either Charlie is not conducting research in domain 3 under laboratory, or Charlie is not conducting research in domain 3 under field, or Charlie is not conducting research in domain 5 under field.\"\n        *   Charlie: Domain 3 ($j=3$). Values for Envs 0, 1, 2 are all 0. Condition satisfied.\n    *   *Condition 28:* A long disjunction requiring many variables to be true. Since most variables are 0, this relies on finding a \"True\" assignment. The fact that the Z3 solver found a solution means there exists a combination of 0s and 1s across all 72 variables that makes every clause true.\n\n**3. Confirming the Certificate Logic**\nThe `sat_reason` in the certificate explains a potential internal conflict resolution mechanism: \"After removing clause (¬x(0, 0, 0)), the conflict is resolved...\"\n*   Clause 20 is `(¬x(0, 0, 0) ∨ ¬x(2, 0, 2))`. Wait, looking closely at the raw `clauses_dimacs`, clause 20 isn't explicitly listed as `(-70, ...)` in the text dump provided in the prompt's `readable_cnf` section vs the `clauses_dimacs` JSON.\n*   However, the `clauses_dimacs` JSON explicitly lists `[-70]` (Clause 20) and `[-44]` (Clause 34?). Actually, let's look at the JSON structure:\n    *   `[ -70 ]` appears at index 21 (Clause 20? No, index 0 is 1st clause).\n    *   Let's map indices: The JSON starts at index 0.\n    *   Index 21: `[-70, -33, -45]` -> This looks like the flattened form of a complex clause or a negated clause.\n    *   Actually, the prompt provides a `clauses_dimacs` list which seems to be the *result* of a simplified or specific extraction, while `readable_cnf` is the human-readable logical representation.\n    *   Crucially, the Z3 output says `true`. The `readable_cnf` snippet shows `x(1, 0, 2) ∨ ¬x(1, 4, 2) ∨ ¬x(2, 2, 2)` etc.\n    *   The Z3 certificate is the ground truth for satisfiability. If `satisfiable` is `true`, then there exists an assignment.\n    *   The `assignment_structured_0_1` provided in the certificate assigns values to all 72 variables. For instance, `x(0, 0, 0)` (Albert, Lab, Lab) is assigned `1` (True)? No, the output says:\n        ```\n        [\n          [\n            [ 1, 0, 0 ],\n            [ 0, 0, 0 ],\n            ...\n          ],\n          ...\n        ]\n        ```\n        The outer brackets represent scientists? Or domains? The dimension is `[4, 6, 3]`.\n        Row 0: Albert. Inner 0: Domain 0. Inner 1: Env 0. Inner 2: Env 1. -> `[1, 0, 0]`.\n        So $x(0, 0, 0) = 1$ (Albert is conducting research in Domain 0, Lab, Virtual Simulation).\n        Wait, the prompt says \"Environment 0 = laboratory\".\n        So $x(0, 0, 0) = 1$ means Albert is in Domain 0, Lab.\n        Let's check Condition 2: \"Albert is not conducting research in domain 4 under laboratory.\" ($x(0, 4, 0)$). In the cert, Albert's Domain 4 ($j=4$) has value 0. So Condition 2 is satisfied.\n        Check Condition 1: \"Charlie is not conducting research in domain 0 under virtual simulation.\" ($x(2, 0, 2)$). In the cert, Charlie's Domain 0 has value 0. Satisfied.\n        Check Condition 3: \"Either Charlie is not conducting research in domain 2 under field, or Albert is not conducting research in domain 0 under laboratory.\"\n        $x(2, 2, 1)$ (Charlie, Dom 2, Field) is 0. $x(0, 0, 0)$ (Albert, Dom 0, Lab) is 1 (True).\n        Condition: $(\\neg x(2, 2, 1) \\lor \\neg x(0, 0, 0))$.\n        Values: $(\\neg 0 \\lor \\neg 1) = (T \\lor F) = T$. Satisfied.\n        Check Condition 16: \"Either Albert is not conducting research in domain 0 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation.\"\n        $(\\neg x(0, 0, 0) \\lor \\neg x(2, 0, 2))$.\n        Values: $(\\neg 1 \\lor \\neg 0) = (F \\lor T) = T$. Satisfied.\n        Check Condition 27: \"Either Charlie is not conducting research in domain 2 under field, or Charlie is not conducting research in domain 0 under virtual simulation.\"\n        $(\\neg x(2, 2, 1) \\lor \\neg x(2, 0, 2))$.\n        Values: $(\\neg 0 \\lor \\neg 0) = (T \\lor T) = T$. Satisfied.\n\n**4. Conclusion**\nThe Z3 solver successfully found a model (SAT) satisfying all 35 clauses. The provided assignment explicitly sets values for all 72 variables. While the `sat_reason` mentions a conflict resolution involving removing $\\neg x(0, 0, 0)$, the existence of the valid certificate overrides any manual deduction of contradictions if the solver has already proven satisfiability. The certificate confirms that the CNF is satisfiable. Therefore, it is possible to satisfy all conditions.\n\n**Answer:** SAT",
+  "teacher_extracted_label": "SAT",
+  "ground_truth_label": "SAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 5764,
+    "generated_tokens": 2276,
+    "batch_elapsed_seconds": 61.50398516654968,
+    "tokens_per_second_for_batch": 37.00573212998649,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777887395.1548214,
+  "slurm_job_id": "3185277",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "140",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a peculiar research lab, four scientists—Albert, Bella, Charlie, and Diana—are conducting experiments across six different research domains (0 through 5). Each experiment within a domain can be run in one of three environments (0 = laboratory, 1 = field, 2 = virtual simulation). Each scientist independently decides their participation in a specific domain and environment. There are no constraints on participation; a scientist can be involved in multiple domains and environments or none at all.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean scientist i is conducting research in domain j under environment k. Here, scientist 0 is Albert, scientist 1 is Bella, scientist 2 is Charlie, and scientist 3 is Diana.\n</variable_mapping>\n\n<conditions>\n1. Charlie is not conducting research in domain 0 under virtual simulation.\n2. Albert is not conducting research in domain 4 under laboratory.\n3. Either Charlie is not conducting research in domain 2 under field, or Albert is not conducting research in domain 0 under laboratory.\n4. Either Albert is not conducting research in domain 0 under laboratory, or Bella is not conducting research in domain 0 under laboratory.\n5. Either Diana is not conducting research in domain 1 under field, or Albert is not conducting research in domain 4 under laboratory.\n6. Either Diana is not conducting research in domain 5 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation.\n7. Charlie is not conducting research in domain 2 under field.\n8. Either Charlie is not conducting research in domain 2 under field, or Diana is not conducting research in domain 1 under field.\n9. Either Diana is not conducting research in domain 5 under laboratory, or Albert is not conducting research in domain 0 under laboratory.\n10. Either Bella is not conducting research in domain 0 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation.\n11. Either Charlie is not conducting research in domain 0 under virtual simulation, or Albert is not conducting research in domain 4 under laboratory.\n12. Diana is not conducting research in domain 5 under laboratory.\n13. Either Diana is not conducting research in domain 5 under laboratory, or Bella is not conducting research in domain 0 under laboratory.\n14. Either Bella is conducting research in domain 0 under virtual simulation, or Bella is not conducting research in domain 4 under virtual simulation, or Charlie is not conducting research in domain 2 under virtual simulation.\n15. Diana is not conducting research in domain 1 under field.\n16. Either Albert is not conducting research in domain 0 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation.\n17. Either Albert is not conducting research in domain 0 under laboratory, or Diana is not conducting research in domain 1 under field.\n18. Either Albert is conducting research in domain 4 under laboratory, or Bella is not conducting research in domain 4 under field, or Diana is not conducting research in domain 5 under field.\n19. Either Diana is not conducting research in domain 5 under laboratory, or Diana is not conducting research in domain 1 under field.\n20. Either Albert is not conducting research in domain 0 under laboratory, or Albert is not conducting research in domain 4 under laboratory.\n21. Either Charlie is not conducting research in domain 2 under field, or Bella is not conducting research in domain 0 under laboratory.\n22. Either Charlie is not conducting research in domain 0 under virtual simulation, or Diana is not conducting research in domain 1 under field.\n23. Either Diana is not conducting research in domain 5 under laboratory, or Albert is not conducting research in domain 4 under laboratory.\n24. Either Albert is conducting research in domain 2 under virtual simulation, or Bella is conducting research in domain 1 under field, or Bella is not conducting research in domain 4 under laboratory.\n25. Either Charlie is not conducting research in domain 3 under laboratory, or Charlie is not conducting research in domain 3 under field, or Charlie is not conducting research in domain 5 under field.\n26. Either Charlie is not conducting research in domain 2 under field, or Albert is not conducting research in domain 4 under laboratory.\n27. Either Charlie is not conducting research in domain 2 under field, or Charlie is not conducting research in domain 0 under virtual simulation.\n28. Either Diana is conducting research in domain 5 under laboratory, or Charlie is conducting research in domain 2 under field, or Albert is conducting research in domain 0 under laboratory, or Bella is conducting research in domain 0 under laboratory, or Charlie is conducting research in domain 0 under virtual simulation, or Diana is conducting research in domain 1 under field, or Albert is conducting research in domain 4 under laboratory.\n29. Either Diana is conducting research in domain 4 under virtual simulation, or Albert is not conducting research in domain 4 under field, or Bella is not conducting research in domain 4 under field.\n30. Either Bella is not conducting research in domain 0 under laboratory, or Diana is not conducting research in domain 1 under field.\n31. Either Bella is not conducting research in domain 0 under laboratory, or Albert is not conducting research in domain 4 under laboratory.\n32. Either Diana is not conducting research in domain 5 under laboratory, or Charlie is not conducting research in domain 2 under field.\n33. Either Bella is conducting research in domain 4 under field, or Charlie is conducting research in domain 4 under laboratory, or Diana is not conducting research in domain 0 under laboratory.\n34. Either Bella is conducting research in domain 1 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation, or Diana is not conducting research in domain 3 under virtual simulation.\n35. Bella is not conducting research in domain 0 under laboratory.\n</conditions>\n\n<question>\nIs it possible to satisfy all these research participation conditions simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,6,3]\n</dims>\n\n<num_vars>\n72\n</num_vars>\n\n<num_clauses>\n35\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    70,\n    44,\n    1,\n    19,\n    39,\n    59,\n    13\n  ],\n  [\n    -70,\n    -44\n  ],\n  [\n    -70,\n    -1\n  ],\n  [\n    -70,\n    -19\n  ],\n  [\n    -70,\n    -39\n  ],\n  [\n    -70,\n    -59\n  ],\n  [\n    -70,\n    -13\n  ],\n  [\n    -44,\n    -1\n  ],\n  [\n    -44,\n    -19\n  ],\n  [\n    -44,\n    -39\n  ],\n  [\n    -44,\n    -59\n  ],\n  [\n    -44,\n    -13\n  ],\n  [\n    -1,\n    -19\n  ],\n  [\n    -1,\n    -39\n  ],\n  [\n    -1,\n    -59\n  ],\n  [\n    -1,\n    -13\n  ],\n  [\n    -19,\n    -39\n  ],\n  [\n    -19,\n    -59\n  ],\n  [\n    -19,\n    -13\n  ],\n  [\n    -39,\n    -59\n  ],\n  [\n    -39,\n    -13\n  ],\n  [\n    -59,\n    -13\n  ],\n  [\n    -70\n  ],\n  [\n    -44\n  ],\n  [\n    -19\n  ],\n  [\n    -39\n  ],\n  [\n    -59\n  ],\n  [\n    -13\n  ],\n  [\n    21,\n    -33,\n    -45\n  ],\n  [\n    9,\n    23,\n    -31\n  ],\n  [\n    32,\n    49,\n    -55\n  ],\n  [\n    -46,\n    -47,\n    -53\n  ],\n  [\n    69,\n    -14,\n    -32\n  ],\n  [\n    22,\n    -39,\n    -66\n  ],\n  [\n    13,\n    -32,\n    -71\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(2, 0, 2)) ∧ (¬x(0, 4, 0)) ∧ (¬x(2, 2, 1) ∨ ¬x(0, 0, 0)) ∧ (¬x(0, 0, 0) ∨ ¬x(1, 0, 0)) ∧ (¬x(3, 1, 1) ∨ ¬x(0, 4, 0)) ∧ (¬x(3, 5, 0) ∨ ¬x(2, 0, 2)) ∧ (¬x(2, 2, 1)) ∧ (¬x(2, 2, 1) ∨ ¬x(3, 1, 1)) ∧ (¬x(3, 5, 0) ∨ ¬x(0, 0, 0)) ∧ (¬x(1, 0, 0) ∨ ¬x(2, 0, 2)) ∧ (¬x(2, 0, 2) ∨ ¬x(0, 4, 0)) ∧ (¬x(3, 5, 0)) ∧ (¬x(3, 5, 0) ∨ ¬x(1, 0, 0)) ∧ (x(1, 0, 2) ∨ ¬x(1, 4, 2) ∨ ¬x(2, 2, 2)) ∧ (¬x(3, 1, 1)) ∧ (¬x(0, 0, 0) ∨ ¬x(2, 0, 2)) ∧ (¬x(0, 0, 0) ∨ ¬x(3, 1, 1)) ∧ (x(0, 4, 0) ∨ ¬x(1, 4, 1) ∨ ¬x(3, 5, 1)) ∧ (¬x(3, 5, 0) ∨ ¬x(3, 1, 1)) ∧ (¬x(0, 0, 0) ∨ ¬x(0, 4, 0)) ∧ (¬x(2, 2, 1) ∨ ¬x(1, 0, 0)) ∧ (¬x(2, 0, 2) ∨ ¬x(3, 1, 1)) ∧ (¬x(3, 5, 0) ∨ ¬x(0, 4, 0)) ∧ (x(0, 2, 2) ∨ x(1, 1, 1) ∨ ¬x(1, 4, 0)) ∧ (¬x(2, 3, 0) ∨ ¬x(2, 3, 1) ∨ ¬x(2, 5, 1)) ∧ (¬x(2, 2, 1) ∨ ¬x(0, 4, 0)) ∧ (¬x(2, 2, 1) ∨ ¬x(2, 0, 2)) ∧ (x(3, 5, 0) ∨ x(2, 2, 1) ∨ x(0, 0, 0) ∨ x(1, 0, 0) ∨ x(2, 0, 2) ∨ x(3, 1, 1) ∨ x(0, 4, 0)) ∧ (x(3, 4, 2) ∨ ¬x(0, 4, 1) ∨ ¬x(1, 4, 1)) ∧ (¬x(1, 0, 0) ∨ ¬x(3, 1, 1)) ∧ (¬x(1, 0, 0) ∨ ¬x(0, 4, 0)) ∧ (¬x(3, 5, 0) ∨ ¬x(2, 2, 1)) ∧ (x(1, 4, 1) ∨ x(2, 4, 0) ∨ ¬x(3, 0, 0)) ∧ (x(1, 1, 0) ∨ ¬x(2, 0, 2) ∨ ¬x(3, 3, 2)) ∧ (¬x(1, 0, 0))\n</readable_cnf>\n\n<satisfiable>\ntrue\n</satisfiable>\n\n<label>\nSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nSAT satisfying assignment\n</certificate_type>\n\n<assignment_structured_0_1>\n[\n  [\n    [\n      1,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ]\n]\n</assignment_structured_0_1>\n\n<assignment_per_variable>\n- x(0, 0, 0) = True\n- x(0, 0, 1) = False\n- x(0, 0, 2) = False\n- x(0, 1, 0) = False\n- x(0, 1, 1) = False\n- x(0, 1, 2) = False\n- x(0, 2, 0) = False\n- x(0, 2, 1) = False\n- x(0, 2, 2) = False\n- x(0, 3, 0) = False\n- x(0, 3, 1) = False\n- x(0, 3, 2) = False\n- x(0, 4, 0) = False\n- x(0, 4, 1) = False\n- x(0, 4, 2) = False\n- x(0, 5, 0) = False\n- x(0, 5, 1) = False\n- x(0, 5, 2) = False\n- x(1, 0, 0) = False\n- x(1, 0, 1) = False\n- x(1, 0, 2) = False\n- x(1, 1, 0) = False\n- x(1, 1, 1) = False\n- x(1, 1, 2) = False\n- x(1, 2, 0) = False\n- x(1, 2, 1) = False\n- x(1, 2, 2) = False\n- x(1, 3, 0) = False\n- x(1, 3, 1) = False\n- x(1, 3, 2) = False\n- x(1, 4, 0) = False\n- x(1, 4, 1) = False\n- x(1, 4, 2) = False\n- x(1, 5, 0) = False\n- x(1, 5, 1) = False\n- x(1, 5, 2) = False\n- x(2, 0, 0) = False\n- x(2, 0, 1) = False\n- x(2, 0, 2) = False\n- x(2, 1, 0) = False\n- x(2, 1, 1) = False\n- x(2, 1, 2) = False\n- x(2, 2, 0) = False\n- x(2, 2, 1) = False\n- x(2, 2, 2) = False\n- x(2, 3, 0) = False\n- x(2, 3, 1) = False\n- x(2, 3, 2) = False\n- x(2, 4, 0) = False\n- x(2, 4, 1) = False\n- x(2, 4, 2) = False\n- x(2, 5, 0) = False\n- x(2, 5, 1) = False\n- x(2, 5, 2) = False\n- x(3, 0, 0) = False\n- x(3, 0, 1) = False\n- x(3, 0, 2) = False\n- x(3, 1, 0) = False\n- x(3, 1, 1) = False\n- x(3, 1, 2) = False\n- x(3, 2, 0) = False\n- x(3, 2, 1) = False\n- x(3, 2, 2) = False\n- x(3, 3, 0) = False\n- x(3, 3, 1) = False\n- x(3, 3, 2) = False\n- x(3, 4, 0) = False\n- x(3, 4, 1) = False\n- x(3, 4, 2) = False\n- x(3, 5, 0) = False\n- x(3, 5, 1) = False\n- x(3, 5, 2) = False\n</assignment_per_variable>\n<sat_reason>\nOriginally UNSAT because: Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(3, 5, 0) ∨ x(2, 2, 1) ∨ x(0, 0, 0) ∨ x(1, 0, 0) ∨ x(2, 0, 2) ∨ x(3, 1, 1) ∨ x(0, 4, 0)), (¬x(3, 5, 0) ∨ ¬x(2, 2, 1)), (¬x(3, 5, 0) ∨ ¬x(0, 0, 0)), (¬x(3, 5, 0) ∨ ¬x(1, 0, 0)), (¬x(3, 5, 0) ∨ ¬x(2, 0, 2)), (¬x(3, 5, 0) ∨ ¬x(3, 1, 1)), (¬x(3, 5, 0) ∨ ¬x(0, 4, 0)), (¬x(2, 2, 1) ∨ ¬x(0, 0, 0)), (¬x(2, 2, 1) ∨ ¬x(1, 0, 0)), (¬x(2, 2, 1) ∨ ¬x(2, 0, 2)), (¬x(2, 2, 1) ∨ ¬x(3, 1, 1)), (¬x(2, 2, 1) ∨ ¬x(0, 4, 0)), (¬x(0, 0, 0) ∨ ¬x(1, 0, 0)), (¬x(0, 0, 0) ∨ ¬x(2, 0, 2)), (¬x(0, 0, 0) ∨ ¬x(3, 1, 1)), (¬x(0, 0, 0) ∨ ¬x(0, 4, 0)), (¬x(1, 0, 0) ∨ ¬x(2, 0, 2)), (¬x(1, 0, 0) ∨ ¬x(3, 1, 1)), (¬x(1, 0, 0) ∨ ¬x(0, 4, 0)), (¬x(2, 0, 2) ∨ ¬x(3, 1, 1)), (¬x(2, 0, 2) ∨ ¬x(0, 4, 0)), (¬x(3, 1, 1) ∨ ¬x(0, 4, 0)), (¬x(3, 5, 0)), (¬x(2, 2, 1)), (¬x(0, 0, 0)), (¬x(1, 0, 0)), (¬x(2, 0, 2)), (¬x(3, 1, 1)), (¬x(0, 4, 0)). After removing clause (¬x(0, 0, 0)), the conflict is resolved, making the problem satisfiable.\n</sat_reason>\n\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a peculiar research lab, four scientists—Albert, Bella, Charlie, and Diana—are conducting experiments across six different research domains (0 through 5). Each experiment within a domain can be run in one of three environments (0 = laboratory, 1 = field, 2 = virtual simulation). Each scientist independently decides their participation in a specific domain and environment. There are no constraints on participation; a scientist can be involved in multiple domains and environments or none at all.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean scientist i is conducting research in domain j under environment k. Here, scientist 0 is Albert, scientist 1 is Bella, scientist 2 is Charlie, and scientist 3 is Diana.\n</variable_mapping>\n\n<conditions>\n1. Charlie is not conducting research in domain 0 under virtual simulation.\n2. Albert is not conducting research in domain 4 under laboratory.\n3. Either Charlie is not conducting research in domain 2 under field, or Albert is not conducting research in domain 0 under laboratory.\n4. Either Albert is not conducting research in domain 0 under laboratory, or Bella is not conducting research in domain 0 under laboratory.\n5. Either Diana is not conducting research in domain 1 under field, or Albert is not conducting research in domain 4 under laboratory.\n6. Either Diana is not conducting research in domain 5 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation.\n7. Charlie is not conducting research in domain 2 under field.\n8. Either Charlie is not conducting research in domain 2 under field, or Diana is not conducting research in domain 1 under field.\n9. Either Diana is not conducting research in domain 5 under laboratory, or Albert is not conducting research in domain 0 under laboratory.\n10. Either Bella is not conducting research in domain 0 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation.\n11. Either Charlie is not conducting research in domain 0 under virtual simulation, or Albert is not conducting research in domain 4 under laboratory.\n12. Diana is not conducting research in domain 5 under laboratory.\n13. Either Diana is not conducting research in domain 5 under laboratory, or Bella is not conducting research in domain 0 under laboratory.\n14. Either Bella is conducting research in domain 0 under virtual simulation, or Bella is not conducting research in domain 4 under virtual simulation, or Charlie is not conducting research in domain 2 under virtual simulation.\n15. Diana is not conducting research in domain 1 under field.\n16. Either Albert is not conducting research in domain 0 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation.\n17. Either Albert is not conducting research in domain 0 under laboratory, or Diana is not conducting research in domain 1 under field.\n18. Either Albert is conducting research in domain 4 under laboratory, or Bella is not conducting research in domain 4 under field, or Diana is not conducting research in domain 5 under field.\n19. Either Diana is not conducting research in domain 5 under laboratory, or Diana is not conducting research in domain 1 under field.\n20. Either Albert is not conducting research in domain 0 under laboratory, or Albert is not conducting research in domain 4 under laboratory.\n21. Either Charlie is not conducting research in domain 2 under field, or Bella is not conducting research in domain 0 under laboratory.\n22. Either Charlie is not conducting research in domain 0 under virtual simulation, or Diana is not conducting research in domain 1 under field.\n23. Either Diana is not conducting research in domain 5 under laboratory, or Albert is not conducting research in domain 4 under laboratory.\n24. Either Albert is conducting research in domain 2 under virtual simulation, or Bella is conducting research in domain 1 under field, or Bella is not conducting research in domain 4 under laboratory.\n25. Either Charlie is not conducting research in domain 3 under laboratory, or Charlie is not conducting research in domain 3 under field, or Charlie is not conducting research in domain 5 under field.\n26. Either Charlie is not conducting research in domain 2 under field, or Albert is not conducting research in domain 4 under laboratory.\n27. Either Charlie is not conducting research in domain 2 under field, or Charlie is not conducting research in domain 0 under virtual simulation.\n28. Either Diana is conducting research in domain 5 under laboratory, or Charlie is conducting research in domain 2 under field, or Albert is conducting research in domain 0 under laboratory, or Bella is conducting research in domain 0 under laboratory, or Charlie is conducting research in domain 0 under virtual simulation, or Diana is conducting research in domain 1 under field, or Albert is conducting research in domain 4 under laboratory.\n29. Either Diana is conducting research in domain 4 under virtual simulation, or Albert is not conducting research in domain 4 under field, or Bella is not conducting research in domain 4 under field.\n30. Either Bella is not conducting research in domain 0 under laboratory, or Diana is not conducting research in domain 1 under field.\n31. Either Bella is not conducting research in domain 0 under laboratory, or Albert is not conducting research in domain 4 under laboratory.\n32. Either Diana is not conducting research in domain 5 under laboratory, or Charlie is not conducting research in domain 2 under field.\n33. Either Bella is conducting research in domain 4 under field, or Charlie is conducting research in domain 4 under laboratory, or Diana is not conducting research in domain 0 under laboratory.\n34. Either Bella is conducting research in domain 1 under laboratory, or Charlie is not conducting research in domain 0 under virtual simulation, or Diana is not conducting research in domain 3 under virtual simulation.\n35. Bella is not conducting research in domain 0 under laboratory.\n</conditions>\n\n<question>\nIs it possible to satisfy all these research participation conditions simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,6,3]\n</dims>\n\n<num_vars>\n72\n</num_vars>\n\n<num_clauses>\n35\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    70,\n    44,\n    1,\n    19,\n    39,\n    59,\n    13\n  ],\n  [\n    -70,\n    -44\n  ],\n  [\n    -70,\n    -1\n  ],\n  [\n    -70,\n    -19\n  ],\n  [\n    -70,\n    -39\n  ],\n  [\n    -70,\n    -59\n  ],\n  [\n    -70,\n    -13\n  ],\n  [\n    -44,\n    -1\n  ],\n  [\n    -44,\n    -19\n  ],\n  [\n    -44,\n    -39\n  ],\n  [\n    -44,\n    -59\n  ],\n  [\n    -44,\n    -13\n  ],\n  [\n    -1,\n    -19\n  ],\n  [\n    -1,\n    -39\n  ],\n  [\n    -1,\n    -59\n  ],\n  [\n    -1,\n    -13\n  ],\n  [\n    -19,\n    -39\n  ],\n  [\n    -19,\n    -59\n  ],\n  [\n    -19,\n    -13\n  ],\n  [\n    -39,\n    -59\n  ],\n  [\n    -39,\n    -13\n  ],\n  [\n    -59,\n    -13\n  ],\n  [\n    -70\n  ],\n  [\n    -44\n  ],\n  [\n    -19\n  ],\n  [\n    -39\n  ],\n  [\n    -59\n  ],\n  [\n    -13\n  ],\n  [\n    21,\n    -33,\n    -45\n  ],\n  [\n    9,\n    23,\n    -31\n  ],\n  [\n    32,\n    49,\n    -55\n  ],\n  [\n    -46,\n    -47,\n    -53\n  ],\n  [\n    69,\n    -14,\n    -32\n  ],\n  [\n    22,\n    -39,\n    -66\n  ],\n  [\n    13,\n    -32,\n    -71\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(2, 0, 2)) ∧ (¬x(0, 4, 0)) ∧ (¬x(2, 2, 1) ∨ ¬x(0, 0, 0)) ∧ (¬x(0, 0, 0) ∨ ¬x(1, 0, 0)) ∧ (¬x(3, 1, 1) ∨ ¬x(0, 4, 0)) ∧ (¬x(3, 5, 0) ∨ ¬x(2, 0, 2)) ∧ (¬x(2, 2, 1)) ∧ (¬x(2, 2, 1) ∨ ¬x(3, 1, 1)) ∧ (¬x(3, 5, 0) ∨ ¬x(0, 0, 0)) ∧ (¬x(1, 0, 0) ∨ ¬x(2, 0, 2)) ∧ (¬x(2, 0, 2) ∨ ¬x(0, 4, 0)) ∧ (¬x(3, 5, 0)) ∧ (¬x(3, 5, 0) ∨ ¬x(1, 0, 0)) ∧ (x(1, 0, 2) ∨ ¬x(1, 4, 2) ∨ ¬x(2, 2, 2)) ∧ (¬x(3, 1, 1)) ∧ (¬x(0, 0, 0) ∨ ¬x(2, 0, 2)) ∧ (¬x(0, 0, 0) ∨ ¬x(3, 1, 1)) ∧ (x(0, 4, 0) ∨ ¬x(1, 4, 1) ∨ ¬x(3, 5, 1)) ∧ (¬x(3, 5, 0) ∨ ¬x(3, 1, 1)) ∧ (¬x(0, 0, 0) ∨ ¬x(0, 4, 0)) ∧ (¬x(2, 2, 1) ∨ ¬x(1, 0, 0)) ∧ (¬x(2, 0, 2) ∨ ¬x(3, 1, 1)) ∧ (¬x(3, 5, 0) ∨ ¬x(0, 4, 0)) ∧ (x(0, 2, 2) ∨ x(1, 1, 1) ∨ ¬x(1, 4, 0)) ∧ (¬x(2, 3, 0) ∨ ¬x(2, 3, 1) ∨ ¬x(2, 5, 1)) ∧ (¬x(2, 2, 1) ∨ ¬x(0, 4, 0)) ∧ (¬x(2, 2, 1) ∨ ¬x(2, 0, 2)) ∧ (x(3, 5, 0) ∨ x(2, 2, 1) ∨ x(0, 0, 0) ∨ x(1, 0, 0) ∨ x(2, 0, 2) ∨ x(3, 1, 1) ∨ x(0, 4, 0)) ∧ (x(3, 4, 2) ∨ ¬x(0, 4, 1) ∨ ¬x(1, 4, 1)) ∧ (¬x(1, 0, 0) ∨ ¬x(3, 1, 1)) ∧ (¬x(1, 0, 0) ∨ ¬x(0, 4, 0)) ∧ (¬x(3, 5, 0) ∨ ¬x(2, 2, 1)) ∧ (x(1, 4, 1) ∨ x(2, 4, 0) ∨ ¬x(3, 0, 0)) ∧ (x(1, 1, 0) ∨ ¬x(2, 0, 2) ∨ ¬x(3, 3, 2)) ∧ (¬x(1, 0, 0))\n</readable_cnf>\n\n<satisfiable>\ntrue\n</satisfiable>\n\n<label>\nSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nSAT satisfying assignment\n</certificate_type>\n\n<assignment_structured_0_1>\n[\n  [\n    [\n      1,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ]\n]\n</assignment_structured_0_1>\n\n<assignment_per_variable>\n- x(0, 0, 0) = True\n- x(0, 0, 1) = False\n- x(0, 0, 2) = False\n- x(0, 1, 0) = False\n- x(0, 1, 1) = False\n- x(0, 1, 2) = False\n- x(0, 2, 0) = False\n- x(0, 2, 1) = False\n- x(0, 2, 2) = False\n- x(0, 3, 0) = False\n- x(0, 3, 1) = False\n- x(0, 3, 2) = False\n- x(0, 4, 0) = False\n- x(0, 4, 1) = False\n- x(0, 4, 2) = False\n- x(0, 5, 0) = False\n- x(0, 5, 1) = False\n- x(0, 5, 2) = False\n- x(1, 0, 0) = False\n- x(1, 0, 1) = False\n- x(1, 0, 2) = False\n- x(1, 1, 0) = False\n- x(1, 1, 1) = False\n- x(1, 1, 2) = False\n- x(1, 2, 0) = False\n- x(1, 2, 1) = False\n- x(1, 2, 2) = False\n- x(1, 3, 0) = False\n- x(1, 3, 1) = False\n- x(1, 3, 2) = False\n- x(1, 4, 0) = False\n- x(1, 4, 1) = False\n- x(1, 4, 2) = False\n- x(1, 5, 0) = False\n- x(1, 5, 1) = False\n- x(1, 5, 2) = False\n- x(2, 0, 0) = False\n- x(2, 0, 1) = False\n- x(2, 0, 2) = False\n- x(2, 1, 0) = False\n- x(2, 1, 1) = False\n- x(2, 1, 2) = False\n- x(2, 2, 0) = False\n- x(2, 2, 1) = False\n- x(2, 2, 2) = False\n- x(2, 3, 0) = False\n- x(2, 3, 1) = False\n- x(2, 3, 2) = False\n- x(2, 4, 0) = False\n- x(2, 4, 1) = False\n- x(2, 4, 2) = False\n- x(2, 5, 0) = False\n- x(2, 5, 1) = False\n- x(2, 5, 2) = False\n- x(3, 0, 0) = False\n- x(3, 0, 1) = False\n- x(3, 0, 2) = False\n- x(3, 1, 0) = False\n- x(3, 1, 1) = False\n- x(3, 1, 2) = False\n- x(3, 2, 0) = False\n- x(3, 2, 1) = False\n- x(3, 2, 2) = False\n- x(3, 3, 0) = False\n- x(3, 3, 1) = False\n- x(3, 3, 2) = False\n- x(3, 4, 0) = False\n- x(3, 4, 1) = False\n- x(3, 4, 2) = False\n- x(3, 5, 0) = False\n- x(3, 5, 1) = False\n- x(3, 5, 2) = False\n</assignment_per_variable>\n<sat_reason>\nOriginally UNSAT because: Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(3, 5, 0) ∨ x(2, 2, 1) ∨ x(0, 0, 0) ∨ x(1, 0, 0) ∨ x(2, 0, 2) ∨ x(3, 1, 1) ∨ x(0, 4, 0)), (¬x(3, 5, 0) ∨ ¬x(2, 2, 1)), (¬x(3, 5, 0) ∨ ¬x(0, 0, 0)), (¬x(3, 5, 0) ∨ ¬x(1, 0, 0)), (¬x(3, 5, 0) ∨ ¬x(2, 0, 2)), (¬x(3, 5, 0) ∨ ¬x(3, 1, 1)), (¬x(3, 5, 0) ∨ ¬x(0, 4, 0)), (¬x(2, 2, 1) ∨ ¬x(0, 0, 0)), (¬x(2, 2, 1) ∨ ¬x(1, 0, 0)), (¬x(2, 2, 1) ∨ ¬x(2, 0, 2)), (¬x(2, 2, 1) ∨ ¬x(3, 1, 1)), (¬x(2, 2, 1) ∨ ¬x(0, 4, 0)), (¬x(0, 0, 0) ∨ ¬x(1, 0, 0)), (¬x(0, 0, 0) ∨ ¬x(2, 0, 2)), (¬x(0, 0, 0) ∨ ¬x(3, 1, 1)), (¬x(0, 0, 0) ∨ ¬x(0, 4, 0)), (¬x(1, 0, 0) ∨ ¬x(2, 0, 2)), (¬x(1, 0, 0) ∨ ¬x(3, 1, 1)), (¬x(1, 0, 0) ∨ ¬x(0, 4, 0)), (¬x(2, 0, 2) ∨ ¬x(3, 1, 1)), (¬x(2, 0, 2) ∨ ¬x(0, 4, 0)), (¬x(3, 1, 1) ∨ ¬x(0, 4, 0)), (¬x(3, 5, 0)), (¬x(2, 2, 1)), (¬x(0, 0, 0)), (¬x(1, 0, 0)), (¬x(2, 0, 2)), (¬x(3, 1, 1)), (¬x(0, 4, 0)). After removing clause (¬x(0, 0, 0)), the conflict is resolved, making the problem satisfiable.\n</sat_reason>\n\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "SAT",
+  "satisfiable": true,
+  "certificate_type": "sat_assignment",
+  "ground_truth": {
+    "dims": [
+      4,
+      6,
+      3
+    ],
+    "num_vars": 72,
+    "num_clauses": 35,
+    "satisfiable": true,
+    "label": "SAT",
+    "certificate_type": "sat_assignment",
+    "assignment_structured_0_1": [
+      [
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    ],
+    "assignment_flat": {
+      "1": true,
+      "2": false,
+      "3": false,
+      "4": false,
+      "5": false,
+      "6": false,
+      "7": false,
+      "8": false,
+      "9": false,
+      "10": false,
+      "11": false,
+      "12": false,
+      "13": false,
+      "14": false,
+      "15": false,
+      "16": false,
+      "17": false,
+      "18": false,
+      "19": false,
+      "20": false,
+      "21": false,
+      "22": false,
+      "23": false,
+      "24": false,
+      "25": false,
+      "26": false,
+      "27": false,
+      "28": false,
+      "29": false,
+      "30": false,
+      "31": false,
+      "32": false,
+      "33": false,
+      "34": false,
+      "35": false,
+      "36": false,
+      "37": false,
+      "38": false,
+      "39": false,
+      "40": false,
+      "41": false,
+      "42": false,
+      "43": false,
+      "44": false,
+      "45": false,
+      "46": false,
+      "47": false,
+      "48": false,
+      "49": false,
+      "50": false,
+      "51": false,
+      "52": false,
+      "53": false,
+      "54": false,
+      "55": false,
+      "56": false,
+      "57": false,
+      "58": false,
+      "59": false,
+      "60": false,
+      "61": false,
+      "62": false,
+      "63": false,
+      "64": false,
+      "65": false,
+      "66": false,
+      "67": false,
+      "68": false,
+      "69": false,
+      "70": false,
+      "71": false,
+      "72": false
+    },
+    "sat_reason": "Originally UNSAT because: Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(3, 5, 0) ∨ x(2, 2, 1) ∨ x(0, 0, 0) ∨ x(1, 0, 0) ∨ x(2, 0, 2) ∨ x(3, 1, 1) ∨ x(0, 4, 0)), (¬x(3, 5, 0) ∨ ¬x(2, 2, 1)), (¬x(3, 5, 0) ∨ ¬x(0, 0, 0)), (¬x(3, 5, 0) ∨ ¬x(1, 0, 0)), (¬x(3, 5, 0) ∨ ¬x(2, 0, 2)), (¬x(3, 5, 0) ∨ ¬x(3, 1, 1)), (¬x(3, 5, 0) ∨ ¬x(0, 4, 0)), (¬x(2, 2, 1) ∨ ¬x(0, 0, 0)), (¬x(2, 2, 1) ∨ ¬x(1, 0, 0)), (¬x(2, 2, 1) ∨ ¬x(2, 0, 2)), (¬x(2, 2, 1) ∨ ¬x(3, 1, 1)), (¬x(2, 2, 1) ∨ ¬x(0, 4, 0)), (¬x(0, 0, 0) ∨ ¬x(1, 0, 0)), (¬x(0, 0, 0) ∨ ¬x(2, 0, 2)), (¬x(0, 0, 0) ∨ ¬x(3, 1, 1)), (¬x(0, 0, 0) ∨ ¬x(0, 4, 0)), (¬x(1, 0, 0) ∨ ¬x(2, 0, 2)), (¬x(1, 0, 0) ∨ ¬x(3, 1, 1)), (¬x(1, 0, 0) ∨ ¬x(0, 4, 0)), (¬x(2, 0, 2) ∨ ¬x(3, 1, 1)), (¬x(2, 0, 2) ∨ ¬x(0, 4, 0)), (¬x(3, 1, 1) ∨ ¬x(0, 4, 0)), (¬x(3, 5, 0)), (¬x(2, 2, 1)), (¬x(0, 0, 0)), (¬x(1, 0, 0)), (¬x(2, 0, 2)), (¬x(3, 1, 1)), (¬x(0, 4, 0)). After removing clause (¬x(0, 0, 0)), the conflict is resolved, making the problem satisfiable."
+  }
+}

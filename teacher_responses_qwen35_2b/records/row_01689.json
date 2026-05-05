@@ -1,0 +1,303 @@
+{
+  "index": 1689,
+  "row_index_in_prompt_file": 1689,
+  "prompt_id": "satbench_01689",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analysis of the Scenario and Constraints**\nThe problem asks whether a valid assignment exists for 5 researchers (Emma, Liam, Olivia, Noah, Ava), 3 tasks (Experimental Setup=0, Data Analysis=1, Report Writing=2), and 3 days (Monday=0, Tuesday=1, Wednesday=2).\n- **Variables**: $x(i, j, k)$ where $i \\in \\{0..4\\}$ (researcher), $j \\in \\{1, 0, 2\\}$ (task type, mapped to indices 1, 0, 2 in the CNF), $k \\in \\{0, 1, 2\\}$ (day).\n- **Goal**: Determine if the CNF formula is satisfiable (SAT) or unsatisfiable (UNSAT).\n\n**2. Analyzing the Certificate and Core Contradiction**\nThe Z3 solver output explicitly states `unsat_core_mapped_condition_numbers` includes `[1, 2, 3, 4, 5, 7, 12, 13, 14, 15, 16, 18, 22, 23, 24, 30]`.\nThe `unsat_reason` section lists 16 raw clauses, all derived from combinations of indices `[13, 8, 19, 3]` (and permutations of negations).\nSpecifically, look at the structure of the \"raw clause index 0\" and others provided in the certificate's `unsat_core_clauses`:\n- They involve terms like `(x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2))`.\n- Crucially, the text under `<unsat_reason>` says: \"Full block: all 16 possible combinations forbidden for variables [13, 8, 19, 3]\". This phrasing is slightly ambiguous in standard logic notation (usually implying a conjunction of literals), but looking at the mapping to Condition Numbers:\n  - The set of indices appearing frequently in the `unsat_core_clauses` includes:\n    - Index 13\n    - Index 8\n    - Index 19\n    - Index 3\n  - Let's verify the specific contradiction derived from the provided `unsat_core_clauses` which map to condition numbers.\n  - Clause 0 maps to Cond 16. Clause 1 maps to Cond 3. Clause 2 maps to Cond 15. Clause 3 maps to Cond 18.\n  - The `unsat_reason` text implies a contradiction involving conditions 13, 8, 19, and 3.\n  - Let's re-read the `unsat_reason` carefully: \"all 16 possible combinations forbidden for variables [13, 8, 19, 3]\". This likely refers to the specific variable assignments implied by the unsatisfiable core. However, the most direct evidence is the explicit label `UNSAT` and the presence of a non-empty `unsat_core_raw_clause_indices` list.\n  - Furthermore, checking the `unsat_core_clauses` list, we see clauses like:\n    - `(¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))` (Maps to Cond 30)\n    - `(x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2))` (Maps to Cond 16)\n  - Wait, the `unsat_core_clauses` list provided in the prompt is truncated or formatted strangely in the display (it shows ~16 lines, but the input `clauses_dimacs` array contains 30 items). The displayed `unsat_core_clauses` section only lists 16 items (indices 0 through 15 roughly, though the indices jump around).\n  - Regardless of the exact interpretation of the 16 lines shown, the `label` field is explicitly **UNSAT**. The `unsat_core_raw_clause_indices` contains values `[0, 1, 2, ..., 15]`.\n  - The `unsat_reason` confirms that specific variable combinations (related to conditions 13, 8, 19, 3) lead to contradictions (e.g., \"all 16 possible combinations forbidden\"). This implies that no matter how you assign truth values to the variables involved in those conditions (specifically those linked to conditions 13, 8, 19, 3 based on the pattern of disjunctions in the core), the system forces a false result.\n  - Actually, let's look closer at the contradiction pattern. If a system is unsatisfiable, it must contain a contradiction like $(A \\land B) \\lor C$ where the literal $C$ is always false, or a set of clauses that force a literal to be true AND another to be false simultaneously.\n  - The certificate clearly asserts `UNSAT`. The reasoning provided (\"all 16 possible combinations forbidden\") suggests that for the core variables involved (13, 8, 19, 3), every logical possibility creates a conflict. This is a definitive proof of unsatisfiability.\n\n**3. Verifying the Conditions (Optional but good for sanity check)**\nWhile the certificate is definitive, understanding *why* helps in the teacher explanation.\n- Look at Condition 1: $(\\neg L_1 \\lor \\neg E_2 \\lor \\neg O_1 \\lor E_3)$.\n- Look at Condition 2: $(\\neg L_1 \\lor E_2 \\lor \\neg O_1 \\lor \\neg E_3)$.\n- Notice the negation of $O_1$ in both.\n- Look at Condition 8: $(L_1 \\lor \\neg E_2 \\lor \\neg O_1 \\lor \\neg E_3)$.\n- Look at Condition 10: $(L_3 \\lor \\neg L_1 \\lor \\neg L_2)$.\n- If we assume $L_1$ is true (Liam analyzes Monday), then from Condition 1, we need $\\neg E_2 \\lor \\neg O_1 \\lor E_3$. From Condition 4 ($L_1 \\lor \\dots$), we need $\\neg E_2 \\lor \\neg O_1 \\lor E_3$.\n- The core contradiction arises because the conditions force specific relationships between variables (like $E_3$ vs $\\neg E_3$, $L_1$ vs $\\neg L_1$) that cannot be satisfied simultaneously without violating the strict logical implications encoded in the CNF.\n- Specifically, the `unsat_core` indicates that the set of clauses $\\{ \\text{Clause}_0, \\dots, \\text{Clause}_{15} \\}$ forms an unsatisfiable core. The label is explicitly `UNSAT`.\n\n**4. Constructing the Teacher Answer**\n- **Label**: Must be `UNSAT`.\n- **Reasoning**: The provided Z3 certificate explicitly labels the problem as `UNSAT`. The `unsat_core` indicates that the core of the unsatisfiability involves clauses corresponding to conditions 13, 8, 19, and 3 (as evidenced by the mapping of clause indices to condition numbers in the `unsat_core_clauses` section, specifically mapping indices like 0, 1, 2... back to conditions via the `mapped_condition_numbers`). The `unsat_reason` text states that \"all 16 possible combinations forbidden for variables [13, 8, 19, 3]\", confirming that no assignment satisfies the logical constraints imposed by these conditions.\n- **Assignment**: Since it is UNSAT, no assignment exists. We do not need to provide one.\n\n**Final Conclusion**: The puzzle is unsatisfiable.\n\n```text\n[UNSAT]\n</think>\n\nLabel:\n[UNSAT]\n\nReasoning:\n1. **Certificate Verification**: The provided Z3 certificate explicitly states the status of the satisfiability problem as `UNSAT`.\n2. **Core Unsat Analysis**: The `unsat_core_raw_clause_indices` list contains values (0 to 15), and the `unsat_core_mapped_condition_numbers` list includes indices corresponding to conditions 1, 2, 3, 4, 5, 7, 12, 13, 14, 15, 16, 18, 22, 23, 24, and 30. The `unsat_reason` section explicitly states that \"all 16 possible combinations forbidden for variables [13, 8, 19, 3]\", indicating a fundamental logical contradiction within the constraints defined by these conditions. No assignment of truth values to the variables (researchers, tasks, days) can satisfy all the clauses simultaneously because the constraints force contradictory requirements on specific variables (e.g., conflicting requirements for whether Liam analyzes data on Monday, Emma writes reports on Tuesday, etc.) that result in a contradiction across the entire system.\n3. **Conclusion**: Since the certificate confirms unsatisfiability and the reasoning confirms no valid combination of tasks exists, the answer is definitively UNSAT.\n\nAnswer:\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 6078,
+    "generated_tokens": 2089,
+    "batch_elapsed_seconds": 58.34770679473877,
+    "tokens_per_second_for_batch": 35.802606730524765,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777897901.786101,
+  "slurm_job_id": "3185830",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "168",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nA group of five researchers—Emma, Liam, Olivia, Noah, and Ava—are conducting experiments in a lab. Each researcher has specific tasks (0 = experimental setup, 1 = data analysis, 2 = report writing) to perform across different days (0 = Monday, 1 = Tuesday, 2 = Wednesday). Each researcher, task, and day can be independently chosen, meaning a researcher can perform multiple tasks across different or the same days, or possibly not perform any task on certain days.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean researcher i performs task j on day k. Here, researcher 0 is Emma, researcher 1 is Liam, researcher 2 is Olivia, researcher 3 is Noah, and researcher 4 is Ava.\n</variable_mapping>\n\n<conditions>\n1. Either Liam doesn't analyze data on Monday, or Emma doesn't write reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma sets up experiments on Wednesday.\n2. Either Liam doesn't analyze data on Monday, or Emma writes reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n3. Either Liam doesn't analyze data on Monday, or Emma writes reports on Tuesday, or Olivia sets up experiments on Monday, or Emma sets up experiments on Wednesday.\n4. Liam analyzes data on Monday, or Emma doesn't write reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma sets up experiments on Wednesday.\n5. Either Liam doesn't analyze data on Monday, or Emma doesn't write reports on Tuesday, or Olivia sets up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n6. Either Liam writes reports on Tuesday, or Olivia analyzes data on Tuesday, or Ava sets up experiments on Tuesday.\n7. Either Liam doesn't analyze data on Monday, or Emma writes reports on Tuesday, or Olivia sets up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n8. Either Ava analyzes data on Monday, or Emma doesn't write reports on Monday, or Emma doesn't write reports on Tuesday.\n9. Either Emma writes reports on Monday, or Liam analyzes data on Wednesday, or Noah doesn't analyze data on Tuesday.\n10. Either Liam sets up experiments on Wednesday, or Liam doesn't set up experiments on Monday, or Liam doesn't write reports on Tuesday.\n11. Either Emma writes reports on Wednesday, or Olivia doesn't analyze data on Monday, or Ava doesn't write reports on Monday.\n12. Liam analyzes data on Monday, or Emma writes reports on Tuesday, or Olivia sets up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n13. Either Liam doesn't analyze data on Monday, or Emma writes reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma sets up experiments on Wednesday.\n14. Liam analyzes data on Monday, or Emma doesn't write reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n15. Liam analyzes data on Monday, or Emma doesn't write reports on Tuesday, or Olivia sets up experiments on Monday, or Emma sets up experiments on Wednesday.\n16. Liam analyzes data on Monday, or Emma writes reports on Tuesday, or Olivia sets up experiments on Monday, or Emma sets up experiments on Wednesday.\n17. Either Emma analyzes data on Monday, or Liam sets up experiments on Monday, or Noah analyzes data on Monday.\n18. Either Liam doesn't analyze data on Monday, or Emma doesn't write reports on Tuesday, or Olivia sets up experiments on Monday, or Emma sets up experiments on Wednesday.\n19. Either Noah analyzes data on Tuesday, or Noah doesn't set up experiments on Monday, or Ava doesn't write reports on Tuesday.\n20. Either Noah analyzes data on Tuesday, or Olivia doesn't analyze data on Monday, or Noah doesn't set up experiments on Monday.\n21. Either Emma analyzes data on Monday, or Ava analyzes data on Tuesday, or Liam doesn't write reports on Monday.\n22. Liam analyzes data on Monday, or Emma writes reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n23. Liam analyzes data on Monday, or Emma doesn't write reports on Tuesday, or Olivia sets up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n24. Liam analyzes data on Monday, or Emma writes reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma sets up experiments on Wednesday.\n25. Either Emma analyzes data on Tuesday, or Ava analyzes data on Wednesday, or Liam doesn't analyze data on Wednesday.\n26. Either Emma sets up experiments on Monday, or Emma sets up experiments on Wednesday, or Liam sets up experiments on Monday.\n27. Either Olivia sets up experiments on Tuesday, or Noah sets up experiments on Wednesday, or Noah doesn't write reports on Monday.\n28. Either Liam writes reports on Tuesday, or Olivia analyzes data on Tuesday, or Ava writes reports on Monday.\n29. Either Liam analyzes data on Wednesday, or Liam doesn't set up experiments on Wednesday, or Olivia doesn't set up experiments on Tuesday.\n30. Either Liam doesn't analyze data on Monday, or Emma doesn't write reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n</conditions>\n\n<question>\nIs there a way to assign tasks to researchers across the days that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[5,3,3]\n</dims>\n\n<num_vars>\n45\n</num_vars>\n\n<num_clauses>\n30\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    13,\n    8,\n    19,\n    3\n  ],\n  [\n    -13,\n    8,\n    19,\n    3\n  ],\n  [\n    13,\n    -8,\n    19,\n    3\n  ],\n  [\n    -13,\n    -8,\n    19,\n    3\n  ],\n  [\n    13,\n    8,\n    -19,\n    3\n  ],\n  [\n    -13,\n    8,\n    -19,\n    3\n  ],\n  [\n    13,\n    -8,\n    -19,\n    3\n  ],\n  [\n    -13,\n    -8,\n    -19,\n    3\n  ],\n  [\n    13,\n    8,\n    19,\n    -3\n  ],\n  [\n    -13,\n    8,\n    19,\n    -3\n  ],\n  [\n    13,\n    -8,\n    19,\n    -3\n  ],\n  [\n    -13,\n    -8,\n    19,\n    -3\n  ],\n  [\n    13,\n    8,\n    -19,\n    -3\n  ],\n  [\n    -13,\n    8,\n    -19,\n    -3\n  ],\n  [\n    13,\n    -8,\n    -19,\n    -3\n  ],\n  [\n    -13,\n    -8,\n    -19,\n    -3\n  ],\n  [\n    4,\n    41,\n    -16\n  ],\n  [\n    15,\n    -12,\n    -20\n  ],\n  [\n    17,\n    23,\n    38\n  ],\n  [\n    40,\n    -7,\n    -8\n  ],\n  [\n    12,\n    -10,\n    -17\n  ],\n  [\n    1,\n    3,\n    10\n  ],\n  [\n    5,\n    42,\n    -15\n  ],\n  [\n    32,\n    -28,\n    -44\n  ],\n  [\n    7,\n    15,\n    -32\n  ],\n  [\n    20,\n    30,\n    -34\n  ],\n  [\n    32,\n    -22,\n    -28\n  ],\n  [\n    9,\n    -22,\n    -43\n  ],\n  [\n    4,\n    10,\n    31\n  ],\n  [\n    17,\n    23,\n    43\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(1, 2, 1) ∨ x(2, 1, 1) ∨ x(4, 0, 1)) ∧ (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(4, 1, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(0, 2, 1)) ∧ (x(0, 2, 0) ∨ x(1, 1, 2) ∨ ¬x(3, 1, 1)) ∧ (x(1, 0, 2) ∨ ¬x(1, 0, 0) ∨ ¬x(1, 2, 1)) ∧ (x(0, 2, 2) ∨ ¬x(2, 1, 0) ∨ ¬x(4, 2, 0)) ∧ (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(0, 1, 0) ∨ x(1, 0, 0) ∨ x(3, 1, 0)) ∧ (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(3, 1, 1) ∨ ¬x(3, 0, 0) ∨ ¬x(4, 2, 1)) ∧ (x(3, 1, 1) ∨ ¬x(2, 1, 0) ∨ ¬x(3, 0, 0)) ∧ (x(0, 1, 0) ∨ x(4, 1, 1) ∨ ¬x(1, 2, 0)) ∧ (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(0, 1, 1) ∨ x(4, 1, 2) ∨ ¬x(1, 1, 2)) ∧ (x(0, 0, 0) ∨ x(0, 0, 2) ∨ x(1, 0, 0)) ∧ (x(2, 0, 1) ∨ x(3, 0, 2) ∨ ¬x(3, 2, 0)) ∧ (x(1, 2, 1) ∨ x(2, 1, 1) ∨ x(4, 2, 0)) ∧ (x(1, 1, 2) ∨ ¬x(1, 0, 2) ∨ ¬x(2, 0, 1)) ∧ (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,7,12,13,14,15,16,18,22,23,24,30]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [13, 8, 19, 3] -> (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [16]\n- raw clause index 1: [-13, 8, 19, 3] -> (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [3]\n- raw clause index 2: [13, -8, 19, 3] -> (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [15]\n- raw clause index 3: [-13, -8, 19, 3] -> (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [18]\n- raw clause index 4: [13, 8, -19, 3] -> (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [24]\n- raw clause index 5: [-13, 8, -19, 3] -> (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [13]\n- raw clause index 6: [13, -8, -19, 3] -> (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [4]\n- raw clause index 7: [-13, -8, -19, 3] -> (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [1]\n- raw clause index 8: [13, 8, 19, -3] -> (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [12]\n- raw clause index 9: [-13, 8, 19, -3] -> (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [7]\n- raw clause index 10: [13, -8, 19, -3] -> (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [23]\n- raw clause index 11: [-13, -8, 19, -3] -> (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [5]\n- raw clause index 12: [13, 8, -19, -3] -> (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [22]\n- raw clause index 13: [-13, 8, -19, -3] -> (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [2]\n- raw clause index 14: [13, -8, -19, -3] -> (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [14]\n- raw clause index 15: [-13, -8, -19, -3] -> (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [30]\n</unsat_core_clauses>\n\n<unsat_reason>\nFull block: all 16 possible combinations forbidden for variables [13, 8, 19, 3]: (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nA group of five researchers—Emma, Liam, Olivia, Noah, and Ava—are conducting experiments in a lab. Each researcher has specific tasks (0 = experimental setup, 1 = data analysis, 2 = report writing) to perform across different days (0 = Monday, 1 = Tuesday, 2 = Wednesday). Each researcher, task, and day can be independently chosen, meaning a researcher can perform multiple tasks across different or the same days, or possibly not perform any task on certain days.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean researcher i performs task j on day k. Here, researcher 0 is Emma, researcher 1 is Liam, researcher 2 is Olivia, researcher 3 is Noah, and researcher 4 is Ava.\n</variable_mapping>\n\n<conditions>\n1. Either Liam doesn't analyze data on Monday, or Emma doesn't write reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma sets up experiments on Wednesday.\n2. Either Liam doesn't analyze data on Monday, or Emma writes reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n3. Either Liam doesn't analyze data on Monday, or Emma writes reports on Tuesday, or Olivia sets up experiments on Monday, or Emma sets up experiments on Wednesday.\n4. Liam analyzes data on Monday, or Emma doesn't write reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma sets up experiments on Wednesday.\n5. Either Liam doesn't analyze data on Monday, or Emma doesn't write reports on Tuesday, or Olivia sets up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n6. Either Liam writes reports on Tuesday, or Olivia analyzes data on Tuesday, or Ava sets up experiments on Tuesday.\n7. Either Liam doesn't analyze data on Monday, or Emma writes reports on Tuesday, or Olivia sets up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n8. Either Ava analyzes data on Monday, or Emma doesn't write reports on Monday, or Emma doesn't write reports on Tuesday.\n9. Either Emma writes reports on Monday, or Liam analyzes data on Wednesday, or Noah doesn't analyze data on Tuesday.\n10. Either Liam sets up experiments on Wednesday, or Liam doesn't set up experiments on Monday, or Liam doesn't write reports on Tuesday.\n11. Either Emma writes reports on Wednesday, or Olivia doesn't analyze data on Monday, or Ava doesn't write reports on Monday.\n12. Liam analyzes data on Monday, or Emma writes reports on Tuesday, or Olivia sets up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n13. Either Liam doesn't analyze data on Monday, or Emma writes reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma sets up experiments on Wednesday.\n14. Liam analyzes data on Monday, or Emma doesn't write reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n15. Liam analyzes data on Monday, or Emma doesn't write reports on Tuesday, or Olivia sets up experiments on Monday, or Emma sets up experiments on Wednesday.\n16. Liam analyzes data on Monday, or Emma writes reports on Tuesday, or Olivia sets up experiments on Monday, or Emma sets up experiments on Wednesday.\n17. Either Emma analyzes data on Monday, or Liam sets up experiments on Monday, or Noah analyzes data on Monday.\n18. Either Liam doesn't analyze data on Monday, or Emma doesn't write reports on Tuesday, or Olivia sets up experiments on Monday, or Emma sets up experiments on Wednesday.\n19. Either Noah analyzes data on Tuesday, or Noah doesn't set up experiments on Monday, or Ava doesn't write reports on Tuesday.\n20. Either Noah analyzes data on Tuesday, or Olivia doesn't analyze data on Monday, or Noah doesn't set up experiments on Monday.\n21. Either Emma analyzes data on Monday, or Ava analyzes data on Tuesday, or Liam doesn't write reports on Monday.\n22. Liam analyzes data on Monday, or Emma writes reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n23. Liam analyzes data on Monday, or Emma doesn't write reports on Tuesday, or Olivia sets up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n24. Liam analyzes data on Monday, or Emma writes reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma sets up experiments on Wednesday.\n25. Either Emma analyzes data on Tuesday, or Ava analyzes data on Wednesday, or Liam doesn't analyze data on Wednesday.\n26. Either Emma sets up experiments on Monday, or Emma sets up experiments on Wednesday, or Liam sets up experiments on Monday.\n27. Either Olivia sets up experiments on Tuesday, or Noah sets up experiments on Wednesday, or Noah doesn't write reports on Monday.\n28. Either Liam writes reports on Tuesday, or Olivia analyzes data on Tuesday, or Ava writes reports on Monday.\n29. Either Liam analyzes data on Wednesday, or Liam doesn't set up experiments on Wednesday, or Olivia doesn't set up experiments on Tuesday.\n30. Either Liam doesn't analyze data on Monday, or Emma doesn't write reports on Tuesday, or Olivia doesn't set up experiments on Monday, or Emma doesn't set up experiments on Wednesday.\n</conditions>\n\n<question>\nIs there a way to assign tasks to researchers across the days that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[5,3,3]\n</dims>\n\n<num_vars>\n45\n</num_vars>\n\n<num_clauses>\n30\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    13,\n    8,\n    19,\n    3\n  ],\n  [\n    -13,\n    8,\n    19,\n    3\n  ],\n  [\n    13,\n    -8,\n    19,\n    3\n  ],\n  [\n    -13,\n    -8,\n    19,\n    3\n  ],\n  [\n    13,\n    8,\n    -19,\n    3\n  ],\n  [\n    -13,\n    8,\n    -19,\n    3\n  ],\n  [\n    13,\n    -8,\n    -19,\n    3\n  ],\n  [\n    -13,\n    -8,\n    -19,\n    3\n  ],\n  [\n    13,\n    8,\n    19,\n    -3\n  ],\n  [\n    -13,\n    8,\n    19,\n    -3\n  ],\n  [\n    13,\n    -8,\n    19,\n    -3\n  ],\n  [\n    -13,\n    -8,\n    19,\n    -3\n  ],\n  [\n    13,\n    8,\n    -19,\n    -3\n  ],\n  [\n    -13,\n    8,\n    -19,\n    -3\n  ],\n  [\n    13,\n    -8,\n    -19,\n    -3\n  ],\n  [\n    -13,\n    -8,\n    -19,\n    -3\n  ],\n  [\n    4,\n    41,\n    -16\n  ],\n  [\n    15,\n    -12,\n    -20\n  ],\n  [\n    17,\n    23,\n    38\n  ],\n  [\n    40,\n    -7,\n    -8\n  ],\n  [\n    12,\n    -10,\n    -17\n  ],\n  [\n    1,\n    3,\n    10\n  ],\n  [\n    5,\n    42,\n    -15\n  ],\n  [\n    32,\n    -28,\n    -44\n  ],\n  [\n    7,\n    15,\n    -32\n  ],\n  [\n    20,\n    30,\n    -34\n  ],\n  [\n    32,\n    -22,\n    -28\n  ],\n  [\n    9,\n    -22,\n    -43\n  ],\n  [\n    4,\n    10,\n    31\n  ],\n  [\n    17,\n    23,\n    43\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(1, 2, 1) ∨ x(2, 1, 1) ∨ x(4, 0, 1)) ∧ (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(4, 1, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(0, 2, 1)) ∧ (x(0, 2, 0) ∨ x(1, 1, 2) ∨ ¬x(3, 1, 1)) ∧ (x(1, 0, 2) ∨ ¬x(1, 0, 0) ∨ ¬x(1, 2, 1)) ∧ (x(0, 2, 2) ∨ ¬x(2, 1, 0) ∨ ¬x(4, 2, 0)) ∧ (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(0, 1, 0) ∨ x(1, 0, 0) ∨ x(3, 1, 0)) ∧ (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(3, 1, 1) ∨ ¬x(3, 0, 0) ∨ ¬x(4, 2, 1)) ∧ (x(3, 1, 1) ∨ ¬x(2, 1, 0) ∨ ¬x(3, 0, 0)) ∧ (x(0, 1, 0) ∨ x(4, 1, 1) ∨ ¬x(1, 2, 0)) ∧ (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)) ∧ (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)) ∧ (x(0, 1, 1) ∨ x(4, 1, 2) ∨ ¬x(1, 1, 2)) ∧ (x(0, 0, 0) ∨ x(0, 0, 2) ∨ x(1, 0, 0)) ∧ (x(2, 0, 1) ∨ x(3, 0, 2) ∨ ¬x(3, 2, 0)) ∧ (x(1, 2, 1) ∨ x(2, 1, 1) ∨ x(4, 2, 0)) ∧ (x(1, 1, 2) ∨ ¬x(1, 0, 2) ∨ ¬x(2, 0, 1)) ∧ (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,7,12,13,14,15,16,18,22,23,24,30]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [13, 8, 19, 3] -> (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [16]\n- raw clause index 1: [-13, 8, 19, 3] -> (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [3]\n- raw clause index 2: [13, -8, 19, 3] -> (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [15]\n- raw clause index 3: [-13, -8, 19, 3] -> (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [18]\n- raw clause index 4: [13, 8, -19, 3] -> (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [24]\n- raw clause index 5: [-13, 8, -19, 3] -> (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [13]\n- raw clause index 6: [13, -8, -19, 3] -> (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [4]\n- raw clause index 7: [-13, -8, -19, 3] -> (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)); matching condition number(s): [1]\n- raw clause index 8: [13, 8, 19, -3] -> (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [12]\n- raw clause index 9: [-13, 8, 19, -3] -> (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [7]\n- raw clause index 10: [13, -8, 19, -3] -> (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [23]\n- raw clause index 11: [-13, -8, 19, -3] -> (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [5]\n- raw clause index 12: [13, 8, -19, -3] -> (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [22]\n- raw clause index 13: [-13, 8, -19, -3] -> (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [2]\n- raw clause index 14: [13, -8, -19, -3] -> (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [14]\n- raw clause index 15: [-13, -8, -19, -3] -> (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)); matching condition number(s): [30]\n</unsat_core_clauses>\n\n<unsat_reason>\nFull block: all 16 possible combinations forbidden for variables [13, 8, 19, 3]: (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      5,
+      3,
+      3
+    ],
+    "num_vars": 45,
+    "num_clauses": 30,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      12,
+      13,
+      14,
+      15,
+      16,
+      18,
+      22,
+      23,
+      24,
+      30
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          13,
+          8,
+          19,
+          3
+        ],
+        "clause_structural": "(x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          16
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -13,
+          8,
+          19,
+          3
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          13,
+          -8,
+          19,
+          3
+        ],
+        "clause_structural": "(x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -13,
+          -8,
+          19,
+          3
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          18
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          13,
+          8,
+          -19,
+          3
+        ],
+        "clause_structural": "(x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          24
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -13,
+          8,
+          -19,
+          3
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          13,
+          -8,
+          -19,
+          3
+        ],
+        "clause_structural": "(x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -13,
+          -8,
+          -19,
+          3
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          13,
+          8,
+          19,
+          -3
+        ],
+        "clause_structural": "(x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -13,
+          8,
+          19,
+          -3
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          13,
+          -8,
+          19,
+          -3
+        ],
+        "clause_structural": "(x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          23
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -13,
+          -8,
+          19,
+          -3
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          13,
+          8,
+          -19,
+          -3
+        ],
+        "clause_structural": "(x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          22
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -13,
+          8,
+          -19,
+          -3
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          13,
+          -8,
+          -19,
+          -3
+        ],
+        "clause_structural": "(x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -13,
+          -8,
+          -19,
+          -3
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          30
+        ]
+      }
+    ],
+    "unsat_reason": "Full block: all 16 possible combinations forbidden for variables [13, 8, 19, 3]: (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2)), (¬x(1, 1, 0) ∨ ¬x(0, 2, 1) ∨ ¬x(2, 0, 0) ∨ ¬x(0, 0, 2))"
+  }
+}

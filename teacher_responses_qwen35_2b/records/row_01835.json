@@ -1,0 +1,113 @@
+{
+  "index": 1835,
+  "row_index_in_prompt_file": 1835,
+  "prompt_id": "satbench_01835",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Teacher Answer\n\n**Label:** [UNSAT]\n\n**Reasoning Step-by-Step:**\n\n1.  **Analyze Condition 10:**\n    Condition 10 states: \"Carol does not demonstrate skill 5 during mission phase 0.\"\n    Formally: $\\neg x(2, 5, 0)$ is True.\n    This simplifies our search space immediately. We do not need to consider the variable $x(2, 5, 0)$ as potentially true; it must be False.\n\n2.  **Analyze Condition 7:**\n    Condition 7 states: \"Either Carol does not demonstrate skill 5 during mission phase 0, or Bob does not demonstrate skill 5 during mission phase 1.\"\n    Formally: $(\\neg x(2, 5, 0)) \\lor (\\neg x(1, 5, 1))$.\n    From Step 1, we know $(\\neg x(2, 5, 0))$ is True.\n    In logic, if any part of an OR statement is True, the whole statement is True. Since the first disjunct is True, Condition 7 imposes no new restrictions on $x(1, 5, 1)$. However, it confirms that the specific configuration where Carol *does* have skill 5 is invalid.\n\n3.  **Identify Contradictions from Remaining Conditions:**\n    Let's look closer at the remaining conditions involving the variables that might be constrained.\n    *   Condition 3: \"Bob does not demonstrate skill 5 during mission phase 1.\" ($\\neg x(1, 5, 1)$)\n    *   Condition 9: \"Either Dave does not demonstrate skill 2 during mission phase 1, or Bob does not demonstrate skill 5 during mission phase 1.\"\n        Formally: $(\\neg x(3, 2, 1)) \\lor (\\neg x(1, 5, 1))$.\n    *   Condition 4: \"Either Dave demonstrates skill 2 during mission phase 1, or Carol demonstrates skill 5 during mission phase 0, or Bob demonstrates skill 5 during mission phase 1.\"\n        Formally: $(x(3, 2, 1)) \\lor (\\neg x(2, 5, 0)) \\lor (\\neg x(1, 5, 1))$.\n\n    Now, let's test the consistency of the conditions derived.\n    We have established in Step 1 that $\\neg x(2, 5, 0)$ is required by Condition 10.\n    Therefore, the term $(\\neg x(2, 5, 0))$ in Condition 4 is always True.\n    Consequently, Condition 4 reduces to: $(\\text{True}) \\lor (\\dots)$, which is trivially satisfied regardless of the other terms.\n\n    Let's re-evaluate the \"Exact One\" conflicts often seen in these puzzles.\n    Looking at the provided Z3 certificate breakdown:\n    *   Clause 0 (Index 4 in the list above) corresponds to $\\neg x(3, 2, 1)$ (Dave does not have skill 2 in Phase 1). This comes from the Z3 unsat core `[42, 35, 24]`. Wait, looking at the mapping provided in the prompt's `<unsat_core_clauses>` section:\n        *   Clause `[42, 35, 24]` maps to `x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)`.\n        *   Clause `[-42]` maps to `¬x(3, 2, 1)`.\n        *   Clause `[-35]` maps to `¬x(2, 5, 0)`.\n        *   Clause `[-24]` maps to `¬x(1, 5, 1)`.\n\n    Let's map these to the logical conditions given in the `<conditions>` section:\n    1.  **Cond 1:** $\\neg x(3, 2, 1)$. (Matches Clause `-42`)\n    2.  **Cond 10:** $\\neg x(2, 5, 0)$. (Matches Clause `[-35]`)\n    3.  **Cond 3:** $\\neg x(1, 5, 1)$. (Matches Clause `[-24]`)\n    4.  **Cond 2:** $x(2, 4, 1) \\lor \\neg x(1, 2, 0) \\lor \\neg x(3, 3, 1)$. Note: The Z3 unsat core includes clause `[42, 35, 24]`. Let's check the dimensions.\n        The `<dims>` are `[4, 6, 2]`, implying 4 rows (astronauts), 6 columns (skills?), 2 columns (phases?).\n        Actually, standard notation for these problems usually aligns with the indices provided in the `readable_cnf`.\n        Let's trace the specific contradiction found in the Z3 analysis:\n        The Z3 unsat core contains `(¬x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1))`? No, let's look at the text description of the conflict:\n        \"Exactly-one conflict: forced to select at least one, but every option is individually forbidden\".\n        \n        Let's look at the specific clauses listed in the Z3 output explanation:\n        1. `raw clause index 0`: `[42, 35, 24]` -> `x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)`\n           Which condition does this match?\n           Condition 4 says: $(x(3, 2, 1)) \\lor (\\neg x(2, 5, 0)) \\lor (\\neg x(1, 5, 1))$.\n           This is NOT the same as `x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)`.\n           However, the Z3 certificate says: \"matching condition number(s): [4]\".\n           Let's re-read Condition 4 carefully from the prompt:\n           \"4. Either Dave demonstrates skill 2... (x(3, 2, 1)) ... or Carol demonstrates skill 5... (¬x(2, 5, 0)) ... or Bob demonstrates skill 5... (x(1, 5, 1)).\"\n           Wait, the prompt text for Condition 4 is: \"(x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1))\".\n           My previous transcription had a negation error. Let me re-read the prompt's `<readable_cnf>` block carefully.\n           \n           Prompt `<readable_cnf>`:\n           `... ∧ (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)) ∧ (¬x(0, 5, 1)) ...`\n           Okay, Condition 4 in the prompt text is: \"(x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1))\".\n           There is NO negation before the last two terms.\n           Condition 4 Text: \"Either Dave demonstrates skill 2... (x(3, 2, 1)) , or Carol demonstrates skill 5... (x(2, 5, 0)) , or Bob demonstrates skill 5... (x(1, 5, 1)).\"\n           Wait, let me double check the prompt's Condition 4 text again.\n           Prompt: \"4. Either Dave demonstrates skill 2 during mission phase 1, or Carol demonstrates skill 5 during mission phase 0, or Bob demonstrates skill 5 during mission phase 1.\"\n           This translates to: $x(3, 2, 1) \\lor x(2, 5, 0) \\lor x(1, 5, 1)$.\n           \n           Now let's look at the Z3 Unsat Core Mapping provided in the prompt's final section:\n           \"raw clause index 0: [42, 35, 24] -> (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)); matching condition number(s): [4]\"\n           This matches Condition 4 perfectly.\n           \n           So, the set of forced values comes from:\n           1.  **Condition 10:** $\\neg x(2, 5, 0)$ (Carol does not have skill 5 in phase 0).\n           2.  **Condition 3:** $\\neg x(1, 5, 1)$ (Bob does not have skill 5 in phase 1).\n           3.  **Condition 1:** $\\neg x(3, 2, 1)$ (Dave does not have skill 2 in phase 1).\n           \n           Let's check Condition 4 again with these values:\n           Formula: $x(3, 2, 1) \\lor x(2, 5, 0) \\lor x(1, 5, 1)$\n           Substitute values: $(\\text{False}) \\lor (\\text{False}) \\lor (\\text{False}) = \\text{False}$.\n           **Contradiction Found.** Condition 4 requires at least one of these three to be True, but Conditions 1, 3, and 10 force all three to be False.\n           \n           Are there any other contradictions?\n           Condition 5: $(x(0, 3, 1) \\lor \\neg x(1, 5, 0))$. No obvious immediate conflict with the derived False values unless $x(1, 5, 0)$ was forced False elsewhere, but that doesn't create a direct logical impossibility like the one in Cond 4.\n           Condition 6: $(x(1, 2, 1) \\lor \\neg x(0, 5, 1) \\lor \\neg x(2, 0, 0))$.\n           Condition 7: $(\\neg x(2, 5, 0) \\lor \\neg x(1, 5, 1))$. Since both $\\neg x(2, 5, 0)$ and $\\neg x(1, 5, 1)$ are True (from C10 and C3), this is satisfied.\n           Condition 8: $(\\neg x(3, 2, 1) \\lor \\neg x(2, 5, 0))$. Both parts are True. Satisfied.\n           Condition 9: $(\\neg x(3, 2, 1) \\lor \\neg x(1, 5, 1))$. Both parts are True. Satisfied.\n           \n           The primary conflict is definitely in Condition 4 vs Conditions 1, 3, and 10.\n           \n           **Conclusion:** The puzzle is unsatisfiable. The core contradiction arises because Conditions 1, 3, and 10 collectively imply the negation of the requirement set in Condition 4.\n\n### Final Answer Construction\n\nBased on the analysis:\n-   **Variable $x(3, 2, 1)$** must be False (from Condition 1).\n-   **Variable $x(2, 5, 0)$** must be False (from Condition 10).\n-   **Variable $x(1, 5, 1)$** must be False (from Condition 3).\n-   **Condition 4** requires: $x(3, 2, 1) \\lor x(2, 5, 0) \\lor x(1, 5, 1)$.\n-   Substituting the False values yields: $F \\lor F \\lor F = F$, which contradicts the requirement that the condition be met.\n\nTherefore, the system is UNSAT.\n\n**Label:** [UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1871,
+    "generated_tokens": 2762,
+    "batch_elapsed_seconds": 78.90299558639526,
+    "tokens_per_second_for_batch": 35.00500810486635,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777901486.6305356,
+  "slurm_job_id": "3186140",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "183",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a space exploration program, four astronauts—Alice, Bob, Carol, and Dave—are being evaluated on their ability to perform various tasks across different phases of a space mission. Each astronaut can be assessed for different skills (numbered 0 to 5) under particular mission phases (numbered 0 and 1). These are independent decisions, meaning each skill evaluation is considered separately for every astronaut and phase.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i demonstrates skill j during mission phase k. Here, astronaut 0 is Alice, astronaut 1 is Bob, astronaut 2 is Carol, and astronaut 3 is Dave.\n</variable_mapping>\n\n<conditions>\n1. Dave does not demonstrate skill 2 during mission phase 1.\n2. Either Carol demonstrates skill 4 during mission phase 1, or Bob does not demonstrate skill 2 during mission phase 0, or Dave does not demonstrate skill 3 during mission phase 1.\n3. Bob does not demonstrate skill 5 during mission phase 1.\n4. Either Dave demonstrates skill 2 during mission phase 1, or Carol demonstrates skill 5 during mission phase 0, or Bob demonstrates skill 5 during mission phase 1.\n5. Either Alice demonstrates skill 3 during mission phase 1, or Bob does not demonstrate skill 5 during mission phase 0.\n6. Either Bob demonstrates skill 2 during mission phase 1, or Alice does not demonstrate skill 5 during mission phase 1, or Carol does not demonstrate skill 0 during mission phase 0.\n7. Either Carol does not demonstrate skill 5 during mission phase 0, or Bob does not demonstrate skill 5 during mission phase 1.\n8. Either Dave does not demonstrate skill 2 during mission phase 1, or Carol does not demonstrate skill 5 during mission phase 0.\n9. Either Dave does not demonstrate skill 2 during mission phase 1, or Bob does not demonstrate skill 5 during mission phase 1.\n10. Carol does not demonstrate skill 5 during mission phase 0.\n</conditions>\n\n<question>\nCan all these conditions be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,6,2]\n</dims>\n\n<num_vars>\n48\n</num_vars>\n\n<num_clauses>\n10\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    42,\n    35,\n    24\n  ],\n  [\n    -42,\n    -35\n  ],\n  [\n    -42,\n    -24\n  ],\n  [\n    -35,\n    -24\n  ],\n  [\n    -42\n  ],\n  [\n    -35\n  ],\n  [\n    -24\n  ],\n  [\n    18,\n    -12,\n    -25\n  ],\n  [\n    34,\n    -17,\n    -44\n  ],\n  [\n    8,\n    -23\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(3, 2, 1)) ∧ (x(2, 4, 1) ∨ ¬x(1, 2, 0) ∨ ¬x(3, 3, 1)) ∧ (¬x(1, 5, 1)) ∧ (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)) ∧ (x(0, 3, 1) ∨ ¬x(1, 5, 0)) ∧ (x(1, 2, 1) ∨ ¬x(0, 5, 1) ∨ ¬x(2, 0, 0)) ∧ (¬x(2, 5, 0) ∨ ¬x(1, 5, 1)) ∧ (¬x(3, 2, 1) ∨ ¬x(2, 5, 0)) ∧ (¬x(3, 2, 1) ∨ ¬x(1, 5, 1)) ∧ (¬x(2, 5, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,4,5,6]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,3,4,10]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [42, 35, 24] -> (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)); matching condition number(s): [4]\n- raw clause index 4: [-42] -> (¬x(3, 2, 1)); matching condition number(s): [1]\n- raw clause index 5: [-35] -> (¬x(2, 5, 0)); matching condition number(s): [10]\n- raw clause index 6: [-24] -> (¬x(1, 5, 1)); matching condition number(s): [3]\n</unsat_core_clauses>\n\n<unsat_reason>\nExactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)), (¬x(3, 2, 1) ∨ ¬x(2, 5, 0)), (¬x(3, 2, 1) ∨ ¬x(1, 5, 1)), (¬x(2, 5, 0) ∨ ¬x(1, 5, 1)), (¬x(3, 2, 1)), (¬x(2, 5, 0)), (¬x(1, 5, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a space exploration program, four astronauts—Alice, Bob, Carol, and Dave—are being evaluated on their ability to perform various tasks across different phases of a space mission. Each astronaut can be assessed for different skills (numbered 0 to 5) under particular mission phases (numbered 0 and 1). These are independent decisions, meaning each skill evaluation is considered separately for every astronaut and phase.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i demonstrates skill j during mission phase k. Here, astronaut 0 is Alice, astronaut 1 is Bob, astronaut 2 is Carol, and astronaut 3 is Dave.\n</variable_mapping>\n\n<conditions>\n1. Dave does not demonstrate skill 2 during mission phase 1.\n2. Either Carol demonstrates skill 4 during mission phase 1, or Bob does not demonstrate skill 2 during mission phase 0, or Dave does not demonstrate skill 3 during mission phase 1.\n3. Bob does not demonstrate skill 5 during mission phase 1.\n4. Either Dave demonstrates skill 2 during mission phase 1, or Carol demonstrates skill 5 during mission phase 0, or Bob demonstrates skill 5 during mission phase 1.\n5. Either Alice demonstrates skill 3 during mission phase 1, or Bob does not demonstrate skill 5 during mission phase 0.\n6. Either Bob demonstrates skill 2 during mission phase 1, or Alice does not demonstrate skill 5 during mission phase 1, or Carol does not demonstrate skill 0 during mission phase 0.\n7. Either Carol does not demonstrate skill 5 during mission phase 0, or Bob does not demonstrate skill 5 during mission phase 1.\n8. Either Dave does not demonstrate skill 2 during mission phase 1, or Carol does not demonstrate skill 5 during mission phase 0.\n9. Either Dave does not demonstrate skill 2 during mission phase 1, or Bob does not demonstrate skill 5 during mission phase 1.\n10. Carol does not demonstrate skill 5 during mission phase 0.\n</conditions>\n\n<question>\nCan all these conditions be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[4,6,2]\n</dims>\n\n<num_vars>\n48\n</num_vars>\n\n<num_clauses>\n10\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    42,\n    35,\n    24\n  ],\n  [\n    -42,\n    -35\n  ],\n  [\n    -42,\n    -24\n  ],\n  [\n    -35,\n    -24\n  ],\n  [\n    -42\n  ],\n  [\n    -35\n  ],\n  [\n    -24\n  ],\n  [\n    18,\n    -12,\n    -25\n  ],\n  [\n    34,\n    -17,\n    -44\n  ],\n  [\n    8,\n    -23\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(3, 2, 1)) ∧ (x(2, 4, 1) ∨ ¬x(1, 2, 0) ∨ ¬x(3, 3, 1)) ∧ (¬x(1, 5, 1)) ∧ (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)) ∧ (x(0, 3, 1) ∨ ¬x(1, 5, 0)) ∧ (x(1, 2, 1) ∨ ¬x(0, 5, 1) ∨ ¬x(2, 0, 0)) ∧ (¬x(2, 5, 0) ∨ ¬x(1, 5, 1)) ∧ (¬x(3, 2, 1) ∨ ¬x(2, 5, 0)) ∧ (¬x(3, 2, 1) ∨ ¬x(1, 5, 1)) ∧ (¬x(2, 5, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,4,5,6]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,3,4,10]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [42, 35, 24] -> (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)); matching condition number(s): [4]\n- raw clause index 4: [-42] -> (¬x(3, 2, 1)); matching condition number(s): [1]\n- raw clause index 5: [-35] -> (¬x(2, 5, 0)); matching condition number(s): [10]\n- raw clause index 6: [-24] -> (¬x(1, 5, 1)); matching condition number(s): [3]\n</unsat_core_clauses>\n\n<unsat_reason>\nExactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)), (¬x(3, 2, 1) ∨ ¬x(2, 5, 0)), (¬x(3, 2, 1) ∨ ¬x(1, 5, 1)), (¬x(2, 5, 0) ∨ ¬x(1, 5, 1)), (¬x(3, 2, 1)), (¬x(2, 5, 0)), (¬x(1, 5, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      4,
+      6,
+      2
+    ],
+    "num_vars": 48,
+    "num_clauses": 10,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      4,
+      5,
+      6
+    ],
+    "mapped_condition_numbers": [
+      1,
+      3,
+      4,
+      10
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          42,
+          35,
+          24
+        ],
+        "clause_structural": "(x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -42
+        ],
+        "clause_structural": "(¬x(3, 2, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -35
+        ],
+        "clause_structural": "(¬x(2, 5, 0))",
+        "condition_numbers": [
+          10
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -24
+        ],
+        "clause_structural": "(¬x(1, 5, 1))",
+        "condition_numbers": [
+          3
+        ]
+      }
+    ],
+    "unsat_reason": "Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(3, 2, 1) ∨ x(2, 5, 0) ∨ x(1, 5, 1)), (¬x(3, 2, 1) ∨ ¬x(2, 5, 0)), (¬x(3, 2, 1) ∨ ¬x(1, 5, 1)), (¬x(2, 5, 0) ∨ ¬x(1, 5, 1)), (¬x(3, 2, 1)), (¬x(2, 5, 0)), (¬x(1, 5, 1))"
+  }
+}

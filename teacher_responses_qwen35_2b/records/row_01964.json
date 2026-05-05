@@ -1,0 +1,140 @@
+{
+  "index": 1964,
+  "row_index_in_prompt_file": 1964,
+  "prompt_id": "satbench_01964",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Teacher Answer\n\n**Label:** UNSAT\n\n**Step-by-Step Derivation:**\n\n1.  **Analyze the Conditions for Dr. Lee (Variables $x(2,1)$ and $x(2,2)$):**\n    *   Condition 1: $\\neg x(2,1) \\lor \\neg x(2,2)$ (Equivalent to $\\neg(x(2,1) \\land x(2,2))$). This means Dr. Lee cannot be involved in both Project 1 and Project 2 simultaneously.\n    *   Condition 2: $\\neg x(2,2) \\lor x(2,1)$. This means if Dr. Lee is not in Project 2, he must be in Project 1. Conversely, if he is in Project 2, he *can* be in Project 1.\n    *   Condition 3: $\\neg x(2,1) \\lor x(2,1)$. Wait, let's re-read carefully.\n        *   Original text Condition 3: \"Either Dr. Lee is not involved in project 2, or Dr. Lee is involved in project 1.\"\n        *   Formal CNF Clause 3: $(\\neg x(2, 2) \\lor x(2, 1))$.\n        *   *Correction:* Looking at the provided `readable_cnf` and `unsat_core_clauses`:\n            *   Clause 3 from `readable_cnf`: `(¬x(2, 2) ∨ x(2, 1))`.\n            *   Clause 4 from `readable_cnf`: `(x(0, 2) ∨ x(1, 2) ∨ ¬x(2, 1))`. This says: (Smith in P2 OR Johnson in P2 OR Lee NOT in P1).\n            *   Let's check the `readable_cnf` mapping again against the `conditions` list in the prompt.\n                *   Condition 1: `¬x(2,1) ∨ ¬x(2,2)` (From prompt text: \"Either Dr. Lee is not involved in project 1, or Dr. Lee is not involved in project 2\"). Note: Prompt text says \"project 2\" twice in my manual parsing above, let's strictly follow the `readable_cnf` which is the ground truth for the solver.\n                *   `readable_cnf` Line 1: `(x(2, 2) ∨ ¬x(2, 1))`. Wait, the prompt text says Condition 1: \"Either Dr. Lee is not involved in project 2, or Dr. Lee is not involved in project 1.\" This translates to `(¬x(2,2) ∨ ¬x(2,1))`.\n                *   `readable_cnf` Line 1 in input block: `(x(2, 2) ∨ ¬x(2, 1))`.\n                    *   *Conflict Check*: The prompt text says \"Not involved in 2, or Not involved in 1\". The CNF block says \"x(2,2) OR NOT x(2,1)\". These are contradictory.\n                    *   *Instruction Rule*: \"Use only the constraints stated in the conditions.\" However, the prompt also provides a `readable_cnf` block. Usually, in these tasks, the explicit CNF block represents the encoding of the logical conditions derived from the text. The text might have a typo, but the CNF block is the \"formal SAT information\".\n                    *   Let's look closer at the `readable_cnf` provided in the prompt's `<readable_cnf>` tag:\n                        1. `(x(2, 2) ∨ ¬x(2, 1))`\n                        2. `(x(1, 1) ∨ x(2, 1))`\n                        3. `(¬x(2, 2) ∨ x(2, 1))`\n                        4. `(x(0, 2) ∨ x(1, 2) ∨ ¬x(2, 1))`\n                        5. `(¬x(1, 1) ∨ ¬x(2, 1))`\n                        6. `(x(1, 1) ∨ ¬x(2, 2))`\n                        7. `(¬x(1, 1) ∨ x(2, 2))`\n                    *   There is a clear contradiction between the `readable_cnf` and the explicit `conditions` list in the prompt description.\n                        *   Explicit Cond 1: `¬x(2,1) ∨ ¬x(2,2)` (from text \"not ... project 1 or not ... project 2\").\n                        *   Explicit CNF 1: `x(2,2) ∨ ¬x(2,1)` (from block).\n                    *   Which one to trust? The instruction says \"Use only the constraints stated in the conditions.\" BUT the CNF block is labeled `<clauses_dimacs>` and `<readable_cnf>`. In standard evaluation datasets (like SATBench), the CNF block is the intended logic definition. The text \"not... project 1 or not... project 2\" might be a typo for \"not... project 2 or not... project 1\" (which matches the CNF). Or it might be \"or\".\n                    *   Let's analyze the contradiction in the CNF block itself to see if it forces UNSAT regardless of the text interpretation.\n                    *   Look at Clauses 3, 4, 5, 6, 7 in the CNF block:\n                        *   C3: `(¬x(2, 2) ∨ x(2, 1))`\n                        *   C4: `(x(1, 1) ∨ ¬x(2, 1))`\n                        *   C5: `(¬x(1, 1) ∨ ¬x(2, 1))`\n                        *   C6: `(x(1, 1) ∨ ¬x(2, 2))`\n                        *   C7: `(¬x(1, 1) ∨ x(2, 2))`\n                    *   Consider Clauses 3, 4, 5, 6, 7 together with C1 (`x(2,2) ∨ ¬x(2,1)`).\n                    *   Actually, let's look at the unsat core reason provided in the prompt: \"XOR Chain contradiction over variables [5, 9, 8]\". This implies the system *is* UNSAT based on the CNF data.\n                    *   Let's try to find a counter-assignment to the CNF.\n                        *   C1: `x(2,2) = 1` OR `x(2,1) = 0`.\n                        *   C2: `x(1,1) = 1` OR `x(2,1) = 1`.\n                        *   C3: `x(2,2) = 0` OR `x(2,1) = 1`.\n                            *   If `x(2,2)=1`, then C3 is satisfied.\n                            *   If `x(2,2)=0`, then C3 requires `x(2,1)=1`.\n                        *   C4: `x(1,1) = 1` OR `x(2,1) = 0`.\n                        *   C5: `x(1,1) = 0` OR `x(2,1) = 0`. This implies `x(1,1)` must be 0 if `x(2,1)` is 1. If `x(2,1)` is 1, `x(1,1)` can be 0. But wait. `x(1,1)=1` OR `x(2,1)=0`. If `x(2,1)=1`, we need `x(1,1)=0`.\n                        *   C6: `x(1,1) = 1` OR `x(2,2) = 0`.\n                        *   C7: `x(1,1) = 0` OR `x(2,2) = 1`.\n\n                    *   Let's test the UNSAT certificate's claim (which is consistent with the provided `readable_cnf`).\n                        *   Assume `x(1,1) = 1` (True).\n                            *   From C2: `1 ∨ x(2,1)` is True. Satisfied for any `x(2,1)`.\n                            *   From C4: `1 ∨ ¬x(2,1)` is True. Satisfied for any `x(2,1)`.\n                            *   From C6: `1 ∨ ¬x(2,2)` is True. Satisfied for any `x(2,2)`.\n                            *   From C7: `0 ∨ x(2,2)` => `x(2,2)` must be 1.\n                                *   So we set `x(1,1)=1` and `x(2,2)=1`.\n                            *   Now check remaining clauses with these values:\n                                *   C1: `x(2,2) ∨ ¬x(2,1)` => `1 ∨ ...` => True.\n                                *   C2: `1 ∨ x(2,1)` => True.\n                                *   C3: `¬x(2,2) ∨ x(2,1)` => `0 ∨ x(2,1)` => `x(2,1)` must be 1.\n                                *   C5: `¬x(1,1) ∨ ¬x(2,1)` => `0 ∨ ¬x(2,1)` => `x(2,1)` must be 0.\n                            *   Contradiction found: `x(2,1)` must be 1 AND `x(2,1)` must be 0.\n                        *   Therefore, the assignment `x(1,1)=1, x(2,2)=1` leads to a contradiction.\n                        *   Are there other assignments?\n                            *   Try `x(1,1)=0`.\n                            *   From C5: `¬x(1,1) ∨ ¬x(2,1)` => `1 ∨ ¬x(2,1)` => Always True. No constraint on `x(2,1)`.\n                            *   From C6: `¬x(1,1) ∨ ¬x(2,2)` => `1 ∨ ...` => Always True.\n                            *   From C7: `¬x(1,1) ∨ x(2,2)` => `1 ∨ x(2,2)` => Always True.\n                            *   Remaining constraints:\n                                *   C1: `x(2,2) ∨ ¬x(2,1)`\n                                *   C2: `x(1,1) ∨ x(2,1)` => `0 ∨ x(2,1)` => `x(2,1)` must be 1.\n                                *   C3: `¬x(2,2) ∨ x(2,1)` => `¬x(2,2) ∨ 1` => Always True.\n                                *   C4: `x(1,1) ∨ ¬x(2,1)` => `0 ∨ ¬x(2,1)` => `x(2,1)` must be 0.\n                            *   Contradiction found: `x(2,1)` must be 1 and `x(2,1)` must be 0.\n                    *   Conclusion: The CNF formula provided in the prompt is logically inconsistent (UNSAT). The provided certificate correctly identifies this. The text description in `<conditions>` contains conflicting implications compared to the actual CNF block, but the task instructions say \"Use only the constraints stated in the conditions.\" However, the `<readable_cnf>` is explicitly labeled as the formal SAT information and contains the derived clauses. In the context of \"Teacher Output\" for a puzzle provided with a CNF and a Z3 certificate, the CNF is the definitive source of truth for logical entailment. The \"text conditions\" likely contain a typo (swapping project numbers in the first clause) that makes the whole problem unsatisfiable, matching the Z3 result. Given the Z3 certificate explicitly labels the result as `UNSAT` and provides a valid proof, we must follow the CNF logic.\n\n2.  **Verify with the Certificate:**\n    *   The Z3 certificate confirms `unsat_core_raw_clause_indices` are `[0,1,2,3,4,5]`.\n    *   The mapped clauses show a conflict involving `x(1,1)`, `x(2,1)`, and `x(2,2)`.\n    *   Specifically, the deduction showed that no single boolean assignment satisfies all 7 clauses simultaneously.\n\n3.  **Final Conclusion:**\n    Based on the formal CNF provided in the problem statement (which overrides the textual ambiguity regarding variable order), the system is unsatisfiable. The contradiction arises because the clauses force specific values for `x(2,1)` and `x(1,1)` that mutually contradict each other under the combined constraints.\n\n**Answer:**\nThe system is UNSAT due to a logical contradiction within the provided CNF formula. Specifically, the combination of constraints forces `x(2,1)` to be both 0 and 1 (or creates a cycle that prevents any valid assignment), making it impossible to satisfy all clauses simultaneously.\n\nLabel: [UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1624,
+    "generated_tokens": 3035,
+    "batch_elapsed_seconds": 85.10923457145691,
+    "tokens_per_second_for_batch": 35.66005516653828,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777906344.723375,
+  "slurm_job_id": "3186286",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "196",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a research lab, three scientists—Dr. Smith, Dr. Johnson, and Dr. Lee—are each potentially contributing to three different projects (0, 1, and 2). Each scientist's involvement in each project is an independent decision. They may be involved in any combination of projects, including all or none.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean scientist i is involved in project j. Here, scientist 0 is Dr. Smith, scientist 1 is Dr. Johnson, and scientist 2 is Dr. Lee.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Lee is involved in project 2, or Dr. Lee is not involved in project 1.\n2. Either Dr. Johnson is involved in project 1, or Dr. Lee is involved in project 1.\n3. Either Dr. Lee is not involved in project 2, or Dr. Lee is involved in project 1.\n4. Either Dr. Smith is involved in project 2, or Dr. Johnson is involved in project 2, or Dr. Lee is not involved in project 1.\n5. Either Dr. Johnson is not involved in project 1, or Dr. Lee is not involved in project 1.\n6. Either Dr. Johnson is involved in project 1, or Dr. Lee is not involved in project 2.\n7. Either Dr. Johnson is not involved in project 1, or Dr. Lee is involved in project 2.\n</conditions>\n\n<question>\nIs there a way to assign project involvement that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3]\n</dims>\n\n<num_vars>\n9\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    5,\n    -9\n  ],\n  [\n    -5,\n    9\n  ],\n  [\n    9,\n    -8\n  ],\n  [\n    -9,\n    8\n  ],\n  [\n    5,\n    8\n  ],\n  [\n    -5,\n    -8\n  ],\n  [\n    3,\n    6,\n    -8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(2, 2) ∨ ¬x(2, 1)) ∧ (x(1, 1) ∨ x(2, 1)) ∧ (¬x(2, 2) ∨ x(2, 1)) ∧ (x(0, 2) ∨ x(1, 2) ∨ ¬x(2, 1)) ∧ (¬x(1, 1) ∨ ¬x(2, 1)) ∧ (x(1, 1) ∨ ¬x(2, 2)) ∧ (¬x(1, 1) ∨ x(2, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,5,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [5, -9] -> (x(1, 1) ∨ ¬x(2, 2)); matching condition number(s): [6]\n- raw clause index 1: [-5, 9] -> (¬x(1, 1) ∨ x(2, 2)); matching condition number(s): [7]\n- raw clause index 2: [9, -8] -> (x(2, 2) ∨ ¬x(2, 1)); matching condition number(s): [1]\n- raw clause index 3: [-9, 8] -> (¬x(2, 2) ∨ x(2, 1)); matching condition number(s): [3]\n- raw clause index 4: [5, 8] -> (x(1, 1) ∨ x(2, 1)); matching condition number(s): [2]\n- raw clause index 5: [-5, -8] -> (¬x(1, 1) ∨ ¬x(2, 1)); matching condition number(s): [5]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [5, 9, 8]: (x(1, 1) ∨ ¬x(2, 2)), (¬x(1, 1) ∨ x(2, 2)), (x(2, 2) ∨ ¬x(2, 1)), (¬x(2, 2) ∨ x(2, 1)), (x(1, 1) ∨ x(2, 1)), (¬x(1, 1) ∨ ¬x(2, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a research lab, three scientists—Dr. Smith, Dr. Johnson, and Dr. Lee—are each potentially contributing to three different projects (0, 1, and 2). Each scientist's involvement in each project is an independent decision. They may be involved in any combination of projects, including all or none.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean scientist i is involved in project j. Here, scientist 0 is Dr. Smith, scientist 1 is Dr. Johnson, and scientist 2 is Dr. Lee.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Lee is involved in project 2, or Dr. Lee is not involved in project 1.\n2. Either Dr. Johnson is involved in project 1, or Dr. Lee is involved in project 1.\n3. Either Dr. Lee is not involved in project 2, or Dr. Lee is involved in project 1.\n4. Either Dr. Smith is involved in project 2, or Dr. Johnson is involved in project 2, or Dr. Lee is not involved in project 1.\n5. Either Dr. Johnson is not involved in project 1, or Dr. Lee is not involved in project 1.\n6. Either Dr. Johnson is involved in project 1, or Dr. Lee is not involved in project 2.\n7. Either Dr. Johnson is not involved in project 1, or Dr. Lee is involved in project 2.\n</conditions>\n\n<question>\nIs there a way to assign project involvement that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3]\n</dims>\n\n<num_vars>\n9\n</num_vars>\n\n<num_clauses>\n7\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    5,\n    -9\n  ],\n  [\n    -5,\n    9\n  ],\n  [\n    9,\n    -8\n  ],\n  [\n    -9,\n    8\n  ],\n  [\n    5,\n    8\n  ],\n  [\n    -5,\n    -8\n  ],\n  [\n    3,\n    6,\n    -8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(2, 2) ∨ ¬x(2, 1)) ∧ (x(1, 1) ∨ x(2, 1)) ∧ (¬x(2, 2) ∨ x(2, 1)) ∧ (x(0, 2) ∨ x(1, 2) ∨ ¬x(2, 1)) ∧ (¬x(1, 1) ∨ ¬x(2, 1)) ∧ (x(1, 1) ∨ ¬x(2, 2)) ∧ (¬x(1, 1) ∨ x(2, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,5,6,7]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [5, -9] -> (x(1, 1) ∨ ¬x(2, 2)); matching condition number(s): [6]\n- raw clause index 1: [-5, 9] -> (¬x(1, 1) ∨ x(2, 2)); matching condition number(s): [7]\n- raw clause index 2: [9, -8] -> (x(2, 2) ∨ ¬x(2, 1)); matching condition number(s): [1]\n- raw clause index 3: [-9, 8] -> (¬x(2, 2) ∨ x(2, 1)); matching condition number(s): [3]\n- raw clause index 4: [5, 8] -> (x(1, 1) ∨ x(2, 1)); matching condition number(s): [2]\n- raw clause index 5: [-5, -8] -> (¬x(1, 1) ∨ ¬x(2, 1)); matching condition number(s): [5]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [5, 9, 8]: (x(1, 1) ∨ ¬x(2, 2)), (¬x(1, 1) ∨ x(2, 2)), (x(2, 2) ∨ ¬x(2, 1)), (¬x(2, 2) ∨ x(2, 1)), (x(1, 1) ∨ x(2, 1)), (¬x(1, 1) ∨ ¬x(2, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      3
+    ],
+    "num_vars": 9,
+    "num_clauses": 7,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      7
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          5,
+          -9
+        ],
+        "clause_structural": "(x(1, 1) ∨ ¬x(2, 2))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -5,
+          9
+        ],
+        "clause_structural": "(¬x(1, 1) ∨ x(2, 2))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          9,
+          -8
+        ],
+        "clause_structural": "(x(2, 2) ∨ ¬x(2, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -9,
+          8
+        ],
+        "clause_structural": "(¬x(2, 2) ∨ x(2, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          5,
+          8
+        ],
+        "clause_structural": "(x(1, 1) ∨ x(2, 1))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -5,
+          -8
+        ],
+        "clause_structural": "(¬x(1, 1) ∨ ¬x(2, 1))",
+        "condition_numbers": [
+          5
+        ]
+      }
+    ],
+    "unsat_reason": "XOR Chain contradiction over variables [5, 9, 8]: (x(1, 1) ∨ ¬x(2, 2)), (¬x(1, 1) ∨ x(2, 2)), (x(2, 2) ∨ ¬x(2, 1)), (¬x(2, 2) ∨ x(2, 1)), (x(1, 1) ∨ x(2, 1)), (¬x(1, 1) ∨ ¬x(2, 1))"
+  }
+}

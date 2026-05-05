@@ -1,0 +1,166 @@
+{
+  "index": 1093,
+  "row_index_in_prompt_file": 1093,
+  "prompt_id": "satbench_01093",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analyze the Conditions and Variable Definitions**\n*   **Variables:** There are 3 scientists (Peterson $\\to$ 0, Singh $\\to$ 1, Kim $\\to$ 2) and 4 projects (Robotics $\\to$ 0, AI $\\to$ 1, Quantum $\\to$ 2, Materials $\\to$ 3, Bioengineering $\\to$ 4).\n*   **Constraints:** The problem asks if *all* scientific contributions can be achieved simultaneously. This implies we must check if there exists an assignment of truth values to specific variables ($x(i, j, k)$) that satisfies all 8 logical conditions.\n*   **Interpretation of \"Achieved\":** In the context of SAT problems generated from logical puzzles like this, \"achieved\" typically implies that the variable representing the contribution exists (True) or the negation of the non-contributing condition exists (False), effectively forcing a specific relationship between the variables. However, looking closely at the provided CNF and the Z3 certificate, the \"conditions\" listed in the prompt text are actually the *negations* of the terms appearing in the CNF clauses (e.g., \"Either A or B\" becomes $(\\neg A \\lor B)$). If a condition says \"Either A or B\", then satisfying the condition requires either A is true OR B is true. If the system is UNSAT, it means the set of conditions (interpreted as OR statements) is contradictory.\n\n**2. Analyze the CNF Formula and Certificate**\nThe `readable_cnf` block provides the explicit clauses derived from the conditions:\n1.  `(¬x(1, 1, 0) ∨ x(1, 2, 0))` $\\leftarrow$ Condition 1 (Singh not AI planning $\\lor$ Singh Quantum planning)\n2.  `(¬x(1, 2, 0) ∨ x(2, 4, 0))` $\\leftarrow$ Condition 2 (Singh not Quantum planning $\\lor$ Kim Bioengineering planning)\n3.  `(¬x(2, 4, 1) ∨ x(2, 1, 1))` $\\leftarrow$ Condition 3 (Kim not Bioengineering exec $\\lor$ Kim AI exec)\n4.  `(¬x(0, 0, 0) ∨ x(1, 1, 0))` $\\leftarrow$ Condition 4 (Peterson not Robotics planning $\\lor$ Singh AI planning)\n5.  `(¬x(2, 4, 0) ∨ ¬x(1, 3, 1))` $\\leftarrow$ Condition 5 (Kim not Bioengineering planning $\\lor$ Singh not Materials science exec)\n6.  `(x(1, 3, 1))` $\\leftarrow$ Condition 6 (Singh MUST contribute to Materials science exec)\n7.  `(¬x(1, 3, 1) ∨ x(2, 4, 1))` $\\leftarrow$ Condition 7 (Singh not Materials exec $\\lor$ Kim Bioengineering exec)\n8.  `(¬x(2, 1, 1) ∨ x(0, 0, 0))` $\\leftarrow$ Condition 8 (Kim not AI exec $\\lor$ Peterson Robotics planning)\n\nWait, let's re-read the `readable_cnf` mapping carefully against the prompt's `conditions` text.\nThe prompt lists 8 conditions. The `readable_cnf` has 8 clauses.\nLet's look at the `unsat_core_clauses` mapping in the certificate:\n*   Clause 0 matches Condition 7.\n*   Clause 1 matches Condition 3.\n*   Clause 2 matches Condition 8.\n*   Clause 3 matches Condition 4.\n*   Clause 4 matches Condition 1.\n*   Clause 5 matches Condition 2.\n*   Clause 6 matches Condition 5.\n*   Clause 7 matches Condition 6.\n\nSo the CNF encodes the conditions directly as disjunctions of literals.\nCondition 6 states: `x(1, 3, 1)` (Singh contributes to Materials Science during Execution). This is a positive clause.\nConditions 1 through 5 contain \"Either... or...\" structures, which translate to clauses starting with a negated literal (if the first part of the \"or\" is false, the second must be true).\n\n**3. Logical Deduction (The Cycle Conflict)**\nLet's trace the dependencies:\n*   **From Condition 6:** We have $x(1, 3, 1)$ must be **True**. (Clause 7 in the certificate).\n*   **From Condition 7:** `(¬x(1, 3, 1) ∨ x(2, 4, 1))`. Since $x(1, 3, 1)$ is True, the clause is satisfied regardless of $x(2, 4, 1)$. This creates no immediate contradiction.\n*   **From Condition 5:** `(¬x(2, 4, 0) ∨ ¬x(1, 3, 1))`. Since $x(1, 3, 1)$ is True, the term $¬x(1, 3, 1)$ is False. Therefore, for the whole clause to be true, $¬x(2, 4, 0)$ must be True, meaning $x(2, 4, 0)$ must be **False**. (Kim does NOT contribute to Bioengineering during Planning).\n*   **From Condition 4:** `(¬x(0, 0, 0) ∨ x(1, 1, 0))`. This doesn't force a value yet.\n*   **From Condition 3:** `(¬x(2, 4, 1) ∨ x(2, 1, 1))`. This relates Kim's Bioengineering Planning vs AI Execution.\n*   **From Condition 2:** `(¬x(1, 2, 0) ∨ x(2, 4, 0))`. From our deduction above, $x(2, 4, 0)$ is False. Therefore, $¬x(1, 2, 0)$ must be True. This means **$x(1, 2, 0)$ is False**. (Singh does NOT contribute to Quantum Computing during Planning).\n*   **From Condition 1:** `(¬x(1, 1, 0) ∨ x(1, 2, 0))`. We found $x(1, 2, 0)$ is False. Therefore, $¬x(1, 1, 0)$ must be True. This means **$x(1, 1, 0)$ is False**. (Dr. Singh does NOT contribute to AI during Planning).\n\nNow let's look at **Condition 8**: `(¬x(2, 1, 1) ∨ x(0, 0, 0))`. This says Kim does not contribute to AI during execution OR Peterson contributes to Robotics during planning.\nAnd **Condition 3** again: `(¬x(2, 4, 1) ∨ x(2, 1, 1))`. This says Kim does not contribute to Bioengineering during planning OR Kim contributes to AI during execution.\n\nLet's look closer at the cycle involving Variables (2, 4, 1), (2, 1, 1), (0, 0, 0).\nWe established $x(1, 3, 1)$ is True.\nLet's re-examine the chain from Condition 5 and Condition 7.\nCondition 7: $x(1, 3, 1) \\implies x(2, 4, 1)$. Wait, earlier I said $x(2, 4, 1)$ is free because Condition 7 is satisfied. But let's check Condition 6 again.\nCondition 6 says `x(1, 3, 1)` is TRUE.\nClause 7 (from Condition 5? No, Clause 6 is Condition 6).\nLet's re-map the certificate clauses to the prompt's numbered conditions carefully.\n\n*   **Prompt Cond 6:** `x(1, 3, 1)` (Singh -> Materials Exec).\n    *   Corresponding Clause in CNF: `(x(1, 3, 1))` (Index 7 in `readable_cnf`, Index 6 in `unsat_core_clauses`).\n    *   Constraint: **Must be True.**\n\n*   **Prompt Cond 5:** `¬x(2, 4, 0) ∨ ¬x(1, 3, 1)`.\n    *   Corresponding Clause in CNF: `(¬x(2, 4, 0) ∨ ¬x(1, 3, 1))` (Index 5 in `readable_cnf`, Index 6 in `unsat_core_clauses`).\n    *   Logic: Since $x(1, 3, 1)$ is True (from Cond 6), the term $¬x(1, 3, 1)$ is FALSE.\n    *   Implication: We **MUST** have $¬x(2, 4, 0)$ be True. So $x(2, 4, 0)$ is **FALSE**. (Kim does not plan Bioengineering).\n\n*   **Prompt Cond 7:** `¬x(1, 3, 1) ∨ x(2, 4, 1)`.\n    *   Corresponding Clause: `(¬x(1, 3, 1) ∨ x(2, 4, 1))` (Index 6).\n    *   Logic: Since $x(1, 3, 1)$ is True, the term $¬x(1, 3, 1)$ is FALSE.\n    *   Implication: We **MUST** have $x(2, 4, 1)$ be True. So Kim plans Quantum Computing (Project 2, Stage 1).\n\n*   **Prompt Cond 3:** `¬x(2, 4, 1) ∨ x(2, 1, 1)`.\n    *   Corresponding Clause: `(¬x(2, 4, 1) ∨ x(2, 1, 1))` (Index 1).\n    *   Logic: We just deduced $x(2, 4, 1)$ is **True**.\n    *   Implication: The term $¬x(2, 4, 1)$ is FALSE.\n    *   Implication: We **MUST** have $x(2, 1, 1)$ be **True**. So Kim contributes to AI during Execution.\n\n*   **Prompt Cond 4:** `¬x(0, 0, 0) ∨ x(1, 1, 0)`.\n    *   Corresponding Clause: `(¬x(0, 0, 0) ∨ x(1, 1, 0))` (Index 3).\n    *   Logic: This clause is independent of the previous deductions so far regarding specific variables, but it links $x(0,0,0)$ and $x(1,1,0)$.\n\n*   **Prompt Cond 1:** `¬x(1, 1, 0) ∨ x(1, 2, 0)`.\n    *   Corresponding Clause: `(¬x(1, 1, 0) ∨ x(1, 2, 0))` (Index 0).\n    *   Logic: We need to check if $x(1, 1, 0)$ is constrained.\n    *   From Cond 4, if $x(0, 0, 0)$ is True, $x(1, 1, 0)$ could be anything? No, Clause 4 says if $x(0,0,0)$ is False, $x(1,1,0)$ must be True.\n    *   Let's check Cond 5 again. Cond 5 involves $x(1, 3, 1)$ (which is True). So $x(2, 4, 0)$ is False.\n    *   Let's check Cond 2: `¬x(1, 2, 0) ∨ x(2, 4, 0)`. Since $x(2, 4, 0)$ is False, $x(1, 2, 0)$ must be **False**.\n    *   Now back to Cond 1: `¬x(1, 1, 0) ∨ x(1, 2, 0)`. Since $x(1, 2, 0)$ is False, $x(1, 1, 0)$ must be **False**.\n\n*   **Prompt Cond 8:** `¬x(2, 1, 1) ∨ x(0, 0, 0)`.\n    *   Corresponding Clause: `(¬x(2, 1, 1) ∨ x(0, 0, 0))` (Index 2).\n    *   Logic: We deduced $x(2, 1, 1)$ is **True**.\n    *   Implication: The term $¬x(2, 1, 1)$ is FALSE.\n    *   Implication: We **MUST** have $x(0, 0, 0)$ be **True**. (Peterson contributes to Robotics during Planning).\n\n**Consolidating the Forced Values:**\n1.  **$x(1, 3, 1)$**: True (Cond 6).\n2.  **$x(2, 4, 0)$**: False (Derived from Cond 5 + Cond 6).\n3.  **$x(2, 4, 1)$**: True (Derived from Cond 7 + Cond 6).\n4.  **$x(2, 1, 1)$**: True (Derived from Cond 3 + Cond 7).\n5.  **$x(1, 2, 0)$**: False (Derived from Cond 2 + Cond 7).\n6.  **$x(1, 1, 0)$**: False (Derived from Cond 1 + Cond 7).\n7.  **$x(0, 0, 0)$**: True (Derived from Cond 8 + Cond 7).\n\n**Checking for Contradictions:**\nLet's verify if these assignments satisfy ALL conditions.\n*   **C1:** `¬x(1, 1, 0) ∨ x(1, 2, 0)` $\\to$ `T ∨ F` $\\to$ **T**.\n*   **C2:** `¬x(1, 2, 0) ∨ x(2, 4, 0)` $\\to$ `T ∨ F` $\\to$ **T**.\n*   **C3:** `¬x(2, 4, 1) ∨ x(2, 1, 1)` $\\to$ `F ∨ T` $\\to$ **T**.\n*   **C4:** `¬x(0, 0, 0) ∨ x(1, 1, 0)` $\\to$ `F ∨ F` $\\to$ **F**.\n    *   Wait. Let's re-evaluate C4.\n    *   Clause C4 is `(¬x(0, 0, 0) ∨ x(1, 1, 0))`.\n    *   My derived values: $x(0, 0, 0) = T$, $x(1, 1, 0) = F$.\n    *   $¬T = F$, $F = F$.\n    *   Result: $F \\lor F = F$.\n    *   **Contradiction Found!**\n\nLet's double check the derivation of $x(0, 0, 0)$.\n*   Cond 8: `¬x(2, 1, 1) ∨ x(0, 0, 0)`.\n*   Derived $x(2, 1, 1) = T$ (from C3 + C7).\n*   Therefore $¬x(2, 1, 1) = F$.\n*   For C8 to be True, $x(0, 0, 0)$ MUST be True.\n*   So $x(0, 0, 0) = T$ is forced.\n\nLet's double check the derivation of $x(1, 1, 0)$.\n*   C1: `¬x(1, 1, 0) ∨ x(1, 2, 0)`.\n*   C2: `¬x(1, 2, 0) ∨ x(2, 4, 0)`.\n*   Derived $x(2, 4, 0) = F$ (from C5 + C6).\n*   Therefore $¬x(1, 2, 0) = T \\implies x(1, 2, 0) = F$.\n*   Back to C1: `¬x(1, 1, 0) ∨ F`.\n*   Therefore $x(1, 1, 0)$ MUST be False.\n*   So $x(1, 1, 0) = F$ is forced.\n\nBack to C4: `¬x(0, 0, 0) ∨ x(1, 1, 0)`.\n*   We have $x(0, 0, 0) = T$.\n*   We have $x(1, 1, 0) = F$.\n*   Clause evaluates to `¬T ∨ F` = `F ∨ F` = **F**.\n*   **UNSAT confirmed.**\n\n**Reasoning Summary:**\nThe system is unsatisfiable due to a logical cycle (a chain of implications) that forces conflicting truth values on the boolean variables. Specifically:\n1.  The requirement that \"Dr. Kim does not contribute to bioengineering during planning\" (derived from Cond 5 and 6) conflicts with the requirement that \"Dr. Kim contributes to AI during execution\" (derived from Cond 3 and 7).\n2.  Alternatively viewed: The chain of dependencies `(¬A ∨ B) → (¬B ∨ C) → ...` leads to a situation where one literal is forced to be True while another required by a different path must be False.\n3.  The specific contradiction lies in the interaction between **Condition 3** (Kim/Bioexec vs Kim/AIexec), **Condition 7** (Singh/MatExec vs Kim/AIexec), **Condition 4** (Pet/Robo vs Singh/AI), **Condition 1** (Singh/AIplan vs Singh/QPlan), and **Condition 8** (Kim/AIexec vs Pet/Robo).\n    *   Let's re-verify the exact path.\n    *   $x(1,3,1)=T$ (Cond 6).\n    *   $x(2,4,1)=T$ (Cond 7, since $¬x(1,3,1)$ is false).\n    *   $x(2,1,1)=T$ (Cond 3, since $¬x(2,4,1)$ is false).\n    *   $x(0,0,0)=T$ (Cond 8, since $¬x(2,1,1)$ is false).\n    *   $x(1,1,0)=F$ (Cond 1, since $x(1,2,0)=F$).\n    *   $x(1,2,0)=F$ (Cond 2, since $x(2,4,0)=F$).\n    *   $x(2,4,0)=F$ (Cond 5, since $x(1,3,1)=T$).\n    *   Check **Condition 4**: `¬x(0,0,0) ∨ x(1,1,0)`. With $x(0,0,0)=T$ and $x(1,1,0)=F$, the clause is `(F ∨ F)` = **False**.\n    *   This contradicts the requirement that Condition 4 must be True.\n    *   Thus, the puzzle is **UNSAT**.\n\nThe certificate confirms this by listing all 8 clauses and marking them as unsatisfiable (the `readable_cnf` contains the negated clauses, and the Z3 certificate identifies all of them as contributing to the unsatisfiability).\n\nFinal Answer:\nThe system is **UNSAT**.\nThe contradiction arises because the logical chain of implications forces the truth value of variable $x(0, 0, 0)$ to be True (based on Condition 8 and the chain from Conditions 3, 7, and 6), whereas Condition 4 requires the conjunction of $\\neg x(0, 0, 0)$ and $x(1, 1, 0)$ to be True. Since we derived $x(0, 0, 0)$ is True, the term $\\neg x(0, 0, 0)$ is False. Consequently, for Condition 4 to hold, $x(1, 1, 0)$ must also be True. However, the chain from Conditions 1, 2, and 7 forces $x(1, 1, 0)$ to be False (because $x(1, 2, 0)$ is False, and $x(1, 2, 0)$ is False because $x(2, 4, 0)$ is False, which is forced by Condition 5 and 6). Therefore, $x(1, 1, 0)$ must be both True and False, which is impossible.\n\nLabel: UNSAT",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1925,
+    "generated_tokens": 4875,
+    "batch_elapsed_seconds": 129.65451097488403,
+    "tokens_per_second_for_batch": 37.599925859458594,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777854032.9786642,
+  "slurm_job_id": "3183050",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "109",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a futuristic research lab, three scientists—Dr. Peterson, Dr. Singh, and Dr. Kim—are working on various stages (0 = planning, 1 = execution) of different experimental projects (0 = robotics, 1 = AI, 2 = quantum computing, 3 = materials science, 4 = bioengineering). Each scientific breakthrough relies on the independent success of a scientist at a certain stage and project.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean scientist i successfully contributes to project j at stage k. Here, scientist 0 is Dr. Peterson, scientist 1 is Dr. Singh, and scientist 2 is Dr. Kim.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Singh does not contribute to AI during planning, or Dr. Singh contributes to quantum computing during planning.\n2. Either Dr. Singh does not contribute to quantum computing during planning, or Dr. Kim contributes to bioengineering during planning.\n3. Either Dr. Kim does not contribute to bioengineering during execution, or Dr. Kim contributes to AI during execution.\n4. Either Dr. Peterson does not contribute to robotics during planning, or Dr. Singh contributes to AI during planning.\n5. Either Dr. Kim does not contribute to bioengineering during planning, or Dr. Singh does not contribute to materials science during execution.\n6. Dr. Singh contributes to materials science during execution.\n7. Either Dr. Singh does not contribute to materials science during execution, or Dr. Kim contributes to bioengineering during execution.\n8. Either Dr. Kim does not contribute to AI during execution, or Dr. Peterson contributes to robotics during planning.\n</conditions>\n\n<question>\nCan all these scientific contributions be achieved simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5,2]\n</dims>\n\n<num_vars>\n30\n</num_vars>\n\n<num_clauses>\n8\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -18,\n    30\n  ],\n  [\n    -30,\n    24\n  ],\n  [\n    -24,\n    1\n  ],\n  [\n    -1,\n    13\n  ],\n  [\n    -13,\n    15\n  ],\n  [\n    -15,\n    29\n  ],\n  [\n    -29,\n    -18\n  ],\n  [\n    18\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 1, 0) ∨ x(1, 2, 0)) ∧ (¬x(1, 2, 0) ∨ x(2, 4, 0)) ∧ (¬x(2, 4, 1) ∨ x(2, 1, 1)) ∧ (¬x(0, 0, 0) ∨ x(1, 1, 0)) ∧ (¬x(2, 4, 0) ∨ ¬x(1, 3, 1)) ∧ (x(1, 3, 1)) ∧ (¬x(1, 3, 1) ∨ x(2, 4, 1)) ∧ (¬x(2, 1, 1) ∨ x(0, 0, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-18, 30] -> (¬x(1, 3, 1) ∨ x(2, 4, 1)); matching condition number(s): [7]\n- raw clause index 1: [-30, 24] -> (¬x(2, 4, 1) ∨ x(2, 1, 1)); matching condition number(s): [3]\n- raw clause index 2: [-24, 1] -> (¬x(2, 1, 1) ∨ x(0, 0, 0)); matching condition number(s): [8]\n- raw clause index 3: [-1, 13] -> (¬x(0, 0, 0) ∨ x(1, 1, 0)); matching condition number(s): [4]\n- raw clause index 4: [-13, 15] -> (¬x(1, 1, 0) ∨ x(1, 2, 0)); matching condition number(s): [1]\n- raw clause index 5: [-15, 29] -> (¬x(1, 2, 0) ∨ x(2, 4, 0)); matching condition number(s): [2]\n- raw clause index 6: [-29, -18] -> (¬x(2, 4, 0) ∨ ¬x(1, 3, 1)); matching condition number(s): [5]\n- raw clause index 7: [18] -> (x(1, 3, 1)); matching condition number(s): [6]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(1, 3, 1) ∨ x(2, 4, 1)), (¬x(2, 4, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(2, 4, 0)), (¬x(2, 4, 0) ∨ ¬x(1, 3, 1)), (x(1, 3, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a futuristic research lab, three scientists—Dr. Peterson, Dr. Singh, and Dr. Kim—are working on various stages (0 = planning, 1 = execution) of different experimental projects (0 = robotics, 1 = AI, 2 = quantum computing, 3 = materials science, 4 = bioengineering). Each scientific breakthrough relies on the independent success of a scientist at a certain stage and project.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean scientist i successfully contributes to project j at stage k. Here, scientist 0 is Dr. Peterson, scientist 1 is Dr. Singh, and scientist 2 is Dr. Kim.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Singh does not contribute to AI during planning, or Dr. Singh contributes to quantum computing during planning.\n2. Either Dr. Singh does not contribute to quantum computing during planning, or Dr. Kim contributes to bioengineering during planning.\n3. Either Dr. Kim does not contribute to bioengineering during execution, or Dr. Kim contributes to AI during execution.\n4. Either Dr. Peterson does not contribute to robotics during planning, or Dr. Singh contributes to AI during planning.\n5. Either Dr. Kim does not contribute to bioengineering during planning, or Dr. Singh does not contribute to materials science during execution.\n6. Dr. Singh contributes to materials science during execution.\n7. Either Dr. Singh does not contribute to materials science during execution, or Dr. Kim contributes to bioengineering during execution.\n8. Either Dr. Kim does not contribute to AI during execution, or Dr. Peterson contributes to robotics during planning.\n</conditions>\n\n<question>\nCan all these scientific contributions be achieved simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5,2]\n</dims>\n\n<num_vars>\n30\n</num_vars>\n\n<num_clauses>\n8\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -18,\n    30\n  ],\n  [\n    -30,\n    24\n  ],\n  [\n    -24,\n    1\n  ],\n  [\n    -1,\n    13\n  ],\n  [\n    -13,\n    15\n  ],\n  [\n    -15,\n    29\n  ],\n  [\n    -29,\n    -18\n  ],\n  [\n    18\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 1, 0) ∨ x(1, 2, 0)) ∧ (¬x(1, 2, 0) ∨ x(2, 4, 0)) ∧ (¬x(2, 4, 1) ∨ x(2, 1, 1)) ∧ (¬x(0, 0, 0) ∨ x(1, 1, 0)) ∧ (¬x(2, 4, 0) ∨ ¬x(1, 3, 1)) ∧ (x(1, 3, 1)) ∧ (¬x(1, 3, 1) ∨ x(2, 4, 1)) ∧ (¬x(2, 1, 1) ∨ x(0, 0, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-18, 30] -> (¬x(1, 3, 1) ∨ x(2, 4, 1)); matching condition number(s): [7]\n- raw clause index 1: [-30, 24] -> (¬x(2, 4, 1) ∨ x(2, 1, 1)); matching condition number(s): [3]\n- raw clause index 2: [-24, 1] -> (¬x(2, 1, 1) ∨ x(0, 0, 0)); matching condition number(s): [8]\n- raw clause index 3: [-1, 13] -> (¬x(0, 0, 0) ∨ x(1, 1, 0)); matching condition number(s): [4]\n- raw clause index 4: [-13, 15] -> (¬x(1, 1, 0) ∨ x(1, 2, 0)); matching condition number(s): [1]\n- raw clause index 5: [-15, 29] -> (¬x(1, 2, 0) ∨ x(2, 4, 0)); matching condition number(s): [2]\n- raw clause index 6: [-29, -18] -> (¬x(2, 4, 0) ∨ ¬x(1, 3, 1)); matching condition number(s): [5]\n- raw clause index 7: [18] -> (x(1, 3, 1)); matching condition number(s): [6]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(1, 3, 1) ∨ x(2, 4, 1)), (¬x(2, 4, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(2, 4, 0)), (¬x(2, 4, 0) ∨ ¬x(1, 3, 1)), (x(1, 3, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      5,
+      2
+    ],
+    "num_vars": 30,
+    "num_clauses": 8,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          -18,
+          30
+        ],
+        "clause_structural": "(¬x(1, 3, 1) ∨ x(2, 4, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -30,
+          24
+        ],
+        "clause_structural": "(¬x(2, 4, 1) ∨ x(2, 1, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -24,
+          1
+        ],
+        "clause_structural": "(¬x(2, 1, 1) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -1,
+          13
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(1, 1, 0))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -13,
+          15
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(1, 2, 0))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -15,
+          29
+        ],
+        "clause_structural": "(¬x(1, 2, 0) ∨ x(2, 4, 0))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -29,
+          -18
+        ],
+        "clause_structural": "(¬x(2, 4, 0) ∨ ¬x(1, 3, 1))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          18
+        ],
+        "clause_structural": "(x(1, 3, 1))",
+        "condition_numbers": [
+          6
+        ]
+      }
+    ],
+    "unsat_reason": "Cycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(1, 3, 1) ∨ x(2, 4, 1)), (¬x(2, 4, 1) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(1, 2, 0)), (¬x(1, 2, 0) ∨ x(2, 4, 0)), (¬x(2, 4, 0) ∨ ¬x(1, 3, 1)), (x(1, 3, 1))"
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "index": 1317,
+  "row_index_in_prompt_file": 1317,
+  "prompt_id": "satbench_01317",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "**Label:** [UNSAT]\n\n### Reasoning\n\nTo determine if the conditions are satisfiable, we must analyze the logical constraints provided in the `readable_cnf` and the unsat core analysis.\n\n1.  **Analyze the Unsat Core:**\n    The Z3 solver explicitly identifies the puzzle as UNSAT (Satisfiability False). The `unsat_core_raw_clause_indices` are `[0, 11, 12, 13, 14, 15]`. These correspond to specific clauses in the CNF formula. The `unsat_core_clauses` section details the contradictions found:\n    *   **Clause 11 (Index 11):** `(¬x(2, 1, 1))`. This translates to \"Emily does NOT track animal behavior 1 in habitat 1\" is false, implying **x(2, 1, 1) must be True** (Emily tracks behavior 1 in habitat 1).\n    *   **Clause 12 (Index 12):** `(-10)` corresponds to `¬x(0, 4, 1)`. In the CNF context, this appears as a negative literal in a clause like `(x(...) ∨ x(...) ∨ ¬x(0, 4, 1))`. For the clause to be satisfied, the negation term must be false, forcing **x(0, 4, 1) = True**.\n    *   **Clause 13 (Index 13):** `(-17)` corresponds to `¬x(1, 3, 0)`. Similarly, this forces **x(1, 3, 0) = True** (Sarah tracks behavior 3 in habitat 0).\n    *   **Clause 14 (Index 14):** `(-22)` corresponds to `¬x(2, 0, 1)`, forcing **x(2, 0, 1) = True** (Emily tracks behavior 0 in habitat 1).\n    *   **Clause 15 (Index 15):** `(-30)` corresponds to `¬x(2, 4, 1)`, forcing **x(2, 4, 1) = True** (Emily tracks behavior 4 in habitat 1).\n\n2.  **Identify the Contradiction:**\n    Now we look at the implications of these forced assignments on Clause 0 (which corresponds to the unsatisfiability proof for the set of variables involved in the core conflict).\n    *   From Clause 11, we have established that `x(2, 1, 1)` must be True.\n    *   From Clause 14, we established that `x(2, 0, 1)` must be True (Wait, let's re-map carefully based on the provided text mapping).\n    \n    Let's re-evaluate the mapping from the `unsat_core_clauses` text provided in the prompt against the indices:\n    *   Index 11 maps to `[-24]`. Clause 24 in `clauses_dimacs` is `[-24]`. Wait, the text says `raw clause index 11: [-24]`. The variable list has 30 variables. Let's look at the actual CNF structure.\n    The `readable_cnf` lists clauses separated by `∧`.\n    Clause 1: `(¬x(2, 1, 1))` -> `x(2,1,1)` is FALSE.\n    Clause 2: `(¬x(2, 1, 1) ∨ ¬x(1, 3, 0))`\n    ...\n    Clause 6: `(x(0, 1, 1) ∨ x(2, 2, 0) ∨ ¬x(1, 4, 0))`\n    ...\n    Clause 11: `(x(0, 1, 1) ∨ x(2, 2, 0) ∨ ¬x(1, 4, 0))` -- Wait, looking at the raw readable_cnf text provided:\n    Line 11 in readable_cnf is: `(x(0, 1, 1) ∨ x(2, 2, 0) ∨ ¬x(1, 4, 0))`. This doesn't seem to match the `unsat_core_clauses` description directly unless the `readable_cnf` text provided in the prompt is a *subset* or the indices refer to the *original* 20 clauses.\n    \n    Let's rely strictly on the **Z3 Unsat Core Analysis** provided in the prompt, as that is the definitive ground truth for the solver's state.\n    \n    The Z3 analysis states:\n    *   `unsat_core_raw_clause_indices`: `[0, 11, 12, 13, 14, 15]`\n    *   `unsat_core_clauses`:\n        *   Index 0: `(x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1))`\n        *   Index 11: `(¬x(2, 1, 1))` -> Forces `x(2, 1, 1)` to be FALSE.\n        *   Index 12: `(¬x(0, 4, 1))` -> Forces `x(0, 4, 1)` to be FALSE.\n        *   Index 13: `(¬x(1, 3, 0))` -> Forces `x(1, 3, 0)` to be FALSE.\n        *   Index 14: `(¬x(2, 0, 1))` -> Forces `x(2, 0, 1)` to be FALSE.\n        *   Index 15: `(¬x(2, 4, 1))` -> Forces `x(2, 4, 1)` to be FALSE.\n\n    **The Conflict:**\n    *   Index 11 implies `¬x(2, 1, 1)` is true (so `x(2, 1, 1)` is false).\n    *   However, look at Clause 0: `(x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1))`.\n    *   Since `x(2, 1, 1)` is False (from Index 11), for Clause 0 to be satisfied, at least one of `{x(0, 4, 1), x(1, 3, 0), x(2, 0, 1), x(2, 4, 1)}` must be True.\n    \n    Now check Indices 12, 13, 14, 15:\n    *   Index 12 (`¬x(0, 4, 1)`): Implies `x(0, 4, 1)` is **False**.\n    *   Index 13 (`¬x(1, 3, 0)`): Implies `x(1, 3, 0)` is **False**.\n    *   Index 14 (`¬x(2, 0, 1)`): Implies `x(2, 0, 1)` is **False**.\n    *   Index 15 (`¬x(2, 4, 1)`): Implies `x(2, 4, 1)` is **False**.\n\n    So, the remaining options in Clause 0 are `{x(0, 4, 1), x(1, 3, 0), x(2, 0, 1), x(2, 4, 1)}`.\n    But Indices 12, 13, 14, 15 explicitly force all of these to be **False**.\n    Therefore, Clause 0 becomes `False ∨ False ∨ False ∨ False ∨ False`, which evaluates to **False**.\n    \n    Since Clause 0 is false while other clauses (like 11, 12, etc.) are also required to be true (as they appear in the unsat core or are implied by the full set of conditions leading to this core), the entire system is inconsistent. Specifically, the unsat core derivation proves that the conjunction of the specific conditions listed in the `unsat_core_clauses` creates a direct logical contradiction where one variable must be true and another false simultaneously (or rather, the set of required literals in Clause 0 cannot be satisfied given the negations forced by indices 12-15).\n\n    The Z3 certificate confirms this by listing these clauses in the core. The fact that the solver reports `[FALSE]` for satisfiability means no assignment exists.\n\n### Final Answer\n\nThe system of conditions is **UNSAT**.\n\n**Explanation:**\nThe Z3 solver identifies a contradiction in the clause set. Specifically, the unsat core analysis reveals that several conditions (indices 11, 12, 13, 14, 15) force specific variable assignments to be False (e.g., `¬x(2, 1, 1)` implies `x(2, 1, 1)` is false; `¬x(0, 4, 1)` implies `x(0, 4, 1)` is false). However, Clause 0 (derived from condition 14 in the readable_cnf structure) requires the disjunction `(x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1))` to be true. Given that `x(2, 1, 1)`, `x(0, 4, 1)`, `x(1, 3, 0)`, and `x(2, 0, 1)` are all forced to be false by the explicit negative literals in the unsat core, the remaining term `x(2, 4, 1)` would also need to be true to satisfy Clause 0. However, Condition 17 explicitly states `¬x(2, 4, 1)` (Emily does not track behavior 4 in habitat 1), which contradicts the requirement derived from Clause 0. This direct logical incompatibility proves the formula is unsatisfiable.\n\n**Final Label:**\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 3005,
+    "generated_tokens": 2379,
+    "batch_elapsed_seconds": 65.54188966751099,
+    "tokens_per_second_for_batch": 36.29739716185306,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777875852.600381,
+  "slurm_job_id": "3184751",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "131",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a wildlife research study, three researchers—Tom, Sarah, and Emily—are observing various animal behaviors in different habitats. For each researcher, there are multiple animal behaviors to be tracked (such as feeding, mating, or migration) and multiple habitats in which these behaviors can be observed. Decisions on whether a specific behavior is observed by a researcher in a certain habitat are made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean researcher i tracks animal behavior j in habitat k. Here, researcher 0 is Tom, researcher 1 is Sarah, and researcher 2 is Emily.\n</variable_mapping>\n\n<conditions>\n1. Emily does not track animal behavior 1 in habitat 1.\n2. Either Emily does not track animal behavior 1 in habitat 1, or Sarah does not track animal behavior 3 in habitat 0.\n3. Either Emily does not track animal behavior 0 in habitat 1, or Emily does not track animal behavior 4 in habitat 1.\n4. Either Emily does not track animal behavior 1 in habitat 1, or Emily does not track animal behavior 0 in habitat 1.\n5. Either Tom tracks animal behavior 2 in habitat 1, or Emily tracks animal behavior 1 in habitat 0, or Sarah does not track animal behavior 1 in habitat 0.\n6. Either Tom does not track animal behavior 4 in habitat 1, or Emily does not track animal behavior 0 in habitat 1.\n7. Either Tom does not track animal behavior 4 in habitat 1, or Emily does not track animal behavior 4 in habitat 1.\n8. Emily does not track animal behavior 0 in habitat 1.\n9. Either Tom does not track animal behavior 4 in habitat 1, or Sarah does not track animal behavior 3 in habitat 0.\n10. Either Sarah does not track animal behavior 3 in habitat 0, or Emily does not track animal behavior 0 in habitat 1.\n11. Either Tom tracks animal behavior 1 in habitat 1, or Emily tracks animal behavior 2 in habitat 0, or Sarah does not track animal behavior 4 in habitat 0.\n12. Either Sarah does not track animal behavior 3 in habitat 0, or Emily does not track animal behavior 4 in habitat 1.\n13. Either Emily does not track animal behavior 1 in habitat 1, or Tom does not track animal behavior 4 in habitat 1.\n14. Either Emily tracks animal behavior 1 in habitat 1, or Tom tracks animal behavior 4 in habitat 1, or Sarah tracks animal behavior 3 in habitat 0, or Emily tracks animal behavior 0 in habitat 1, or Emily tracks animal behavior 4 in habitat 1.\n15. Either Emily does not track animal behavior 1 in habitat 1, or Emily does not track animal behavior 4 in habitat 1.\n16. Tom does not track animal behavior 4 in habitat 1.\n17. Emily does not track animal behavior 4 in habitat 1.\n18. Either Emily tracks animal behavior 3 in habitat 0, or Tom does not track animal behavior 0 in habitat 1, or Sarah does not track animal behavior 2 in habitat 1.\n19. Sarah does not track animal behavior 3 in habitat 0.\n20. Either Sarah tracks animal behavior 4 in habitat 1, or Tom does not track animal behavior 0 in habitat 1, or Emily does not track animal behavior 3 in habitat 1.\n</conditions>\n\n<question>\nIs there a way to assign values that makes these conditions work?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5,2]\n</dims>\n\n<num_vars>\n30\n</num_vars>\n\n<num_clauses>\n20\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    24,\n    10,\n    17,\n    22,\n    30\n  ],\n  [\n    -24,\n    -10\n  ],\n  [\n    -24,\n    -17\n  ],\n  [\n    -24,\n    -22\n  ],\n  [\n    -24,\n    -30\n  ],\n  [\n    -10,\n    -17\n  ],\n  [\n    -10,\n    -22\n  ],\n  [\n    -10,\n    -30\n  ],\n  [\n    -17,\n    -22\n  ],\n  [\n    -17,\n    -30\n  ],\n  [\n    -22,\n    -30\n  ],\n  [\n    -24\n  ],\n  [\n    -10\n  ],\n  [\n    -17\n  ],\n  [\n    -22\n  ],\n  [\n    -30\n  ],\n  [\n    4,\n    25,\n    -19\n  ],\n  [\n    20,\n    -2,\n    -28\n  ],\n  [\n    6,\n    23,\n    -13\n  ],\n  [\n    27,\n    -2,\n    -16\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(2, 1, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(1, 3, 0)) ∧ (¬x(2, 0, 1) ∨ ¬x(2, 4, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(2, 0, 1)) ∧ (x(0, 2, 1) ∨ x(2, 1, 0) ∨ ¬x(1, 1, 0)) ∧ (¬x(0, 4, 1) ∨ ¬x(2, 0, 1)) ∧ (¬x(0, 4, 1) ∨ ¬x(2, 4, 1)) ∧ (¬x(2, 0, 1)) ∧ (¬x(0, 4, 1) ∨ ¬x(1, 3, 0)) ∧ (¬x(1, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(0, 1, 1) ∨ x(2, 2, 0) ∨ ¬x(1, 4, 0)) ∧ (¬x(1, 3, 0) ∨ ¬x(2, 4, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(0, 4, 1)) ∧ (x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(2, 4, 1)) ∧ (¬x(0, 4, 1)) ∧ (¬x(2, 4, 1)) ∧ (x(2, 3, 0) ∨ ¬x(0, 0, 1) ∨ ¬x(1, 2, 1)) ∧ (¬x(1, 3, 0)) ∧ (x(1, 4, 1) ∨ ¬x(0, 0, 1) ∨ ¬x(2, 3, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,11,12,13,14,15]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,8,14,16,17,19]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [24, 10, 17, 22, 30] -> (x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1)); matching condition number(s): [14]\n- raw clause index 11: [-24] -> (¬x(2, 1, 1)); matching condition number(s): [1]\n- raw clause index 12: [-10] -> (¬x(0, 4, 1)); matching condition number(s): [16]\n- raw clause index 13: [-17] -> (¬x(1, 3, 0)); matching condition number(s): [19]\n- raw clause index 14: [-22] -> (¬x(2, 0, 1)); matching condition number(s): [8]\n- raw clause index 15: [-30] -> (¬x(2, 4, 1)); matching condition number(s): [17]\n</unsat_core_clauses>\n\n<unsat_reason>\nExactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1)), (¬x(2, 1, 1) ∨ ¬x(0, 4, 1)), (¬x(2, 1, 1) ∨ ¬x(1, 3, 0)), (¬x(2, 1, 1) ∨ ¬x(2, 0, 1)), (¬x(2, 1, 1) ∨ ¬x(2, 4, 1)), (¬x(0, 4, 1) ∨ ¬x(1, 3, 0)), (¬x(0, 4, 1) ∨ ¬x(2, 0, 1)), (¬x(0, 4, 1) ∨ ¬x(2, 4, 1)), (¬x(1, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(1, 3, 0) ∨ ¬x(2, 4, 1)), (¬x(2, 0, 1) ∨ ¬x(2, 4, 1)), (¬x(2, 1, 1)), (¬x(0, 4, 1)), (¬x(1, 3, 0)), (¬x(2, 0, 1)), (¬x(2, 4, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a wildlife research study, three researchers—Tom, Sarah, and Emily—are observing various animal behaviors in different habitats. For each researcher, there are multiple animal behaviors to be tracked (such as feeding, mating, or migration) and multiple habitats in which these behaviors can be observed. Decisions on whether a specific behavior is observed by a researcher in a certain habitat are made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean researcher i tracks animal behavior j in habitat k. Here, researcher 0 is Tom, researcher 1 is Sarah, and researcher 2 is Emily.\n</variable_mapping>\n\n<conditions>\n1. Emily does not track animal behavior 1 in habitat 1.\n2. Either Emily does not track animal behavior 1 in habitat 1, or Sarah does not track animal behavior 3 in habitat 0.\n3. Either Emily does not track animal behavior 0 in habitat 1, or Emily does not track animal behavior 4 in habitat 1.\n4. Either Emily does not track animal behavior 1 in habitat 1, or Emily does not track animal behavior 0 in habitat 1.\n5. Either Tom tracks animal behavior 2 in habitat 1, or Emily tracks animal behavior 1 in habitat 0, or Sarah does not track animal behavior 1 in habitat 0.\n6. Either Tom does not track animal behavior 4 in habitat 1, or Emily does not track animal behavior 0 in habitat 1.\n7. Either Tom does not track animal behavior 4 in habitat 1, or Emily does not track animal behavior 4 in habitat 1.\n8. Emily does not track animal behavior 0 in habitat 1.\n9. Either Tom does not track animal behavior 4 in habitat 1, or Sarah does not track animal behavior 3 in habitat 0.\n10. Either Sarah does not track animal behavior 3 in habitat 0, or Emily does not track animal behavior 0 in habitat 1.\n11. Either Tom tracks animal behavior 1 in habitat 1, or Emily tracks animal behavior 2 in habitat 0, or Sarah does not track animal behavior 4 in habitat 0.\n12. Either Sarah does not track animal behavior 3 in habitat 0, or Emily does not track animal behavior 4 in habitat 1.\n13. Either Emily does not track animal behavior 1 in habitat 1, or Tom does not track animal behavior 4 in habitat 1.\n14. Either Emily tracks animal behavior 1 in habitat 1, or Tom tracks animal behavior 4 in habitat 1, or Sarah tracks animal behavior 3 in habitat 0, or Emily tracks animal behavior 0 in habitat 1, or Emily tracks animal behavior 4 in habitat 1.\n15. Either Emily does not track animal behavior 1 in habitat 1, or Emily does not track animal behavior 4 in habitat 1.\n16. Tom does not track animal behavior 4 in habitat 1.\n17. Emily does not track animal behavior 4 in habitat 1.\n18. Either Emily tracks animal behavior 3 in habitat 0, or Tom does not track animal behavior 0 in habitat 1, or Sarah does not track animal behavior 2 in habitat 1.\n19. Sarah does not track animal behavior 3 in habitat 0.\n20. Either Sarah tracks animal behavior 4 in habitat 1, or Tom does not track animal behavior 0 in habitat 1, or Emily does not track animal behavior 3 in habitat 1.\n</conditions>\n\n<question>\nIs there a way to assign values that makes these conditions work?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5,2]\n</dims>\n\n<num_vars>\n30\n</num_vars>\n\n<num_clauses>\n20\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    24,\n    10,\n    17,\n    22,\n    30\n  ],\n  [\n    -24,\n    -10\n  ],\n  [\n    -24,\n    -17\n  ],\n  [\n    -24,\n    -22\n  ],\n  [\n    -24,\n    -30\n  ],\n  [\n    -10,\n    -17\n  ],\n  [\n    -10,\n    -22\n  ],\n  [\n    -10,\n    -30\n  ],\n  [\n    -17,\n    -22\n  ],\n  [\n    -17,\n    -30\n  ],\n  [\n    -22,\n    -30\n  ],\n  [\n    -24\n  ],\n  [\n    -10\n  ],\n  [\n    -17\n  ],\n  [\n    -22\n  ],\n  [\n    -30\n  ],\n  [\n    4,\n    25,\n    -19\n  ],\n  [\n    20,\n    -2,\n    -28\n  ],\n  [\n    6,\n    23,\n    -13\n  ],\n  [\n    27,\n    -2,\n    -16\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(2, 1, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(1, 3, 0)) ∧ (¬x(2, 0, 1) ∨ ¬x(2, 4, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(2, 0, 1)) ∧ (x(0, 2, 1) ∨ x(2, 1, 0) ∨ ¬x(1, 1, 0)) ∧ (¬x(0, 4, 1) ∨ ¬x(2, 0, 1)) ∧ (¬x(0, 4, 1) ∨ ¬x(2, 4, 1)) ∧ (¬x(2, 0, 1)) ∧ (¬x(0, 4, 1) ∨ ¬x(1, 3, 0)) ∧ (¬x(1, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(0, 1, 1) ∨ x(2, 2, 0) ∨ ¬x(1, 4, 0)) ∧ (¬x(1, 3, 0) ∨ ¬x(2, 4, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(0, 4, 1)) ∧ (x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1)) ∧ (¬x(2, 1, 1) ∨ ¬x(2, 4, 1)) ∧ (¬x(0, 4, 1)) ∧ (¬x(2, 4, 1)) ∧ (x(2, 3, 0) ∨ ¬x(0, 0, 1) ∨ ¬x(1, 2, 1)) ∧ (¬x(1, 3, 0)) ∧ (x(1, 4, 1) ∨ ¬x(0, 0, 1) ∨ ¬x(2, 3, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,11,12,13,14,15]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,8,14,16,17,19]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [24, 10, 17, 22, 30] -> (x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1)); matching condition number(s): [14]\n- raw clause index 11: [-24] -> (¬x(2, 1, 1)); matching condition number(s): [1]\n- raw clause index 12: [-10] -> (¬x(0, 4, 1)); matching condition number(s): [16]\n- raw clause index 13: [-17] -> (¬x(1, 3, 0)); matching condition number(s): [19]\n- raw clause index 14: [-22] -> (¬x(2, 0, 1)); matching condition number(s): [8]\n- raw clause index 15: [-30] -> (¬x(2, 4, 1)); matching condition number(s): [17]\n</unsat_core_clauses>\n\n<unsat_reason>\nExactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1)), (¬x(2, 1, 1) ∨ ¬x(0, 4, 1)), (¬x(2, 1, 1) ∨ ¬x(1, 3, 0)), (¬x(2, 1, 1) ∨ ¬x(2, 0, 1)), (¬x(2, 1, 1) ∨ ¬x(2, 4, 1)), (¬x(0, 4, 1) ∨ ¬x(1, 3, 0)), (¬x(0, 4, 1) ∨ ¬x(2, 0, 1)), (¬x(0, 4, 1) ∨ ¬x(2, 4, 1)), (¬x(1, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(1, 3, 0) ∨ ¬x(2, 4, 1)), (¬x(2, 0, 1) ∨ ¬x(2, 4, 1)), (¬x(2, 1, 1)), (¬x(0, 4, 1)), (¬x(1, 3, 0)), (¬x(2, 0, 1)), (¬x(2, 4, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      5,
+      2
+    ],
+    "num_vars": 30,
+    "num_clauses": 20,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "mapped_condition_numbers": [
+      1,
+      8,
+      14,
+      16,
+      17,
+      19
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          24,
+          10,
+          17,
+          22,
+          30
+        ],
+        "clause_structural": "(x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -24
+        ],
+        "clause_structural": "(¬x(2, 1, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          -10
+        ],
+        "clause_structural": "(¬x(0, 4, 1))",
+        "condition_numbers": [
+          16
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -17
+        ],
+        "clause_structural": "(¬x(1, 3, 0))",
+        "condition_numbers": [
+          19
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          -22
+        ],
+        "clause_structural": "(¬x(2, 0, 1))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -30
+        ],
+        "clause_structural": "(¬x(2, 4, 1))",
+        "condition_numbers": [
+          17
+        ]
+      }
+    ],
+    "unsat_reason": "Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(2, 1, 1) ∨ x(0, 4, 1) ∨ x(1, 3, 0) ∨ x(2, 0, 1) ∨ x(2, 4, 1)), (¬x(2, 1, 1) ∨ ¬x(0, 4, 1)), (¬x(2, 1, 1) ∨ ¬x(1, 3, 0)), (¬x(2, 1, 1) ∨ ¬x(2, 0, 1)), (¬x(2, 1, 1) ∨ ¬x(2, 4, 1)), (¬x(0, 4, 1) ∨ ¬x(1, 3, 0)), (¬x(0, 4, 1) ∨ ¬x(2, 0, 1)), (¬x(0, 4, 1) ∨ ¬x(2, 4, 1)), (¬x(1, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(1, 3, 0) ∨ ¬x(2, 4, 1)), (¬x(2, 0, 1) ∨ ¬x(2, 4, 1)), (¬x(2, 1, 1)), (¬x(0, 4, 1)), (¬x(1, 3, 0)), (¬x(2, 0, 1)), (¬x(2, 4, 1))"
+  }
+}

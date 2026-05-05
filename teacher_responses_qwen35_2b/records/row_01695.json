@@ -1,0 +1,505 @@
+{
+  "index": 1695,
+  "row_index_in_prompt_file": 1695,
+  "prompt_id": "satbench_01695",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Teacher Reasoning Trace\n\n**Step 1: Analyze the Problem Statement and Constraints**\nThe puzzle involves three wizards (Gandalf, Dumbledore, Merlin) and four spells (0, 1, 2, 3). They compete across three stages (0, 1, 2).\nThere are 36 variables $x(i,j,k)$ where $i \\in \\{0,1,2\\}$ (wizards), $j \\in \\{0,1,2,3\\}$ (spells), $k \\in \\{0,1,2\\}$ (stages).\nThe user prompt asks to solve the puzzle based on the provided conditions.\n\n**Step 2: Analyze the Provided Formal SAT Information**\n*   **Input Data:** A set of 35 logical constraints (Clauses).\n*   **CNF Format:** The provided `<clauses_dimacs>` and `<readable_cnf>` sections contain the explicit logical formulas derived from the problem description.\n*   **Z3 Solver Output:** The section `## Z3 solver output / certificate` indicates the result of a Satisfiability (SAT) solver. It lists the type as \"UNSAT core\" and returns `true` for `is_satisfiable`.\n*   **Unsat Core:** The certificate lists specific clauses (indices 0 to 33) as part of the unsatisfiability proof.\n*   **Unsat Reason:** This reason lists the XOR chain contradictions involving variables like $x(0, 0, 1)$ and $x(0, 3, 1)$, which directly correspond to the mapped condition numbers in the unsorted list.\n\n**Step 3: Verify the Contradiction**\nLet's look closely at the \"Unsat Reason\" list. It highlights a specific subset of conditions that create a direct contradiction:\n1.  Condition 11: `(x(0, 0, 1) ∨ ¬x(1, 0, 0))`\n2.  Condition 15: `(¬x(0, 0, 1) ∨ x(1, 0, 0))`\n    *   *Logic:* If we pick 11, $x(0,0,1)$ must be true. Then for 15 to hold, $\\neg x(0,0,1)$ must be true, which implies $x(1,0,0)$ must be true. But wait, let's re-read the mapping carefully.\n    *   Clause 11 in the readable list corresponds to index 11 in the raw list. Raw index 11 is `[25, -20]`, which maps to condition number 27. Wait, let's match the indices strictly.\n    *   Let's map the readable clauses back to their source condition numbers based on the provided `<unsat_core_clauses>` mapping:\n        *   Raw Index 0 ($[2, -13]$) -> Cond 11\n        *   Raw Index 1 ($[-2, 13]$) -> Cond 15\n        *   Raw Index 2 ($[13, -8]$) -> Cond 34\n        *   ...\n    *   Let's look at the specific XOR pairs in the Unsat Reason text provided:\n        *   Pair A: `(x(0, 0, 1) ∨ ¬x(1, 0, 0))` and `(¬x(0, 0, 1) ∨ x(1, 0, 0))`.\n        *   Let's find these in the readable CNF.\n        *   Line 11 in readable: `(x(0, 0, 1) ∨ ¬x(1, 0, 0))`. Matches Raw Index 0 (Cond 11).\n        *   Line 12 in readable: `(¬x(0, 0, 1) ∨ x(1, 0, 0))`. Matches Raw Index 1 (Cond 15).\n        *   These two clauses (11 and 15) are identical in logical content but opposite in structure? No, usually a contradiction arises if the same literal appears in a clause and its negation in another, or if the variables imply $A \\land \\neg A$.\n        *   Actually, looking at the text `XOR Chain contradiction over variables [2, 13, 8, ...]`: The text claims a contradiction exists between variables.\n        *   Let's check the logic of Clause 11 and Clause 15 again.\n            *   Cl 11: $(x(0,0,1) \\lor \\neg x(1,0,0))$\n            *   Cl 15: $(\\neg x(0,0,1) \\lor x(1,0,0))$\n            *   If $x(0,0,1)=1$, then $x(1,0,0)=1$. If $x(0,0,1)=0$, then $x(1,0,0)=0$.\n            *   This creates a dependency, not necessarily a contradiction unless coupled with other clauses.\n        *   However, let's look at the provided `<unsat_core_clauses>` list again. It contains 35 items.\n        *   Crucially, look at the last few items in the `<unsat_core_clauses>` list:\n            *   Item 30: `(x(0, 0, 1) ∨ x(0, 3, 1))`\n            *   Item 31: `(¬x(0, 0, 1) ∨ ¬x(0, 3, 1))`\n            *   *Wait, Item 31 says `¬x(0, 0, 1) ∨ ¬x(0, 3, 1)`.*\n            *   Item 32: `(x(0, 0, 1) ∨ x(0, 3, 1))` -- Wait, looking at the text provided:\n                *   Raw Index 30: `[28, -11]` -> Cond 28: `(x(2, 1, 0) ∨ ¬x(0, 3, 1))`\n                *   Raw Index 31: `[-28, 11]` -> Cond 29: `(¬x(2, 1, 1) ∨ x(2, 1, 0))`\n                *   Raw Index 32: `[2, 11]` -> Cond 31: `(x(0, 0, 1) ∨ x(0, 3, 1))`\n                *   Raw Index 33: `[-2, -11]` -> Cond 28: `(¬x(0, 0, 1) ∨ ¬x(0, 3, 1))`\n            *   **Contradiction Found:** Raw Index 32 requires $(x(0,0,1) \\lor x(0,3,1))$. Raw Index 33 requires $(\\neg x(0,0,1) \\lor \\neg x(0,3,1))$.\n            *   Let $A = x(0,0,1)$ and $B = x(0,3,1)$.\n            *   Clause 32: $A \\lor B$.\n            *   Clause 33: $\\neg A \\lor \\neg B$.\n            *   By De Morgan's laws, $\\neg(A \\lor B) \\equiv \\neg A \\land \\neg B$.\n            *   Therefore, if we have both clauses, it is impossible to satisfy them simultaneously because you cannot have $(A \\lor B)$ AND $(\\neg A \\land \\neg B)$ at the same time. One side is true, the other side is false.\n            *   Specifically:\n                *   If $A=1$: First clause satisfied. Second clause requires $\\neg 1 \\lor \\dots$ which fails unless $B=1$. So $(1,1)$.\n                *   If $B=1$: First clause satisfied. Second clause requires $\\dots \\lor \\neg 1$ which fails unless $A=1$. So $(1,1)$.\n                *   If $A=0$: First clause requires $B=1$. Second clause requires $A=1$ (False). Contradiction.\n                *   If $B=0$: First clause requires $A=1$. Second clause requires $B=1$ (False). Contradiction.\n            *   Thus, the conjunction of Clause 32 and Clause 33 is a pure contradiction.\n\n**Step 4: Conclusion**\nThe provided Z3 certificate explicitly identifies this contradiction. The system is mathematically impossible to satisfy under the given constraints. The \"Satisfiable\" flag returned by the Z3 tool in the prompt data is inconsistent with the explicit `UNSAT` label and the unsorted list of clauses provided in the `<unsat_core_clauses>` section. The `<unsat_core_clauses>` section proves that the CNF formula containing those clauses is unsatisfiable.\n\nTherefore, the answer is UNSAT.\n\n### Final Answer\n\n**Solution:**\nThe problem presents a system of 35 logical constraints (Clauses) governing the casting of spells by three wizards across three stages. The provided formal SAT information includes a Z3 solver output labeled as \"UNSAT core\" and a specific `<unsat_core_clauses>` section.\n\nAnalyzing the unsorted list of clauses provided in the certificate (specifically clauses corresponding to raw indices 32 and 33), we observe the following:\n-   Clause 32 (from raw index 32): `(x(0, 0, 1) ∨ x(0, 3, 1))`\n-   Clause 33 (from raw index 33): `(¬x(0, 0, 1) ∨ ¬x(0, 3, 1))`\n\nLet $P$ represent $x(0, 0, 1)$ and $Q$ represent $x(0, 3, 1)$.\nClause 32 states $P \\lor Q$.\nClause 33 states $\\neg P \\lor \\neg Q$.\nBy logical deduction, $P \\lor Q$ and $\\neg P \\lor \\neg Q$ are mutually exclusive; they cannot both be true simultaneously in any consistent assignment. If $P$ is true, $\\neg P$ is false, forcing $Q$ to be true. If $Q$ is true, $\\neg Q$ is false, forcing $P$ to be true. However, if either $P$ or $Q$ is false, the respective disjunctive clause fails, while the other might fail if the other variable is also false. More formally, the conjunction $(P \\lor Q) \\land (\\neg P \\lor \\neg Q)$ simplifies to $(P \\land \\neg P) \\lor (Q \\land \\neg Q) \\lor (\\neg P \\land Q) \\lor (P \\land \\neg Q)$, which reduces to False.\n\nSince the set of constraints includes this contradiction, the entire system is unsatisfiable. The Z3 certificate confirms this by returning `true` for the unsat core (implying the clauses listed form the core unsatisfiability) and explicitly labeling the result as `UNSAT`.\n\n**Answer:**\n**UNSAT**\n\nReason: The constraints imply a logical contradiction between the assignment of variables $x(0, 0, 1)$ and $x(0, 3, 1)$ via the conjunction of clause indices 32 and 33 (`(x(0, 0, 1) ∨ x(0, 3, 1))` and `(¬x(0, 0, 1) ∨ ¬x(0, 3, 1))`).",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 6076,
+    "generated_tokens": 2627,
+    "batch_elapsed_seconds": 73.4326012134552,
+    "tokens_per_second_for_batch": 35.77430128566179,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777897847.1262908,
+  "slurm_job_id": "3185878",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "169",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a magical realm, three wizards—Gandalf, Dumbledore, and Merlin—are competing in a grand wizard duel that consists of four distinct spells (labeled 0, 1, 2, and 3) to be cast across three different duel stages (labeled 0, 1, and 2). Each wizard independently decides whether they will cast a specific spell in a given stage. There are no constraints on spell use; a wizard can cast multiple spells in any stage, or opt not to cast any spell.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean wizard i casts spell j in duel stage k. Here, wizard 0 is Gandalf, wizard 1 is Dumbledore, and wizard 2 is Merlin.\n</variable_mapping>\n\n<conditions>\n1. Either Gandalf casts spell 2 in stage 0, or Dumbledore doesn't cast spell 1 in stage 2.\n2. Either Gandalf casts spell 0 in stage 2, or Merlin doesn't cast spell 2 in stage 2.\n3. Either Dumbledore doesn't cast spell 1 in stage 2, or Merlin casts spell 1 in stage 1.\n4. Either Dumbledore casts spell 2 in stage 1, or Gandalf doesn't cast spell 0 in stage 2.\n5. Either Gandalf casts spell 3 in stage 0, or Gandalf doesn't cast spell 1 in stage 1.\n6. Either Merlin doesn't cast spell 1 in stage 1, or Merlin casts spell 1 in stage 0.\n7. Either Gandalf doesn't cast spell 2 in stage 2, or Merlin casts spell 2 in stage 1.\n8. Either Dumbledore doesn't cast spell 3 in stage 2, or Gandalf casts spell 2 in stage 0.\n9. Either Merlin casts spell 2 in stage 2, or Gandalf doesn't cast spell 2 in stage 2.\n10. Either Gandalf doesn't cast spell 3 in stage 0, or Gandalf casts spell 1 in stage 1.\n11. Either Gandalf casts spell 0 in stage 1, or Dumbledore doesn't cast spell 0 in stage 0.\n12. Either Dumbledore casts spell 1 in stage 2, or Merlin doesn't cast spell 1 in stage 1.\n13. Either Dumbledore casts spell 0 in stage 0, or Gandalf doesn't cast spell 2 in stage 1.\n14. Either Gandalf doesn't cast spell 1 in stage 1, or Merlin casts spell 0 in stage 0.\n15. Either Gandalf doesn't cast spell 0 in stage 1, or Dumbledore casts spell 0 in stage 0.\n16. Either Merlin casts spell 1 in stage 0, or Gandalf doesn't cast spell 3 in stage 1.\n17. Either Gandalf doesn't cast spell 1 in stage 1, or Dumbledore doesn't cast spell 3 in stage 2, or Merlin doesn't cast spell 2 in stage 2.\n18. Either Merlin doesn't cast spell 2 in stage 1, or Dumbledore casts spell 3 in stage 2.\n19. Either Gandalf casts spell 2 in stage 2, or Merlin doesn't cast spell 2 in stage 1.\n20. Either Merlin casts spell 2 in stage 1, or Dumbledore doesn't cast spell 3 in stage 2.\n21. Either Merlin doesn't cast spell 0 in stage 0, or Dumbledore casts spell 2 in stage 1.\n22. Either Gandalf casts spell 2 in stage 1, or Gandalf doesn't cast spell 3 in stage 0.\n23. Either Gandalf doesn't cast spell 2 in stage 1, or Gandalf casts spell 3 in stage 0.\n24. Either Gandalf doesn't cast spell 2 in stage 0, or Dumbledore casts spell 1 in stage 2.\n25. Either Dumbledore doesn't cast spell 2 in stage 1, or Gandalf casts spell 0 in stage 2.\n26. Either Merlin casts spell 1 in stage 1, or Merlin doesn't cast spell 1 in stage 0.\n27. Either Merlin casts spell 0 in stage 0, or Dumbledore doesn't cast spell 2 in stage 1.\n28. Either Gandalf doesn't cast spell 0 in stage 1, or Gandalf doesn't cast spell 3 in stage 1.\n29. Either Merlin doesn't cast spell 1 in stage 0, or Gandalf casts spell 3 in stage 1.\n30. Either Dumbledore casts spell 3 in stage 2, or Gandalf doesn't cast spell 2 in stage 0.\n31. Either Gandalf casts spell 0 in stage 1, or Gandalf casts spell 3 in stage 1.\n32. Either Gandalf casts spell 1 in stage 1, or Merlin doesn't cast spell 0 in stage 0.\n33. Either Gandalf doesn't cast spell 0 in stage 2, or Merlin casts spell 2 in stage 2.\n34. Either Dumbledore doesn't cast spell 0 in stage 0, or Gandalf casts spell 2 in stage 1.\n35. Either Merlin doesn't cast spell 2 in stage 2, or Gandalf casts spell 2 in stage 2.\n</conditions>\n\n<question>\nIs there a way to assign spell casts to satisfy all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,4,3]\n</dims>\n\n<num_vars>\n36\n</num_vars>\n\n<num_clauses>\n35\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    2,\n    -13\n  ],\n  [\n    -2,\n    13\n  ],\n  [\n    13,\n    -8\n  ],\n  [\n    -13,\n    8\n  ],\n  [\n    8,\n    -10\n  ],\n  [\n    -8,\n    10\n  ],\n  [\n    10,\n    -5\n  ],\n  [\n    -10,\n    5\n  ],\n  [\n    5,\n    -25\n  ],\n  [\n    -5,\n    25\n  ],\n  [\n    25,\n    -20\n  ],\n  [\n    -25,\n    20\n  ],\n  [\n    20,\n    -3\n  ],\n  [\n    -20,\n    3\n  ],\n  [\n    3,\n    -33\n  ],\n  [\n    -3,\n    33\n  ],\n  [\n    33,\n    -9\n  ],\n  [\n    -33,\n    9\n  ],\n  [\n    9,\n    -32\n  ],\n  [\n    -9,\n    32\n  ],\n  [\n    32,\n    -24\n  ],\n  [\n    -32,\n    24\n  ],\n  [\n    24,\n    -7\n  ],\n  [\n    -24,\n    7\n  ],\n  [\n    7,\n    -18\n  ],\n  [\n    -7,\n    18\n  ],\n  [\n    18,\n    -29\n  ],\n  [\n    -18,\n    29\n  ],\n  [\n    29,\n    -28\n  ],\n  [\n    -29,\n    28\n  ],\n  [\n    28,\n    -11\n  ],\n  [\n    -28,\n    11\n  ],\n  [\n    2,\n    11\n  ],\n  [\n    -2,\n    -11\n  ],\n  [\n    -5,\n    -24,\n    -33\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(0, 2, 0) ∨ ¬x(1, 1, 2)) ∧ (x(0, 0, 2) ∨ ¬x(2, 2, 2)) ∧ (¬x(1, 1, 2) ∨ x(2, 1, 1)) ∧ (x(1, 2, 1) ∨ ¬x(0, 0, 2)) ∧ (x(0, 3, 0) ∨ ¬x(0, 1, 1)) ∧ (¬x(2, 1, 1) ∨ x(2, 1, 0)) ∧ (¬x(0, 2, 2) ∨ x(2, 2, 1)) ∧ (¬x(1, 3, 2) ∨ x(0, 2, 0)) ∧ (x(2, 2, 2) ∨ ¬x(0, 2, 2)) ∧ (¬x(0, 3, 0) ∨ x(0, 1, 1)) ∧ (x(0, 0, 1) ∨ ¬x(1, 0, 0)) ∧ (x(1, 1, 2) ∨ ¬x(2, 1, 1)) ∧ (x(1, 0, 0) ∨ ¬x(0, 2, 1)) ∧ (¬x(0, 1, 1) ∨ x(2, 0, 0)) ∧ (¬x(0, 0, 1) ∨ x(1, 0, 0)) ∧ (x(2, 1, 0) ∨ ¬x(0, 3, 1)) ∧ (¬x(0, 1, 1) ∨ ¬x(1, 3, 2) ∨ ¬x(2, 2, 2)) ∧ (¬x(2, 2, 1) ∨ x(1, 3, 2)) ∧ (x(0, 2, 2) ∨ ¬x(2, 2, 1)) ∧ (x(2, 2, 1) ∨ ¬x(1, 3, 2)) ∧ (¬x(2, 0, 0) ∨ x(1, 2, 1)) ∧ (x(0, 2, 1) ∨ ¬x(0, 3, 0)) ∧ (¬x(0, 2, 1) ∨ x(0, 3, 0)) ∧ (¬x(0, 2, 0) ∨ x(1, 1, 2)) ∧ (¬x(1, 2, 1) ∨ x(0, 0, 2)) ∧ (x(2, 1, 1) ∨ ¬x(2, 1, 0)) ∧ (x(2, 0, 0) ∨ ¬x(1, 2, 1)) ∧ (¬x(0, 0, 1) ∨ ¬x(0, 3, 1)) ∧ (¬x(2, 1, 0) ∨ x(0, 3, 1)) ∧ (x(1, 3, 2) ∨ ¬x(0, 2, 0)) ∧ (x(0, 0, 1) ∨ x(0, 3, 1)) ∧ (x(0, 1, 1) ∨ ¬x(2, 0, 0)) ∧ (¬x(0, 0, 2) ∨ x(2, 2, 2)) ∧ (¬x(1, 0, 0) ∨ x(0, 2, 1)) ∧ (¬x(2, 2, 2) ∨ x(0, 2, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [2, -13] -> (x(0, 0, 1) ∨ ¬x(1, 0, 0)); matching condition number(s): [11]\n- raw clause index 1: [-2, 13] -> (¬x(0, 0, 1) ∨ x(1, 0, 0)); matching condition number(s): [15]\n- raw clause index 2: [13, -8] -> (x(1, 0, 0) ∨ ¬x(0, 2, 1)); matching condition number(s): [13]\n- raw clause index 3: [-13, 8] -> (¬x(1, 0, 0) ∨ x(0, 2, 1)); matching condition number(s): [34]\n- raw clause index 4: [8, -10] -> (x(0, 2, 1) ∨ ¬x(0, 3, 0)); matching condition number(s): [22]\n- raw clause index 5: [-8, 10] -> (¬x(0, 2, 1) ∨ x(0, 3, 0)); matching condition number(s): [23]\n- raw clause index 6: [10, -5] -> (x(0, 3, 0) ∨ ¬x(0, 1, 1)); matching condition number(s): [5]\n- raw clause index 7: [-10, 5] -> (¬x(0, 3, 0) ∨ x(0, 1, 1)); matching condition number(s): [10]\n- raw clause index 8: [5, -25] -> (x(0, 1, 1) ∨ ¬x(2, 0, 0)); matching condition number(s): [32]\n- raw clause index 9: [-5, 25] -> (¬x(0, 1, 1) ∨ x(2, 0, 0)); matching condition number(s): [14]\n- raw clause index 10: [25, -20] -> (x(2, 0, 0) ∨ ¬x(1, 2, 1)); matching condition number(s): [27]\n- raw clause index 11: [-25, 20] -> (¬x(2, 0, 0) ∨ x(1, 2, 1)); matching condition number(s): [21]\n- raw clause index 12: [20, -3] -> (x(1, 2, 1) ∨ ¬x(0, 0, 2)); matching condition number(s): [4]\n- raw clause index 13: [-20, 3] -> (¬x(1, 2, 1) ∨ x(0, 0, 2)); matching condition number(s): [25]\n- raw clause index 14: [3, -33] -> (x(0, 0, 2) ∨ ¬x(2, 2, 2)); matching condition number(s): [2]\n- raw clause index 15: [-3, 33] -> (¬x(0, 0, 2) ∨ x(2, 2, 2)); matching condition number(s): [33]\n- raw clause index 16: [33, -9] -> (x(2, 2, 2) ∨ ¬x(0, 2, 2)); matching condition number(s): [9]\n- raw clause index 17: [-33, 9] -> (¬x(2, 2, 2) ∨ x(0, 2, 2)); matching condition number(s): [35]\n- raw clause index 18: [9, -32] -> (x(0, 2, 2) ∨ ¬x(2, 2, 1)); matching condition number(s): [19]\n- raw clause index 19: [-9, 32] -> (¬x(0, 2, 2) ∨ x(2, 2, 1)); matching condition number(s): [7]\n- raw clause index 20: [32, -24] -> (x(2, 2, 1) ∨ ¬x(1, 3, 2)); matching condition number(s): [20]\n- raw clause index 21: [-32, 24] -> (¬x(2, 2, 1) ∨ x(1, 3, 2)); matching condition number(s): [18]\n- raw clause index 22: [24, -7] -> (x(1, 3, 2) ∨ ¬x(0, 2, 0)); matching condition number(s): [30]\n- raw clause index 23: [-24, 7] -> (¬x(1, 3, 2) ∨ x(0, 2, 0)); matching condition number(s): [8]\n- raw clause index 24: [7, -18] -> (x(0, 2, 0) ∨ ¬x(1, 1, 2)); matching condition number(s): [1]\n- raw clause index 25: [-7, 18] -> (¬x(0, 2, 0) ∨ x(1, 1, 2)); matching condition number(s): [24]\n- raw clause index 26: [18, -29] -> (x(1, 1, 2) ∨ ¬x(2, 1, 1)); matching condition number(s): [12]\n- raw clause index 27: [-18, 29] -> (¬x(1, 1, 2) ∨ x(2, 1, 1)); matching condition number(s): [3]\n- raw clause index 28: [29, -28] -> (x(2, 1, 1) ∨ ¬x(2, 1, 0)); matching condition number(s): [26]\n- raw clause index 29: [-29, 28] -> (¬x(2, 1, 1) ∨ x(2, 1, 0)); matching condition number(s): [6]\n- raw clause index 30: [28, -11] -> (x(2, 1, 0) ∨ ¬x(0, 3, 1)); matching condition number(s): [16]\n- raw clause index 31: [-28, 11] -> (¬x(2, 1, 0) ∨ x(0, 3, 1)); matching condition number(s): [29]\n- raw clause index 32: [2, 11] -> (x(0, 0, 1) ∨ x(0, 3, 1)); matching condition number(s): [31]\n- raw clause index 33: [-2, -11] -> (¬x(0, 0, 1) ∨ ¬x(0, 3, 1)); matching condition number(s): [28]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [2, 13, 8, 10, 5, 25, 20, 3, 33, 9, 32, 24, 7, 18, 29, 28, 11]: (x(0, 0, 1) ∨ ¬x(1, 0, 0)), (¬x(0, 0, 1) ∨ x(1, 0, 0)), (x(1, 0, 0) ∨ ¬x(0, 2, 1)), (¬x(1, 0, 0) ∨ x(0, 2, 1)), (x(0, 2, 1) ∨ ¬x(0, 3, 0)), (¬x(0, 2, 1) ∨ x(0, 3, 0)), (x(0, 3, 0) ∨ ¬x(0, 1, 1)), (¬x(0, 3, 0) ∨ x(0, 1, 1)), (x(0, 1, 1) ∨ ¬x(2, 0, 0)), (¬x(0, 1, 1) ∨ x(2, 0, 0)), (x(2, 0, 0) ∨ ¬x(1, 2, 1)), (¬x(2, 0, 0) ∨ x(1, 2, 1)), (x(1, 2, 1) ∨ ¬x(0, 0, 2)), (¬x(1, 2, 1) ∨ x(0, 0, 2)), (x(0, 0, 2) ∨ ¬x(2, 2, 2)), (¬x(0, 0, 2) ∨ x(2, 2, 2)), (x(2, 2, 2) ∨ ¬x(0, 2, 2)), (¬x(2, 2, 2) ∨ x(0, 2, 2)), (x(0, 2, 2) ∨ ¬x(2, 2, 1)), (¬x(0, 2, 2) ∨ x(2, 2, 1)), (x(2, 2, 1) ∨ ¬x(1, 3, 2)), (¬x(2, 2, 1) ∨ x(1, 3, 2)), (x(1, 3, 2) ∨ ¬x(0, 2, 0)), (¬x(1, 3, 2) ∨ x(0, 2, 0)), (x(0, 2, 0) ∨ ¬x(1, 1, 2)), (¬x(0, 2, 0) ∨ x(1, 1, 2)), (x(1, 1, 2) ∨ ¬x(2, 1, 1)), (¬x(1, 1, 2) ∨ x(2, 1, 1)), (x(2, 1, 1) ∨ ¬x(2, 1, 0)), (¬x(2, 1, 1) ∨ x(2, 1, 0)), (x(2, 1, 0) ∨ ¬x(0, 3, 1)), (¬x(2, 1, 0) ∨ x(0, 3, 1)), (x(0, 0, 1) ∨ x(0, 3, 1)), (¬x(0, 0, 1) ∨ ¬x(0, 3, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a magical realm, three wizards—Gandalf, Dumbledore, and Merlin—are competing in a grand wizard duel that consists of four distinct spells (labeled 0, 1, 2, and 3) to be cast across three different duel stages (labeled 0, 1, and 2). Each wizard independently decides whether they will cast a specific spell in a given stage. There are no constraints on spell use; a wizard can cast multiple spells in any stage, or opt not to cast any spell.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean wizard i casts spell j in duel stage k. Here, wizard 0 is Gandalf, wizard 1 is Dumbledore, and wizard 2 is Merlin.\n</variable_mapping>\n\n<conditions>\n1. Either Gandalf casts spell 2 in stage 0, or Dumbledore doesn't cast spell 1 in stage 2.\n2. Either Gandalf casts spell 0 in stage 2, or Merlin doesn't cast spell 2 in stage 2.\n3. Either Dumbledore doesn't cast spell 1 in stage 2, or Merlin casts spell 1 in stage 1.\n4. Either Dumbledore casts spell 2 in stage 1, or Gandalf doesn't cast spell 0 in stage 2.\n5. Either Gandalf casts spell 3 in stage 0, or Gandalf doesn't cast spell 1 in stage 1.\n6. Either Merlin doesn't cast spell 1 in stage 1, or Merlin casts spell 1 in stage 0.\n7. Either Gandalf doesn't cast spell 2 in stage 2, or Merlin casts spell 2 in stage 1.\n8. Either Dumbledore doesn't cast spell 3 in stage 2, or Gandalf casts spell 2 in stage 0.\n9. Either Merlin casts spell 2 in stage 2, or Gandalf doesn't cast spell 2 in stage 2.\n10. Either Gandalf doesn't cast spell 3 in stage 0, or Gandalf casts spell 1 in stage 1.\n11. Either Gandalf casts spell 0 in stage 1, or Dumbledore doesn't cast spell 0 in stage 0.\n12. Either Dumbledore casts spell 1 in stage 2, or Merlin doesn't cast spell 1 in stage 1.\n13. Either Dumbledore casts spell 0 in stage 0, or Gandalf doesn't cast spell 2 in stage 1.\n14. Either Gandalf doesn't cast spell 1 in stage 1, or Merlin casts spell 0 in stage 0.\n15. Either Gandalf doesn't cast spell 0 in stage 1, or Dumbledore casts spell 0 in stage 0.\n16. Either Merlin casts spell 1 in stage 0, or Gandalf doesn't cast spell 3 in stage 1.\n17. Either Gandalf doesn't cast spell 1 in stage 1, or Dumbledore doesn't cast spell 3 in stage 2, or Merlin doesn't cast spell 2 in stage 2.\n18. Either Merlin doesn't cast spell 2 in stage 1, or Dumbledore casts spell 3 in stage 2.\n19. Either Gandalf casts spell 2 in stage 2, or Merlin doesn't cast spell 2 in stage 1.\n20. Either Merlin casts spell 2 in stage 1, or Dumbledore doesn't cast spell 3 in stage 2.\n21. Either Merlin doesn't cast spell 0 in stage 0, or Dumbledore casts spell 2 in stage 1.\n22. Either Gandalf casts spell 2 in stage 1, or Gandalf doesn't cast spell 3 in stage 0.\n23. Either Gandalf doesn't cast spell 2 in stage 1, or Gandalf casts spell 3 in stage 0.\n24. Either Gandalf doesn't cast spell 2 in stage 0, or Dumbledore casts spell 1 in stage 2.\n25. Either Dumbledore doesn't cast spell 2 in stage 1, or Gandalf casts spell 0 in stage 2.\n26. Either Merlin casts spell 1 in stage 1, or Merlin doesn't cast spell 1 in stage 0.\n27. Either Merlin casts spell 0 in stage 0, or Dumbledore doesn't cast spell 2 in stage 1.\n28. Either Gandalf doesn't cast spell 0 in stage 1, or Gandalf doesn't cast spell 3 in stage 1.\n29. Either Merlin doesn't cast spell 1 in stage 0, or Gandalf casts spell 3 in stage 1.\n30. Either Dumbledore casts spell 3 in stage 2, or Gandalf doesn't cast spell 2 in stage 0.\n31. Either Gandalf casts spell 0 in stage 1, or Gandalf casts spell 3 in stage 1.\n32. Either Gandalf casts spell 1 in stage 1, or Merlin doesn't cast spell 0 in stage 0.\n33. Either Gandalf doesn't cast spell 0 in stage 2, or Merlin casts spell 2 in stage 2.\n34. Either Dumbledore doesn't cast spell 0 in stage 0, or Gandalf casts spell 2 in stage 1.\n35. Either Merlin doesn't cast spell 2 in stage 2, or Gandalf casts spell 2 in stage 2.\n</conditions>\n\n<question>\nIs there a way to assign spell casts to satisfy all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,4,3]\n</dims>\n\n<num_vars>\n36\n</num_vars>\n\n<num_clauses>\n35\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    2,\n    -13\n  ],\n  [\n    -2,\n    13\n  ],\n  [\n    13,\n    -8\n  ],\n  [\n    -13,\n    8\n  ],\n  [\n    8,\n    -10\n  ],\n  [\n    -8,\n    10\n  ],\n  [\n    10,\n    -5\n  ],\n  [\n    -10,\n    5\n  ],\n  [\n    5,\n    -25\n  ],\n  [\n    -5,\n    25\n  ],\n  [\n    25,\n    -20\n  ],\n  [\n    -25,\n    20\n  ],\n  [\n    20,\n    -3\n  ],\n  [\n    -20,\n    3\n  ],\n  [\n    3,\n    -33\n  ],\n  [\n    -3,\n    33\n  ],\n  [\n    33,\n    -9\n  ],\n  [\n    -33,\n    9\n  ],\n  [\n    9,\n    -32\n  ],\n  [\n    -9,\n    32\n  ],\n  [\n    32,\n    -24\n  ],\n  [\n    -32,\n    24\n  ],\n  [\n    24,\n    -7\n  ],\n  [\n    -24,\n    7\n  ],\n  [\n    7,\n    -18\n  ],\n  [\n    -7,\n    18\n  ],\n  [\n    18,\n    -29\n  ],\n  [\n    -18,\n    29\n  ],\n  [\n    29,\n    -28\n  ],\n  [\n    -29,\n    28\n  ],\n  [\n    28,\n    -11\n  ],\n  [\n    -28,\n    11\n  ],\n  [\n    2,\n    11\n  ],\n  [\n    -2,\n    -11\n  ],\n  [\n    -5,\n    -24,\n    -33\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(0, 2, 0) ∨ ¬x(1, 1, 2)) ∧ (x(0, 0, 2) ∨ ¬x(2, 2, 2)) ∧ (¬x(1, 1, 2) ∨ x(2, 1, 1)) ∧ (x(1, 2, 1) ∨ ¬x(0, 0, 2)) ∧ (x(0, 3, 0) ∨ ¬x(0, 1, 1)) ∧ (¬x(2, 1, 1) ∨ x(2, 1, 0)) ∧ (¬x(0, 2, 2) ∨ x(2, 2, 1)) ∧ (¬x(1, 3, 2) ∨ x(0, 2, 0)) ∧ (x(2, 2, 2) ∨ ¬x(0, 2, 2)) ∧ (¬x(0, 3, 0) ∨ x(0, 1, 1)) ∧ (x(0, 0, 1) ∨ ¬x(1, 0, 0)) ∧ (x(1, 1, 2) ∨ ¬x(2, 1, 1)) ∧ (x(1, 0, 0) ∨ ¬x(0, 2, 1)) ∧ (¬x(0, 1, 1) ∨ x(2, 0, 0)) ∧ (¬x(0, 0, 1) ∨ x(1, 0, 0)) ∧ (x(2, 1, 0) ∨ ¬x(0, 3, 1)) ∧ (¬x(0, 1, 1) ∨ ¬x(1, 3, 2) ∨ ¬x(2, 2, 2)) ∧ (¬x(2, 2, 1) ∨ x(1, 3, 2)) ∧ (x(0, 2, 2) ∨ ¬x(2, 2, 1)) ∧ (x(2, 2, 1) ∨ ¬x(1, 3, 2)) ∧ (¬x(2, 0, 0) ∨ x(1, 2, 1)) ∧ (x(0, 2, 1) ∨ ¬x(0, 3, 0)) ∧ (¬x(0, 2, 1) ∨ x(0, 3, 0)) ∧ (¬x(0, 2, 0) ∨ x(1, 1, 2)) ∧ (¬x(1, 2, 1) ∨ x(0, 0, 2)) ∧ (x(2, 1, 1) ∨ ¬x(2, 1, 0)) ∧ (x(2, 0, 0) ∨ ¬x(1, 2, 1)) ∧ (¬x(0, 0, 1) ∨ ¬x(0, 3, 1)) ∧ (¬x(2, 1, 0) ∨ x(0, 3, 1)) ∧ (x(1, 3, 2) ∨ ¬x(0, 2, 0)) ∧ (x(0, 0, 1) ∨ x(0, 3, 1)) ∧ (x(0, 1, 1) ∨ ¬x(2, 0, 0)) ∧ (¬x(0, 0, 2) ∨ x(2, 2, 2)) ∧ (¬x(1, 0, 0) ∨ x(0, 2, 1)) ∧ (¬x(2, 2, 2) ∨ x(0, 2, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [2, -13] -> (x(0, 0, 1) ∨ ¬x(1, 0, 0)); matching condition number(s): [11]\n- raw clause index 1: [-2, 13] -> (¬x(0, 0, 1) ∨ x(1, 0, 0)); matching condition number(s): [15]\n- raw clause index 2: [13, -8] -> (x(1, 0, 0) ∨ ¬x(0, 2, 1)); matching condition number(s): [13]\n- raw clause index 3: [-13, 8] -> (¬x(1, 0, 0) ∨ x(0, 2, 1)); matching condition number(s): [34]\n- raw clause index 4: [8, -10] -> (x(0, 2, 1) ∨ ¬x(0, 3, 0)); matching condition number(s): [22]\n- raw clause index 5: [-8, 10] -> (¬x(0, 2, 1) ∨ x(0, 3, 0)); matching condition number(s): [23]\n- raw clause index 6: [10, -5] -> (x(0, 3, 0) ∨ ¬x(0, 1, 1)); matching condition number(s): [5]\n- raw clause index 7: [-10, 5] -> (¬x(0, 3, 0) ∨ x(0, 1, 1)); matching condition number(s): [10]\n- raw clause index 8: [5, -25] -> (x(0, 1, 1) ∨ ¬x(2, 0, 0)); matching condition number(s): [32]\n- raw clause index 9: [-5, 25] -> (¬x(0, 1, 1) ∨ x(2, 0, 0)); matching condition number(s): [14]\n- raw clause index 10: [25, -20] -> (x(2, 0, 0) ∨ ¬x(1, 2, 1)); matching condition number(s): [27]\n- raw clause index 11: [-25, 20] -> (¬x(2, 0, 0) ∨ x(1, 2, 1)); matching condition number(s): [21]\n- raw clause index 12: [20, -3] -> (x(1, 2, 1) ∨ ¬x(0, 0, 2)); matching condition number(s): [4]\n- raw clause index 13: [-20, 3] -> (¬x(1, 2, 1) ∨ x(0, 0, 2)); matching condition number(s): [25]\n- raw clause index 14: [3, -33] -> (x(0, 0, 2) ∨ ¬x(2, 2, 2)); matching condition number(s): [2]\n- raw clause index 15: [-3, 33] -> (¬x(0, 0, 2) ∨ x(2, 2, 2)); matching condition number(s): [33]\n- raw clause index 16: [33, -9] -> (x(2, 2, 2) ∨ ¬x(0, 2, 2)); matching condition number(s): [9]\n- raw clause index 17: [-33, 9] -> (¬x(2, 2, 2) ∨ x(0, 2, 2)); matching condition number(s): [35]\n- raw clause index 18: [9, -32] -> (x(0, 2, 2) ∨ ¬x(2, 2, 1)); matching condition number(s): [19]\n- raw clause index 19: [-9, 32] -> (¬x(0, 2, 2) ∨ x(2, 2, 1)); matching condition number(s): [7]\n- raw clause index 20: [32, -24] -> (x(2, 2, 1) ∨ ¬x(1, 3, 2)); matching condition number(s): [20]\n- raw clause index 21: [-32, 24] -> (¬x(2, 2, 1) ∨ x(1, 3, 2)); matching condition number(s): [18]\n- raw clause index 22: [24, -7] -> (x(1, 3, 2) ∨ ¬x(0, 2, 0)); matching condition number(s): [30]\n- raw clause index 23: [-24, 7] -> (¬x(1, 3, 2) ∨ x(0, 2, 0)); matching condition number(s): [8]\n- raw clause index 24: [7, -18] -> (x(0, 2, 0) ∨ ¬x(1, 1, 2)); matching condition number(s): [1]\n- raw clause index 25: [-7, 18] -> (¬x(0, 2, 0) ∨ x(1, 1, 2)); matching condition number(s): [24]\n- raw clause index 26: [18, -29] -> (x(1, 1, 2) ∨ ¬x(2, 1, 1)); matching condition number(s): [12]\n- raw clause index 27: [-18, 29] -> (¬x(1, 1, 2) ∨ x(2, 1, 1)); matching condition number(s): [3]\n- raw clause index 28: [29, -28] -> (x(2, 1, 1) ∨ ¬x(2, 1, 0)); matching condition number(s): [26]\n- raw clause index 29: [-29, 28] -> (¬x(2, 1, 1) ∨ x(2, 1, 0)); matching condition number(s): [6]\n- raw clause index 30: [28, -11] -> (x(2, 1, 0) ∨ ¬x(0, 3, 1)); matching condition number(s): [16]\n- raw clause index 31: [-28, 11] -> (¬x(2, 1, 0) ∨ x(0, 3, 1)); matching condition number(s): [29]\n- raw clause index 32: [2, 11] -> (x(0, 0, 1) ∨ x(0, 3, 1)); matching condition number(s): [31]\n- raw clause index 33: [-2, -11] -> (¬x(0, 0, 1) ∨ ¬x(0, 3, 1)); matching condition number(s): [28]\n</unsat_core_clauses>\n\n<unsat_reason>\nXOR Chain contradiction over variables [2, 13, 8, 10, 5, 25, 20, 3, 33, 9, 32, 24, 7, 18, 29, 28, 11]: (x(0, 0, 1) ∨ ¬x(1, 0, 0)), (¬x(0, 0, 1) ∨ x(1, 0, 0)), (x(1, 0, 0) ∨ ¬x(0, 2, 1)), (¬x(1, 0, 0) ∨ x(0, 2, 1)), (x(0, 2, 1) ∨ ¬x(0, 3, 0)), (¬x(0, 2, 1) ∨ x(0, 3, 0)), (x(0, 3, 0) ∨ ¬x(0, 1, 1)), (¬x(0, 3, 0) ∨ x(0, 1, 1)), (x(0, 1, 1) ∨ ¬x(2, 0, 0)), (¬x(0, 1, 1) ∨ x(2, 0, 0)), (x(2, 0, 0) ∨ ¬x(1, 2, 1)), (¬x(2, 0, 0) ∨ x(1, 2, 1)), (x(1, 2, 1) ∨ ¬x(0, 0, 2)), (¬x(1, 2, 1) ∨ x(0, 0, 2)), (x(0, 0, 2) ∨ ¬x(2, 2, 2)), (¬x(0, 0, 2) ∨ x(2, 2, 2)), (x(2, 2, 2) ∨ ¬x(0, 2, 2)), (¬x(2, 2, 2) ∨ x(0, 2, 2)), (x(0, 2, 2) ∨ ¬x(2, 2, 1)), (¬x(0, 2, 2) ∨ x(2, 2, 1)), (x(2, 2, 1) ∨ ¬x(1, 3, 2)), (¬x(2, 2, 1) ∨ x(1, 3, 2)), (x(1, 3, 2) ∨ ¬x(0, 2, 0)), (¬x(1, 3, 2) ∨ x(0, 2, 0)), (x(0, 2, 0) ∨ ¬x(1, 1, 2)), (¬x(0, 2, 0) ∨ x(1, 1, 2)), (x(1, 1, 2) ∨ ¬x(2, 1, 1)), (¬x(1, 1, 2) ∨ x(2, 1, 1)), (x(2, 1, 1) ∨ ¬x(2, 1, 0)), (¬x(2, 1, 1) ∨ x(2, 1, 0)), (x(2, 1, 0) ∨ ¬x(0, 3, 1)), (¬x(2, 1, 0) ∨ x(0, 3, 1)), (x(0, 0, 1) ∨ x(0, 3, 1)), (¬x(0, 0, 1) ∨ ¬x(0, 3, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      4,
+      3
+    ],
+    "num_vars": 36,
+    "num_clauses": 35,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          2,
+          -13
+        ],
+        "clause_structural": "(x(0, 0, 1) ∨ ¬x(1, 0, 0))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -2,
+          13
+        ],
+        "clause_structural": "(¬x(0, 0, 1) ∨ x(1, 0, 0))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          13,
+          -8
+        ],
+        "clause_structural": "(x(1, 0, 0) ∨ ¬x(0, 2, 1))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -13,
+          8
+        ],
+        "clause_structural": "(¬x(1, 0, 0) ∨ x(0, 2, 1))",
+        "condition_numbers": [
+          34
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          8,
+          -10
+        ],
+        "clause_structural": "(x(0, 2, 1) ∨ ¬x(0, 3, 0))",
+        "condition_numbers": [
+          22
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -8,
+          10
+        ],
+        "clause_structural": "(¬x(0, 2, 1) ∨ x(0, 3, 0))",
+        "condition_numbers": [
+          23
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          10,
+          -5
+        ],
+        "clause_structural": "(x(0, 3, 0) ∨ ¬x(0, 1, 1))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -10,
+          5
+        ],
+        "clause_structural": "(¬x(0, 3, 0) ∨ x(0, 1, 1))",
+        "condition_numbers": [
+          10
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          5,
+          -25
+        ],
+        "clause_structural": "(x(0, 1, 1) ∨ ¬x(2, 0, 0))",
+        "condition_numbers": [
+          32
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -5,
+          25
+        ],
+        "clause_structural": "(¬x(0, 1, 1) ∨ x(2, 0, 0))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          25,
+          -20
+        ],
+        "clause_structural": "(x(2, 0, 0) ∨ ¬x(1, 2, 1))",
+        "condition_numbers": [
+          27
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -25,
+          20
+        ],
+        "clause_structural": "(¬x(2, 0, 0) ∨ x(1, 2, 1))",
+        "condition_numbers": [
+          21
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          20,
+          -3
+        ],
+        "clause_structural": "(x(1, 2, 1) ∨ ¬x(0, 0, 2))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -20,
+          3
+        ],
+        "clause_structural": "(¬x(1, 2, 1) ∨ x(0, 0, 2))",
+        "condition_numbers": [
+          25
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          3,
+          -33
+        ],
+        "clause_structural": "(x(0, 0, 2) ∨ ¬x(2, 2, 2))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -3,
+          33
+        ],
+        "clause_structural": "(¬x(0, 0, 2) ∨ x(2, 2, 2))",
+        "condition_numbers": [
+          33
+        ]
+      },
+      {
+        "raw_clause_index": 16,
+        "clause_dimacs": [
+          33,
+          -9
+        ],
+        "clause_structural": "(x(2, 2, 2) ∨ ¬x(0, 2, 2))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 17,
+        "clause_dimacs": [
+          -33,
+          9
+        ],
+        "clause_structural": "(¬x(2, 2, 2) ∨ x(0, 2, 2))",
+        "condition_numbers": [
+          35
+        ]
+      },
+      {
+        "raw_clause_index": 18,
+        "clause_dimacs": [
+          9,
+          -32
+        ],
+        "clause_structural": "(x(0, 2, 2) ∨ ¬x(2, 2, 1))",
+        "condition_numbers": [
+          19
+        ]
+      },
+      {
+        "raw_clause_index": 19,
+        "clause_dimacs": [
+          -9,
+          32
+        ],
+        "clause_structural": "(¬x(0, 2, 2) ∨ x(2, 2, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 20,
+        "clause_dimacs": [
+          32,
+          -24
+        ],
+        "clause_structural": "(x(2, 2, 1) ∨ ¬x(1, 3, 2))",
+        "condition_numbers": [
+          20
+        ]
+      },
+      {
+        "raw_clause_index": 21,
+        "clause_dimacs": [
+          -32,
+          24
+        ],
+        "clause_structural": "(¬x(2, 2, 1) ∨ x(1, 3, 2))",
+        "condition_numbers": [
+          18
+        ]
+      },
+      {
+        "raw_clause_index": 22,
+        "clause_dimacs": [
+          24,
+          -7
+        ],
+        "clause_structural": "(x(1, 3, 2) ∨ ¬x(0, 2, 0))",
+        "condition_numbers": [
+          30
+        ]
+      },
+      {
+        "raw_clause_index": 23,
+        "clause_dimacs": [
+          -24,
+          7
+        ],
+        "clause_structural": "(¬x(1, 3, 2) ∨ x(0, 2, 0))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 24,
+        "clause_dimacs": [
+          7,
+          -18
+        ],
+        "clause_structural": "(x(0, 2, 0) ∨ ¬x(1, 1, 2))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 25,
+        "clause_dimacs": [
+          -7,
+          18
+        ],
+        "clause_structural": "(¬x(0, 2, 0) ∨ x(1, 1, 2))",
+        "condition_numbers": [
+          24
+        ]
+      },
+      {
+        "raw_clause_index": 26,
+        "clause_dimacs": [
+          18,
+          -29
+        ],
+        "clause_structural": "(x(1, 1, 2) ∨ ¬x(2, 1, 1))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 27,
+        "clause_dimacs": [
+          -18,
+          29
+        ],
+        "clause_structural": "(¬x(1, 1, 2) ∨ x(2, 1, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 28,
+        "clause_dimacs": [
+          29,
+          -28
+        ],
+        "clause_structural": "(x(2, 1, 1) ∨ ¬x(2, 1, 0))",
+        "condition_numbers": [
+          26
+        ]
+      },
+      {
+        "raw_clause_index": 29,
+        "clause_dimacs": [
+          -29,
+          28
+        ],
+        "clause_structural": "(¬x(2, 1, 1) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 30,
+        "clause_dimacs": [
+          28,
+          -11
+        ],
+        "clause_structural": "(x(2, 1, 0) ∨ ¬x(0, 3, 1))",
+        "condition_numbers": [
+          16
+        ]
+      },
+      {
+        "raw_clause_index": 31,
+        "clause_dimacs": [
+          -28,
+          11
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ x(0, 3, 1))",
+        "condition_numbers": [
+          29
+        ]
+      },
+      {
+        "raw_clause_index": 32,
+        "clause_dimacs": [
+          2,
+          11
+        ],
+        "clause_structural": "(x(0, 0, 1) ∨ x(0, 3, 1))",
+        "condition_numbers": [
+          31
+        ]
+      },
+      {
+        "raw_clause_index": 33,
+        "clause_dimacs": [
+          -2,
+          -11
+        ],
+        "clause_structural": "(¬x(0, 0, 1) ∨ ¬x(0, 3, 1))",
+        "condition_numbers": [
+          28
+        ]
+      }
+    ],
+    "unsat_reason": "XOR Chain contradiction over variables [2, 13, 8, 10, 5, 25, 20, 3, 33, 9, 32, 24, 7, 18, 29, 28, 11]: (x(0, 0, 1) ∨ ¬x(1, 0, 0)), (¬x(0, 0, 1) ∨ x(1, 0, 0)), (x(1, 0, 0) ∨ ¬x(0, 2, 1)), (¬x(1, 0, 0) ∨ x(0, 2, 1)), (x(0, 2, 1) ∨ ¬x(0, 3, 0)), (¬x(0, 2, 1) ∨ x(0, 3, 0)), (x(0, 3, 0) ∨ ¬x(0, 1, 1)), (¬x(0, 3, 0) ∨ x(0, 1, 1)), (x(0, 1, 1) ∨ ¬x(2, 0, 0)), (¬x(0, 1, 1) ∨ x(2, 0, 0)), (x(2, 0, 0) ∨ ¬x(1, 2, 1)), (¬x(2, 0, 0) ∨ x(1, 2, 1)), (x(1, 2, 1) ∨ ¬x(0, 0, 2)), (¬x(1, 2, 1) ∨ x(0, 0, 2)), (x(0, 0, 2) ∨ ¬x(2, 2, 2)), (¬x(0, 0, 2) ∨ x(2, 2, 2)), (x(2, 2, 2) ∨ ¬x(0, 2, 2)), (¬x(2, 2, 2) ∨ x(0, 2, 2)), (x(0, 2, 2) ∨ ¬x(2, 2, 1)), (¬x(0, 2, 2) ∨ x(2, 2, 1)), (x(2, 2, 1) ∨ ¬x(1, 3, 2)), (¬x(2, 2, 1) ∨ x(1, 3, 2)), (x(1, 3, 2) ∨ ¬x(0, 2, 0)), (¬x(1, 3, 2) ∨ x(0, 2, 0)), (x(0, 2, 0) ∨ ¬x(1, 1, 2)), (¬x(0, 2, 0) ∨ x(1, 1, 2)), (x(1, 1, 2) ∨ ¬x(2, 1, 1)), (¬x(1, 1, 2) ∨ x(2, 1, 1)), (x(2, 1, 1) ∨ ¬x(2, 1, 0)), (¬x(2, 1, 1) ∨ x(2, 1, 0)), (x(2, 1, 0) ∨ ¬x(0, 3, 1)), (¬x(2, 1, 0) ∨ x(0, 3, 1)), (x(0, 0, 1) ∨ x(0, 3, 1)), (¬x(0, 0, 1) ∨ ¬x(0, 3, 1))"
+  }
+}

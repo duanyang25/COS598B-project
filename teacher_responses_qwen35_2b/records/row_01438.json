@@ -1,0 +1,113 @@
+{
+  "index": 1438,
+  "row_index_in_prompt_file": 1438,
+  "prompt_id": "satbench_01438",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "# Teacher Reasoning Trace\n\n**Step 1: Analyze the Problem Statement and Constraints**\nThe problem asks whether we can assign behaviors ($x(i,j,k)$) and seasons ($k$) such that all logical conditions are met.\n- **Variables:**\n  - $x(i, j, k)$: Species $i$ exhibits behavior $j$ during season $k$.\n  - Indices: Species $\\{0, 1, 2\\}$, Behaviors $\\{0, 1, 2\\}$, Seasons $\\{0, 1\\}$. Total $3 \\times 3 \\times 2 = 18$ variables.\n- **Conditions:** There are 10 explicit logical conditions provided.\n- **Goal:** Determine if a satisfying assignment exists.\n\n**Step 2: Map Conditions to CNF Clauses**\nWe must translate the textual conditions into the standard Disjunctive Normal Form (DNF) that matches the provided `<clauses_dimacs>` structure.\nThe provided CNF file shows `num_clauses` as 10, which aligns with the \"Either...\" structure in the text.\n\n*   **Condition 1:** \"Either lions graze... or elephants rest...\"\n    *   Text: $(x(0, 0, 0) \\lor x(0, 2, 0) \\lor x(1, 2, 0))$\n    *   CNF: Clause 1 is the disjunction of these three positive literals.\n*   **Condition 2:** \"Either zebras play... or lions do not graze...\"\n    *   Text: $(x(2, 1, 1) \\lor \\neg x(0, 0, 0))$\n    *   CNF: Clause 2 is the disjunction of these two.\n*   **Condition 3:** \"Either lions rest... or zebras rest... or elephants rest...\"\n    *   Text: $(x(0, 2, 0) \\lor x(2, 2, 1) \\lor x(1, 2, 0))$\n    *   CNF: Clause 3 is the disjunction of these three.\n*   **Condition 4:** \"Either lions do not graze... or elephants do not play... or zebras do not rest...\"\n    *   Text: $(\\neg x(0, 0, 0) \\lor \\neg x(1, 1, 1) \\lor \\neg x(2, 2, 0))$\n    *   CNF: Clause 4 is the disjunction of these three negated literals.\n*   **Condition 5:** \"Either lions do not graze... or zebras do not rest...\"\n    *   Text: $(\\neg x(0, 0, 0) \\lor \\neg x(2, 2, 1))$\n    *   CNF: Clause 5 is the disjunction of these two.\n*   **Condition 6:** \"Elephants do not rest in the dry season.\"\n    *   Text: $\\neg x(1, 2, 0)$\n    *   CNF: This is a single negative literal. In the provided file, this corresponds to a unit clause forcing the variable to be false.\n*   **Condition 7:** \"Either zebras do not rest in the wet season... or elephants do not rest in the dry season.\"\n    *   Text: $(\\neg x(2, 2, 1) \\lor \\neg x(1, 2, 0))$\n    *   CNF: Clause 7 is the disjunction of these two.\n*   **Condition 8:** \"Zebras do not rest in the wet season.\"\n    *   Text: $\\neg x(2, 2, 1)$\n    *   CNF: This is a single negative literal. Forces variable to be false.\n*   **Condition 9:** \"Either lions do not rest... or elephants do not rest...\"\n    *   Text: $(\\neg x(0, 2, 0) \\lor \\neg x(1, 2, 0))$\n    *   CNF: Clause 9 is the disjunction of these two.\n*   **Condition 10:** \"Lions do not rest in the dry season.\"\n    *   Text: $\\neg x(0, 2, 0)$\n    *   CNF: This is a single negative literal. Forces variable to be false.\n\n**Step 3: Analyze the Satisfiability Status**\nThe prompt provides the `<satisfiable>` field as `false`.\nThe `<unsat_core_raw_clause_indices>` lists `[0, 4, 5, 6]`.\nLet's verify the mapping of these indices to the readable CNF list provided in the `<readable_cnf>` block:\n1.  **Clause 0:** `(x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0))`\n    *   Matches Condition **3**.\n2.  **Clause 4:** `¬x(0, 2, 0)`\n    *   Matches Condition **10**.\n3.  **Clause 5:** `¬x(2, 2, 1)`\n    *   Matches Condition **8**.\n4.  **Clause 6:** `¬x(1, 2, 0)`\n    *   Matches Condition **6**.\n\n**Step 4: Logical Derivation of Contradiction**\nWe have a set of clauses. Let's look at the combination of conditions 6, 8, 9, and 10.\n-   **Condition 6:** $\\neg x(1, 2, 0)$ is true.\n-   **Condition 8:** $\\neg x(2, 2, 1)$ is true.\n-   **Condition 9:** $(\\neg x(0, 2, 0) \\lor \\neg x(1, 2, 0))$. Since $x(1, 2, 0)$ is false (from Cond 6), this clause is satisfied regardless of $x(0, 2, 0)$.\n-   **Condition 10:** $\\neg x(0, 2, 0)$ is true.\n\nWait, let's re-evaluate based strictly on the provided `<readable_cnf>` and `<unsat_core_clauses>` which claim the system is UNSAT.\nThe `<unsat_core_clauses>` list in the Z3 output identifies specific clauses causing the unsatisfiability.\n-   Clause 6 is `¬x(1, 2, 0)`. (Cond 6)\n-   Clause 5 is `¬x(2, 2, 1)`. (Cond 8)\n-   Clause 4 is `¬x(0, 2, 0)`. (Cond 10)\n-   Clause 0 is `x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)`. (Cond 3)\n\nLet's check for direct conflicts among the *individual* literals vs the *disjunctions*.\nThe Z3 output claims the unsatisfiability comes from Clause 0, 4, 5, 6.\nClause 4: `¬x(0, 2, 0)`\nClause 10 (Cond 10): `¬x(0, 2, 0)`\nThese are identical. They don't create a logical contradiction between themselves; they simply assert the same fact.\n\nHowever, look at the `<unsat_core_raw_clause_indices>` again: `[0, 4, 5, 6]`.\n-   Index 4 maps to Cond 10 (`¬x(0, 2, 0)`).\n-   Index 6 maps to Cond 6 (`¬x(1, 2, 0)`).\n-   Index 5 maps to Cond 8 (`¬x(2, 2, 1)`).\n-   Index 0 maps to Cond 3 (`x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)`).\n\nLet's check if the *entire set* of these 4 clauses forces a contradiction.\nIf we assume the Z3 certificate is correct (which we must accept per instructions):\n1.  From Cond 6: $x(1, 2, 0)$ must be **False**.\n2.  From Cond 8: $x(2, 2, 1)$ must be **False**.\n3.  From Cond 10: $x(0, 2, 0)$ must be **False**.\n4.  Now check Cond 3: $(x(0, 2, 0) \\lor x(2, 2, 1) \\lor x(1, 2, 0))$.\n    -   We have established $x(0, 2, 0) = F$, $x(2, 2, 1) = F$, $x(1, 2, 0) = F$.\n    -   Therefore, the disjunction becomes $F \\lor F \\lor F$, which evaluates to **False**.\n\nThis creates a direct logical contradiction within the system itself. Even though the other clauses (like Cond 1, 2, 4, 5, 7, 9) might seem satisfied or irrelevant, the interaction between Cond 3 and the specific deductions derived from Cond 6, 8, and 10 results in a false statement. Specifically, Cond 3 requires at least one of the three variables to be true, but the combination of the other conditions forces all three to be false simultaneously.\n\n**Conclusion**\nThe system contains a contradiction.\n-   **Contradiction Source:** The conjunction of Conditions 6, 8, 10, and 3 creates an impossible state.\n    -   Conditions 6, 8, and 10 independently force $x(1, 2, 0)=0$, $x(2, 2, 1)=0$, and $x(0, 2, 0)=0$.\n    -   Condition 3 becomes $(0 \\lor 0 \\lor 0)$, which is False.\n-   Since the CNF formula is the conjunction of all conditions, and one part of the conjunction is False, the whole formula is **Unsatisfiable**.\n\n**Final Answer Construction**\n-   **Result:** UNSAT\n-   **Reasoning:** A contradiction exists where the combination of conditions forces specific variables to be false while another condition requires at least one of them to be true. Specifically, conditions 6, 8, and 10 jointly imply that $x(0, 2, 0) = \\text{False}$, $x(1, 2, 0) = \\text{False}$, and $x(2, 2, 1) = \\text{False}$. However, condition 3 requires $(x(0, 2, 0) \\lor x(2, 2, 1) \\lor x(1, 2, 0))$ to be True. This yields a contradiction.\n-   **Satisfiable Assignment:** None exists.\n\n**Label:**\nUNSAT",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1793,
+    "generated_tokens": 2524,
+    "batch_elapsed_seconds": 67.10736536979675,
+    "tokens_per_second_for_batch": 37.61137076521239,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777889265.482746,
+  "slurm_job_id": "3185298",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "143",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nA wildlife reserve is studying three species of animals: lions (0), elephants (1), and zebras (2). Each species can exhibit behaviors related to three activities (0 = grazing, 1 = playing, 2 = resting) across two seasons (0 = dry season, 1 = wet season). The study independently observes each species, activity, and season to determine whether the behavior is typical or not.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean species i typically exhibits behavior j during season k. Here, species 0 is lions, species 1 is elephants, and species 2 is zebras.\n</variable_mapping>\n\n<conditions>\n1. Either lions graze in the dry season, or lions rest in the dry season, or elephants rest in the dry season.\n2. Either zebras play in the wet season, or lions do not graze in the dry season.\n3. Either lions rest in the dry season, or zebras rest in the wet season, or elephants rest in the dry season.\n4. Either lions do not graze in the dry season, or elephants do not play in the wet season, or zebras do not rest in the dry season.\n5. Either lions do not rest in the dry season, or zebras do not rest in the wet season.\n6. Elephants do not rest in the dry season.\n7. Either zebras do not rest in the wet season, or elephants do not rest in the dry season.\n8. Zebras do not rest in the wet season.\n9. Either lions do not rest in the dry season, or elephants do not rest in the dry season.\n10. Lions do not rest in the dry season.\n</conditions>\n\n<question>\nIs there a way to assign these behaviors and seasons such that all conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n10\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    5,\n    18,\n    11\n  ],\n  [\n    -5,\n    -18\n  ],\n  [\n    -5,\n    -11\n  ],\n  [\n    -18,\n    -11\n  ],\n  [\n    -5\n  ],\n  [\n    -18\n  ],\n  [\n    -11\n  ],\n  [\n    -1,\n    -10,\n    -17\n  ],\n  [\n    16,\n    -1\n  ],\n  [\n    1,\n    5,\n    11\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(0, 0, 0) ∨ x(0, 2, 0) ∨ x(1, 2, 0)) ∧ (x(2, 1, 1) ∨ ¬x(0, 0, 0)) ∧ (x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)) ∧ (¬x(0, 0, 0) ∨ ¬x(1, 1, 1) ∨ ¬x(2, 2, 0)) ∧ (¬x(0, 2, 0) ∨ ¬x(2, 2, 1)) ∧ (¬x(1, 2, 0)) ∧ (¬x(2, 2, 1) ∨ ¬x(1, 2, 0)) ∧ (¬x(2, 2, 1)) ∧ (¬x(0, 2, 0) ∨ ¬x(1, 2, 0)) ∧ (¬x(0, 2, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,4,5,6]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[3,6,8,10]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [5, 18, 11] -> (x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)); matching condition number(s): [3]\n- raw clause index 4: [-5] -> (¬x(0, 2, 0)); matching condition number(s): [10]\n- raw clause index 5: [-18] -> (¬x(2, 2, 1)); matching condition number(s): [8]\n- raw clause index 6: [-11] -> (¬x(1, 2, 0)); matching condition number(s): [6]\n</unsat_core_clauses>\n\n<unsat_reason>\nExactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)), (¬x(0, 2, 0) ∨ ¬x(2, 2, 1)), (¬x(0, 2, 0) ∨ ¬x(1, 2, 0)), (¬x(2, 2, 1) ∨ ¬x(1, 2, 0)), (¬x(0, 2, 0)), (¬x(2, 2, 1)), (¬x(1, 2, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nA wildlife reserve is studying three species of animals: lions (0), elephants (1), and zebras (2). Each species can exhibit behaviors related to three activities (0 = grazing, 1 = playing, 2 = resting) across two seasons (0 = dry season, 1 = wet season). The study independently observes each species, activity, and season to determine whether the behavior is typical or not.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean species i typically exhibits behavior j during season k. Here, species 0 is lions, species 1 is elephants, and species 2 is zebras.\n</variable_mapping>\n\n<conditions>\n1. Either lions graze in the dry season, or lions rest in the dry season, or elephants rest in the dry season.\n2. Either zebras play in the wet season, or lions do not graze in the dry season.\n3. Either lions rest in the dry season, or zebras rest in the wet season, or elephants rest in the dry season.\n4. Either lions do not graze in the dry season, or elephants do not play in the wet season, or zebras do not rest in the dry season.\n5. Either lions do not rest in the dry season, or zebras do not rest in the wet season.\n6. Elephants do not rest in the dry season.\n7. Either zebras do not rest in the wet season, or elephants do not rest in the dry season.\n8. Zebras do not rest in the wet season.\n9. Either lions do not rest in the dry season, or elephants do not rest in the dry season.\n10. Lions do not rest in the dry season.\n</conditions>\n\n<question>\nIs there a way to assign these behaviors and seasons such that all conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,3,2]\n</dims>\n\n<num_vars>\n18\n</num_vars>\n\n<num_clauses>\n10\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    5,\n    18,\n    11\n  ],\n  [\n    -5,\n    -18\n  ],\n  [\n    -5,\n    -11\n  ],\n  [\n    -18,\n    -11\n  ],\n  [\n    -5\n  ],\n  [\n    -18\n  ],\n  [\n    -11\n  ],\n  [\n    -1,\n    -10,\n    -17\n  ],\n  [\n    16,\n    -1\n  ],\n  [\n    1,\n    5,\n    11\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(0, 0, 0) ∨ x(0, 2, 0) ∨ x(1, 2, 0)) ∧ (x(2, 1, 1) ∨ ¬x(0, 0, 0)) ∧ (x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)) ∧ (¬x(0, 0, 0) ∨ ¬x(1, 1, 1) ∨ ¬x(2, 2, 0)) ∧ (¬x(0, 2, 0) ∨ ¬x(2, 2, 1)) ∧ (¬x(1, 2, 0)) ∧ (¬x(2, 2, 1) ∨ ¬x(1, 2, 0)) ∧ (¬x(2, 2, 1)) ∧ (¬x(0, 2, 0) ∨ ¬x(1, 2, 0)) ∧ (¬x(0, 2, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,4,5,6]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[3,6,8,10]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [5, 18, 11] -> (x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)); matching condition number(s): [3]\n- raw clause index 4: [-5] -> (¬x(0, 2, 0)); matching condition number(s): [10]\n- raw clause index 5: [-18] -> (¬x(2, 2, 1)); matching condition number(s): [8]\n- raw clause index 6: [-11] -> (¬x(1, 2, 0)); matching condition number(s): [6]\n</unsat_core_clauses>\n\n<unsat_reason>\nExactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)), (¬x(0, 2, 0) ∨ ¬x(2, 2, 1)), (¬x(0, 2, 0) ∨ ¬x(1, 2, 0)), (¬x(2, 2, 1) ∨ ¬x(1, 2, 0)), (¬x(0, 2, 0)), (¬x(2, 2, 1)), (¬x(1, 2, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      3,
+      2
+    ],
+    "num_vars": 18,
+    "num_clauses": 10,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      4,
+      5,
+      6
+    ],
+    "mapped_condition_numbers": [
+      3,
+      6,
+      8,
+      10
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          5,
+          18,
+          11
+        ],
+        "clause_structural": "(x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -5
+        ],
+        "clause_structural": "(¬x(0, 2, 0))",
+        "condition_numbers": [
+          10
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -18
+        ],
+        "clause_structural": "(¬x(2, 2, 1))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -11
+        ],
+        "clause_structural": "(¬x(1, 2, 0))",
+        "condition_numbers": [
+          6
+        ]
+      }
+    ],
+    "unsat_reason": "Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(0, 2, 0) ∨ x(2, 2, 1) ∨ x(1, 2, 0)), (¬x(0, 2, 0) ∨ ¬x(2, 2, 1)), (¬x(0, 2, 0) ∨ ¬x(1, 2, 0)), (¬x(2, 2, 1) ∨ ¬x(1, 2, 0)), (¬x(0, 2, 0)), (¬x(2, 2, 1)), (¬x(1, 2, 0))"
+  }
+}

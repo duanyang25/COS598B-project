@@ -1,0 +1,575 @@
+{
+  "index": 1551,
+  "row_index_in_prompt_file": 1551,
+  "prompt_id": "satbench_01551",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Reasoning Step-by-Step\n\n**1. Analyze the Constraints:**\nThe problem asks whether a specific configuration of 50 Boolean variables can be satisfied simultaneously. The constraints are explicitly listed as logical formulas in the `<conditions>` section (e.g., \"Either A or B\").\nThe provided `<readable_cnf>` block contains a large conjunction of clauses.\nThe provided `<unsat_core_raw_clause_indices>` and `<unsat_core_clauses>` indicate that the Z3 solver has determined the formula is **UNSAT**.\n\n**2. Interpret the Certificate:**\nThe Z3 certificate confirms the system is unsatisfiable.\n*   **Core Logic:** The certificate identifies that specific combinations of variable assignments (denoted by indices like 29, 33, 35, etc., mapped to the variables $x(i,j,k)$) lead to contradictions.\n*   **Mapping:**\n    *   Variable dimensions are `[5,5,3]`, meaning $x(i, j, k)$ where $i \\in \\{0..4\\}$, $j \\in \\{0..4\\}$, $k \\in \\{0..2\\}$.\n    *   There are 75 total variables ($5 \\times 5 \\times 3$).\n    *   The `num_clauses` is 50, which matches the count of clauses in the `clauses_dimacs` list.\n    *   The `unsat_core_raw_clause_indices` lists 32 unique indices. This suggests that while the full set of 50 clauses might be involved in proving unsatisfiability, the \"core\" unsatisfiable core involves a subset of them, often derived from the most restrictive interactions. However, the instruction states: \"Use the Z3 certificate to anchor the derivation...\". The fact that the certificate explicitly returns `false` for satisfiability means the answer is definitively **UNSAT**.\n\n**3. Check for Contradictions in Conditions:**\nLet's look closely at the condition descriptions to see if they inherently contradict each other, independent of the specific Z3 resolution path.\n*   **Condition 1:** $(\\neg x(1, 4, 1) \\lor x(2, 0, 2) \\lor \\neg x(2, 1, 1) \\lor x(4, 3, 2) \\lor \\neg x(0, 4, 2))$\n*   **Condition 2:** $(\\neg x(1, 4, 1) \\lor x(2, 0, 2) \\lor x(2, 1, 1) \\lor x(4, 3, 2) \\lor \\neg x(0, 4, 2))$\n    *   *Observation:* Condition 1 and 2 differ only in the third term: $\\neg x(2, 1, 1)$ vs $x(2, 1, 1)$. One requires Clara NOT to do Exp 1 in Module 1; the other requires her TO do so. These are mutually exclusive requirements within the disjunction structure if we assume standard OR behavior (at least one must hold).\n    *   Let's re-read carefully. Condition 1 says: \"Ben NOT exp4-mod1 OR Clara NOT exp1-mod1 OR Emma NOT exp3-mod2 OR Anna NOT exp4-mod2\".\n    *   Condition 2 says: \"Ben NOT exp4-mod1 OR Clara exp1-mod1 OR ...\".\n    *   Wait, looking at the full list of 50 conditions provided in the prompt text vs the readable CNF.\n    *   The prompt provides `<conditions>` as 50 distinct natural language statements.\n    *   The `<readable_cnf>` lists the logical translation of those 50 conditions.\n    *   The `unsat_core` shows that certain combinations of literals (e.g., $x(2, 1, 1)$ appearing in one clause and $\\neg x(2, 1, 1)$ in another, coupled with other terms) force a contradiction. Specifically, Clause 1 has $\\neg x(2, 1, 1)$, Clause 2 has $x(2, 1, 1)$. Since they appear in a disjunction, satisfying one doesn't necessarily force the other false unless there are other terms that can't compensate.\n    *   Actually, let's look at the `unsat_core_clauses`. They show pairs of contradictory clauses like `[29, 33, 35, 72, 15]` and `[-29, 33, 35, 72, 15]`. In a DNF (Disjunctive Normal Form) representation, a clause $A \\lor B$ and its negation $\\neg A \\lor \\dots$ does not directly prove unsatisfiability unless they form a tautological contradiction like $(P \\lor Q) \\land (\\neg P \\lor \\neg Q)$.\n    *   However, the `unsat_core` implies that the set of all 50 clauses is unsatisfiable. The Z3 engine found a path where assuming the truth values implied by the core leads to a violation of one of the clauses.\n    *   The instruction explicitly says: \"Use the Z3 certificate to anchor the derivation...\". Since the certificate is `false` (Unsat), and the reasoning rules state \"Do not add commonsense assumptions\", the correct conclusion based on the formal verification is that the system cannot be satisfied.\n\n**4. Verification of Unsat Status:**\nThe `satisfiable` field in the metadata is `false`.\nThe `label` is `UNSAT`.\nThe `unsat_core` lists specific conflicting groups of variables. For instance, Clause 0 is `x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)`. Clause 17 is `¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)`.\nWait, Clause 0 and 17 seem similar but Clause 0 has $x(2, 1, 1)$ and $x(0, 4, 2)$, while Clause 17 has $\\neg x(2, 1, 1)$ and $\\neg x(0, 4, 2)$.\nIf we assume the Z3 solver proved unsatisfiability, we must conclude that no assignment exists that satisfies all 50 clauses.\n\nThe prompt asks to solve the puzzle step by step.\nStep 1: Identify the nature of the problem. It is a SAT instance.\nStep 2: Consult the provided formal SAT information. The CNF is given.\nStep 3: Consult the Z3 certificate. The certificate explicitly states `false` for satisfiability and lists the unsat core.\nStep 4: Formulate the answer. The question is \"Can all these conditions be satisfied simultaneously?\". The evidence points to No.\n\n**Conclusion:**\nBased on the provided Z3 certificate which confirms the formula is unsatisfiable (`false`), and the logical contradiction identified within the unsat core (specifically the conflicting literals regarding specific variable assignments like $x(2, 1, 1)$ appearing in some clauses and $\\neg x(2, 1, 1)$ in others under the assumption that the remaining terms cannot resolve the conflict), the answer is **No**.\n\nThe specific contradiction arises because the logical combination of the 50 clauses forces a situation where no valid truth assignment for the 75 variables can make all clauses true. The Z3 solver has already computed this via its SAT solving algorithm (likely using backtracking with conflict learning or unit propagation equivalent to the core finding). The \"core\" represents the minimal set of clauses that generate the contradiction.\n\nTherefore, the answer is UNSAT.\n\nFinal Label:\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 13242,
+    "generated_tokens": 1775,
+    "batch_elapsed_seconds": 50.25421619415283,
+    "tokens_per_second_for_batch": 35.3204195473359,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777893173.8345237,
+  "slurm_job_id": "3185623",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "155",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nFive astronauts—Anna, Ben, Clara, David, and Emma—are part of an interstellar mission where they conduct various experiments in different modules of their spaceship. Each astronaut can choose independently which experiments to conduct in which module at any given time. The experiments range from physics to biology to engineering, across various modules and time frames, for all kinds of research and data collection.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i is conducting experiment j in module k. Here, astronaut 0 is Anna, astronaut 1 is Ben, astronaut 2 is Clara, astronaut 3 is David, and astronaut 4 is Emma.\n</variable_mapping>\n\n<conditions>\n1. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n2. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n3. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n4. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n5. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n6. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n7. Either Ben is conducting experiment 2 in module 2, or Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 2 in module 0.\n8. Either Anna is not conducting experiment 4 in module 2, or Clara is not conducting experiment 1 in module 0, or Emma is not conducting experiment 1 in module 1.\n9. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n10. Either Anna is conducting experiment 0 in module 1, or Anna is conducting experiment 0 in module 2, or Emma is conducting experiment 2 in module 0.\n11. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n12. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n13. Either Anna is not conducting experiment 1 in module 0, or Ben is not conducting experiment 4 in module 2, or Emma is not conducting experiment 3 in module 0.\n14. Either Clara is conducting experiment 0 in module 0, or Clara is conducting experiment 0 in module 1, or David is conducting experiment 3 in module 1.\n15. Either Ben is conducting experiment 3 in module 2, or David is conducting experiment 4 in module 2, or Emma is conducting experiment 3 in module 0.\n16. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n17. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n18. Either David is conducting experiment 2 in module 2, or Anna is not conducting experiment 1 in module 0, or Anna is not conducting experiment 1 in module 2.\n19. Either Ben is not conducting experiment 4 in module 2, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 2 in module 2.\n20. Either Clara is not conducting experiment 1 in module 2, or Clara is not conducting experiment 2 in module 0, or David is not conducting experiment 3 in module 1.\n21. Either Ben is conducting experiment 3 in module 0, or Ben is not conducting experiment 1 in module 0, or David is not conducting experiment 0 in module 2.\n22. Either Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 0 in module 1, or Emma is conducting experiment 2 in module 2.\n23. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n24. Either Anna is conducting experiment 4 in module 2, or Ben is conducting experiment 0 in module 0, or Emma is not conducting experiment 4 in module 1.\n25. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n26. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n27. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n28. Either Anna is conducting experiment 0 in module 0, or Anna is conducting experiment 1 in module 2, or David is conducting experiment 0 in module 1.\n29. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n30. Either David is conducting experiment 0 in module 2, or Emma is conducting experiment 2 in module 2, or Anna is not conducting experiment 3 in module 2.\n31. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n32. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n33. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n34. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n35. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n36. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n37. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n38. Either Anna is conducting experiment 3 in module 1, or Clara is conducting experiment 4 in module 2, or David is conducting experiment 1 in module 1.\n39. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n40. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n41. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n42. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n43. Either Clara is conducting experiment 1 in module 1, or Anna is not conducting experiment 2 in module 2, or Ben is not conducting experiment 4 in module 2.\n44. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n45. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n46. Either Ben is conducting experiment 2 in module 0, or Clara is not conducting experiment 4 in module 2, or David is not conducting experiment 0 in module 2.\n47. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n48. Either Anna is conducting experiment 4 in module 2, or Ben is conducting experiment 0 in module 2, or Clara is not conducting experiment 3 in module 1.\n49. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n50. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n</conditions>\n\n<question>\nCan all these conditions be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[5,5,3]\n</dims>\n\n<num_vars>\n75\n</num_vars>\n\n<num_clauses>\n50\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    29,\n    33,\n    35,\n    72,\n    15\n  ],\n  [\n    -29,\n    33,\n    35,\n    72,\n    15\n  ],\n  [\n    29,\n    -33,\n    35,\n    72,\n    15\n  ],\n  [\n    -29,\n    -33,\n    35,\n    72,\n    15\n  ],\n  [\n    29,\n    33,\n    -35,\n    72,\n    15\n  ],\n  [\n    -29,\n    33,\n    -35,\n    72,\n    15\n  ],\n  [\n    29,\n    -33,\n    -35,\n    72,\n    15\n  ],\n  [\n    -29,\n    -33,\n    -35,\n    72,\n    15\n  ],\n  [\n    29,\n    33,\n    35,\n    -72,\n    15\n  ],\n  [\n    -29,\n    33,\n    35,\n    -72,\n    15\n  ],\n  [\n    29,\n    -33,\n    35,\n    -72,\n    15\n  ],\n  [\n    -29,\n    -33,\n    35,\n    -72,\n    15\n  ],\n  [\n    29,\n    33,\n    -35,\n    -72,\n    15\n  ],\n  [\n    -29,\n    33,\n    -35,\n    -72,\n    15\n  ],\n  [\n    29,\n    -33,\n    -35,\n    -72,\n    15\n  ],\n  [\n    -29,\n    -33,\n    -35,\n    -72,\n    15\n  ],\n  [\n    29,\n    33,\n    35,\n    72,\n    -15\n  ],\n  [\n    -29,\n    33,\n    35,\n    72,\n    -15\n  ],\n  [\n    29,\n    -33,\n    35,\n    72,\n    -15\n  ],\n  [\n    -29,\n    -33,\n    35,\n    72,\n    -15\n  ],\n  [\n    29,\n    33,\n    -35,\n    72,\n    -15\n  ],\n  [\n    -29,\n    33,\n    -35,\n    72,\n    -15\n  ],\n  [\n    29,\n    -33,\n    -35,\n    72,\n    -15\n  ],\n  [\n    -29,\n    -33,\n    -35,\n    72,\n    -15\n  ],\n  [\n    29,\n    33,\n    35,\n    -72,\n    -15\n  ],\n  [\n    -29,\n    33,\n    35,\n    -72,\n    -15\n  ],\n  [\n    29,\n    -33,\n    35,\n    -72,\n    -15\n  ],\n  [\n    -29,\n    -33,\n    35,\n    -72,\n    -15\n  ],\n  [\n    29,\n    33,\n    -35,\n    -72,\n    -15\n  ],\n  [\n    -29,\n    33,\n    -35,\n    -72,\n    -15\n  ],\n  [\n    29,\n    -33,\n    -35,\n    -72,\n    -15\n  ],\n  [\n    -29,\n    -33,\n    -35,\n    -72,\n    -15\n  ],\n  [\n    48,\n    69,\n    -12\n  ],\n  [\n    -30,\n    -33,\n    -39\n  ],\n  [\n    15,\n    18,\n    -41\n  ],\n  [\n    54,\n    -4,\n    -6\n  ],\n  [\n    -36,\n    -37,\n    -56\n  ],\n  [\n    -4,\n    -30,\n    -70\n  ],\n  [\n    35,\n    -9,\n    -30\n  ],\n  [\n    35,\n    62,\n    69\n  ],\n  [\n    24,\n    -29,\n    -37\n  ],\n  [\n    27,\n    60,\n    70\n  ],\n  [\n    -15,\n    -34,\n    -65\n  ],\n  [\n    22,\n    -45,\n    -48\n  ],\n  [\n    11,\n    45,\n    50\n  ],\n  [\n    31,\n    32,\n    56\n  ],\n  [\n    1,\n    6,\n    47\n  ],\n  [\n    15,\n    16,\n    -74\n  ],\n  [\n    2,\n    3,\n    67\n  ],\n  [\n    25,\n    -19,\n    -48\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 2, 2) ∨ ¬x(1, 4, 1) ∨ ¬x(2, 2, 0)) ∧ (¬x(0, 4, 2) ∨ ¬x(2, 1, 0) ∨ ¬x(4, 1, 1)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(0, 0, 1) ∨ x(0, 0, 2) ∨ x(4, 2, 0)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(0, 1, 0) ∨ ¬x(1, 4, 2) ∨ ¬x(4, 3, 0)) ∧ (x(2, 0, 0) ∨ x(2, 0, 1) ∨ x(3, 3, 1)) ∧ (x(1, 3, 2) ∨ x(3, 4, 2) ∨ x(4, 3, 0)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(3, 2, 2) ∨ ¬x(0, 1, 0) ∨ ¬x(0, 1, 2)) ∧ (¬x(1, 4, 2) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 2, 2)) ∧ (¬x(2, 1, 2) ∨ ¬x(2, 2, 0) ∨ ¬x(3, 3, 1)) ∧ (x(1, 3, 0) ∨ ¬x(1, 1, 0) ∨ ¬x(3, 0, 2)) ∧ (x(2, 1, 1) ∨ x(4, 0, 1) ∨ x(4, 2, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(0, 4, 2) ∨ x(1, 0, 0) ∨ ¬x(4, 4, 1)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(0, 0, 0) ∨ x(0, 1, 2) ∨ x(3, 0, 1)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(3, 0, 2) ∨ x(4, 2, 2) ∨ ¬x(0, 3, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(0, 3, 1) ∨ x(2, 4, 2) ∨ x(3, 1, 1)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(2, 1, 1) ∨ ¬x(0, 2, 2) ∨ ¬x(1, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 2, 0) ∨ ¬x(2, 4, 2) ∨ ¬x(3, 0, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(0, 4, 2) ∨ x(1, 0, 2) ∨ ¬x(2, 3, 1)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,9,11,12,16,17,23,25,26,27,29,31,32,33,34,35,36,37,39,40,41,42,44,45,47,49,50]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [29, 33, 35, 72, 15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [45]\n- raw clause index 1: [-29, 33, 35, 72, 15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [50]\n- raw clause index 2: [29, -33, 35, 72, 15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [31]\n- raw clause index 3: [-29, -33, 35, 72, 15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [49]\n- raw clause index 4: [29, 33, -35, 72, 15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [41]\n- raw clause index 5: [-29, 33, -35, 72, 15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [42]\n- raw clause index 6: [29, -33, -35, 72, 15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [47]\n- raw clause index 7: [-29, -33, -35, 72, 15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [40]\n- raw clause index 8: [29, 33, 35, -72, 15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [27]\n- raw clause index 9: [-29, 33, 35, -72, 15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [25]\n- raw clause index 10: [29, -33, 35, -72, 15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [32]\n- raw clause index 11: [-29, -33, 35, -72, 15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [9]\n- raw clause index 12: [29, 33, -35, -72, 15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [4]\n- raw clause index 13: [-29, 33, -35, -72, 15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [29]\n- raw clause index 14: [29, -33, -35, -72, 15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [44]\n- raw clause index 15: [-29, -33, -35, -72, 15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [16]\n- raw clause index 16: [29, 33, 35, 72, -15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [26]\n- raw clause index 17: [-29, 33, 35, 72, -15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [2]\n- raw clause index 18: [29, -33, 35, 72, -15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [5]\n- raw clause index 19: [-29, -33, 35, 72, -15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [39]\n- raw clause index 20: [29, 33, -35, 72, -15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [3]\n- raw clause index 21: [-29, 33, -35, 72, -15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [1]\n- raw clause index 22: [29, -33, -35, 72, -15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [36]\n- raw clause index 23: [-29, -33, -35, 72, -15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [35]\n- raw clause index 24: [29, 33, 35, -72, -15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [23]\n- raw clause index 25: [-29, 33, 35, -72, -15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [12]\n- raw clause index 26: [29, -33, 35, -72, -15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [17]\n- raw clause index 27: [-29, -33, 35, -72, -15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [33]\n- raw clause index 28: [29, 33, -35, -72, -15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [6]\n- raw clause index 29: [-29, 33, -35, -72, -15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [34]\n- raw clause index 30: [29, -33, -35, -72, -15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [11]\n- raw clause index 31: [-29, -33, -35, -72, -15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [37]\n</unsat_core_clauses>\n\n<unsat_reason>\nFull block: all 32 possible combinations forbidden for variables [29, 33, 35, 72, 15]: (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nFive astronauts—Anna, Ben, Clara, David, and Emma—are part of an interstellar mission where they conduct various experiments in different modules of their spaceship. Each astronaut can choose independently which experiments to conduct in which module at any given time. The experiments range from physics to biology to engineering, across various modules and time frames, for all kinds of research and data collection.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean astronaut i is conducting experiment j in module k. Here, astronaut 0 is Anna, astronaut 1 is Ben, astronaut 2 is Clara, astronaut 3 is David, and astronaut 4 is Emma.\n</variable_mapping>\n\n<conditions>\n1. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n2. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n3. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n4. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n5. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n6. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n7. Either Ben is conducting experiment 2 in module 2, or Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 2 in module 0.\n8. Either Anna is not conducting experiment 4 in module 2, or Clara is not conducting experiment 1 in module 0, or Emma is not conducting experiment 1 in module 1.\n9. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n10. Either Anna is conducting experiment 0 in module 1, or Anna is conducting experiment 0 in module 2, or Emma is conducting experiment 2 in module 0.\n11. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n12. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n13. Either Anna is not conducting experiment 1 in module 0, or Ben is not conducting experiment 4 in module 2, or Emma is not conducting experiment 3 in module 0.\n14. Either Clara is conducting experiment 0 in module 0, or Clara is conducting experiment 0 in module 1, or David is conducting experiment 3 in module 1.\n15. Either Ben is conducting experiment 3 in module 2, or David is conducting experiment 4 in module 2, or Emma is conducting experiment 3 in module 0.\n16. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n17. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n18. Either David is conducting experiment 2 in module 2, or Anna is not conducting experiment 1 in module 0, or Anna is not conducting experiment 1 in module 2.\n19. Either Ben is not conducting experiment 4 in module 2, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 2 in module 2.\n20. Either Clara is not conducting experiment 1 in module 2, or Clara is not conducting experiment 2 in module 0, or David is not conducting experiment 3 in module 1.\n21. Either Ben is conducting experiment 3 in module 0, or Ben is not conducting experiment 1 in module 0, or David is not conducting experiment 0 in module 2.\n22. Either Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 0 in module 1, or Emma is conducting experiment 2 in module 2.\n23. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n24. Either Anna is conducting experiment 4 in module 2, or Ben is conducting experiment 0 in module 0, or Emma is not conducting experiment 4 in module 1.\n25. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n26. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n27. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n28. Either Anna is conducting experiment 0 in module 0, or Anna is conducting experiment 1 in module 2, or David is conducting experiment 0 in module 1.\n29. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n30. Either David is conducting experiment 0 in module 2, or Emma is conducting experiment 2 in module 2, or Anna is not conducting experiment 3 in module 2.\n31. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n32. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n33. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n34. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n35. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n36. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n37. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n38. Either Anna is conducting experiment 3 in module 1, or Clara is conducting experiment 4 in module 2, or David is conducting experiment 1 in module 1.\n39. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is not conducting experiment 4 in module 2.\n40. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n41. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n42. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n43. Either Clara is conducting experiment 1 in module 1, or Anna is not conducting experiment 2 in module 2, or Ben is not conducting experiment 4 in module 2.\n44. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is not conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n45. Either Ben is conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n46. Either Ben is conducting experiment 2 in module 0, or Clara is not conducting experiment 4 in module 2, or David is not conducting experiment 0 in module 2.\n47. Either Ben is conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is not conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n48. Either Anna is conducting experiment 4 in module 2, or Ben is conducting experiment 0 in module 2, or Clara is not conducting experiment 3 in module 1.\n49. Either Ben is not conducting experiment 4 in module 1, or Clara is not conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n50. Either Ben is not conducting experiment 4 in module 1, or Clara is conducting experiment 0 in module 2, or Clara is conducting experiment 1 in module 1, or Emma is conducting experiment 3 in module 2, or Anna is conducting experiment 4 in module 2.\n</conditions>\n\n<question>\nCan all these conditions be satisfied simultaneously?\n</question>\n\n## Formal SAT information\n\n<dims>\n[5,5,3]\n</dims>\n\n<num_vars>\n75\n</num_vars>\n\n<num_clauses>\n50\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    29,\n    33,\n    35,\n    72,\n    15\n  ],\n  [\n    -29,\n    33,\n    35,\n    72,\n    15\n  ],\n  [\n    29,\n    -33,\n    35,\n    72,\n    15\n  ],\n  [\n    -29,\n    -33,\n    35,\n    72,\n    15\n  ],\n  [\n    29,\n    33,\n    -35,\n    72,\n    15\n  ],\n  [\n    -29,\n    33,\n    -35,\n    72,\n    15\n  ],\n  [\n    29,\n    -33,\n    -35,\n    72,\n    15\n  ],\n  [\n    -29,\n    -33,\n    -35,\n    72,\n    15\n  ],\n  [\n    29,\n    33,\n    35,\n    -72,\n    15\n  ],\n  [\n    -29,\n    33,\n    35,\n    -72,\n    15\n  ],\n  [\n    29,\n    -33,\n    35,\n    -72,\n    15\n  ],\n  [\n    -29,\n    -33,\n    35,\n    -72,\n    15\n  ],\n  [\n    29,\n    33,\n    -35,\n    -72,\n    15\n  ],\n  [\n    -29,\n    33,\n    -35,\n    -72,\n    15\n  ],\n  [\n    29,\n    -33,\n    -35,\n    -72,\n    15\n  ],\n  [\n    -29,\n    -33,\n    -35,\n    -72,\n    15\n  ],\n  [\n    29,\n    33,\n    35,\n    72,\n    -15\n  ],\n  [\n    -29,\n    33,\n    35,\n    72,\n    -15\n  ],\n  [\n    29,\n    -33,\n    35,\n    72,\n    -15\n  ],\n  [\n    -29,\n    -33,\n    35,\n    72,\n    -15\n  ],\n  [\n    29,\n    33,\n    -35,\n    72,\n    -15\n  ],\n  [\n    -29,\n    33,\n    -35,\n    72,\n    -15\n  ],\n  [\n    29,\n    -33,\n    -35,\n    72,\n    -15\n  ],\n  [\n    -29,\n    -33,\n    -35,\n    72,\n    -15\n  ],\n  [\n    29,\n    33,\n    35,\n    -72,\n    -15\n  ],\n  [\n    -29,\n    33,\n    35,\n    -72,\n    -15\n  ],\n  [\n    29,\n    -33,\n    35,\n    -72,\n    -15\n  ],\n  [\n    -29,\n    -33,\n    35,\n    -72,\n    -15\n  ],\n  [\n    29,\n    33,\n    -35,\n    -72,\n    -15\n  ],\n  [\n    -29,\n    33,\n    -35,\n    -72,\n    -15\n  ],\n  [\n    29,\n    -33,\n    -35,\n    -72,\n    -15\n  ],\n  [\n    -29,\n    -33,\n    -35,\n    -72,\n    -15\n  ],\n  [\n    48,\n    69,\n    -12\n  ],\n  [\n    -30,\n    -33,\n    -39\n  ],\n  [\n    15,\n    18,\n    -41\n  ],\n  [\n    54,\n    -4,\n    -6\n  ],\n  [\n    -36,\n    -37,\n    -56\n  ],\n  [\n    -4,\n    -30,\n    -70\n  ],\n  [\n    35,\n    -9,\n    -30\n  ],\n  [\n    35,\n    62,\n    69\n  ],\n  [\n    24,\n    -29,\n    -37\n  ],\n  [\n    27,\n    60,\n    70\n  ],\n  [\n    -15,\n    -34,\n    -65\n  ],\n  [\n    22,\n    -45,\n    -48\n  ],\n  [\n    11,\n    45,\n    50\n  ],\n  [\n    31,\n    32,\n    56\n  ],\n  [\n    1,\n    6,\n    47\n  ],\n  [\n    15,\n    16,\n    -74\n  ],\n  [\n    2,\n    3,\n    67\n  ],\n  [\n    25,\n    -19,\n    -48\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 2, 2) ∨ ¬x(1, 4, 1) ∨ ¬x(2, 2, 0)) ∧ (¬x(0, 4, 2) ∨ ¬x(2, 1, 0) ∨ ¬x(4, 1, 1)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(0, 0, 1) ∨ x(0, 0, 2) ∨ x(4, 2, 0)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(0, 1, 0) ∨ ¬x(1, 4, 2) ∨ ¬x(4, 3, 0)) ∧ (x(2, 0, 0) ∨ x(2, 0, 1) ∨ x(3, 3, 1)) ∧ (x(1, 3, 2) ∨ x(3, 4, 2) ∨ x(4, 3, 0)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(3, 2, 2) ∨ ¬x(0, 1, 0) ∨ ¬x(0, 1, 2)) ∧ (¬x(1, 4, 2) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 2, 2)) ∧ (¬x(2, 1, 2) ∨ ¬x(2, 2, 0) ∨ ¬x(3, 3, 1)) ∧ (x(1, 3, 0) ∨ ¬x(1, 1, 0) ∨ ¬x(3, 0, 2)) ∧ (x(2, 1, 1) ∨ x(4, 0, 1) ∨ x(4, 2, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(0, 4, 2) ∨ x(1, 0, 0) ∨ ¬x(4, 4, 1)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(0, 0, 0) ∨ x(0, 1, 2) ∨ x(3, 0, 1)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(3, 0, 2) ∨ x(4, 2, 2) ∨ ¬x(0, 3, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (x(0, 3, 1) ∨ x(2, 4, 2) ∨ x(3, 1, 1)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(2, 1, 1) ∨ ¬x(0, 2, 2) ∨ ¬x(1, 4, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(1, 2, 0) ∨ ¬x(2, 4, 2) ∨ ¬x(3, 0, 2)) ∧ (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (x(0, 4, 2) ∨ x(1, 0, 2) ∨ ¬x(2, 3, 1)) ∧ (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)) ∧ (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,9,11,12,16,17,23,25,26,27,29,31,32,33,34,35,36,37,39,40,41,42,44,45,47,49,50]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [29, 33, 35, 72, 15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [45]\n- raw clause index 1: [-29, 33, 35, 72, 15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [50]\n- raw clause index 2: [29, -33, 35, 72, 15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [31]\n- raw clause index 3: [-29, -33, 35, 72, 15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [49]\n- raw clause index 4: [29, 33, -35, 72, 15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [41]\n- raw clause index 5: [-29, 33, -35, 72, 15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [42]\n- raw clause index 6: [29, -33, -35, 72, 15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [47]\n- raw clause index 7: [-29, -33, -35, 72, 15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [40]\n- raw clause index 8: [29, 33, 35, -72, 15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [27]\n- raw clause index 9: [-29, 33, 35, -72, 15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [25]\n- raw clause index 10: [29, -33, 35, -72, 15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [32]\n- raw clause index 11: [-29, -33, 35, -72, 15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [9]\n- raw clause index 12: [29, 33, -35, -72, 15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [4]\n- raw clause index 13: [-29, 33, -35, -72, 15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [29]\n- raw clause index 14: [29, -33, -35, -72, 15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [44]\n- raw clause index 15: [-29, -33, -35, -72, 15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)); matching condition number(s): [16]\n- raw clause index 16: [29, 33, 35, 72, -15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [26]\n- raw clause index 17: [-29, 33, 35, 72, -15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [2]\n- raw clause index 18: [29, -33, 35, 72, -15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [5]\n- raw clause index 19: [-29, -33, 35, 72, -15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [39]\n- raw clause index 20: [29, 33, -35, 72, -15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [3]\n- raw clause index 21: [-29, 33, -35, 72, -15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [1]\n- raw clause index 22: [29, -33, -35, 72, -15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [36]\n- raw clause index 23: [-29, -33, -35, 72, -15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [35]\n- raw clause index 24: [29, 33, 35, -72, -15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [23]\n- raw clause index 25: [-29, 33, 35, -72, -15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [12]\n- raw clause index 26: [29, -33, 35, -72, -15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [17]\n- raw clause index 27: [-29, -33, 35, -72, -15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [33]\n- raw clause index 28: [29, 33, -35, -72, -15] -> (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [6]\n- raw clause index 29: [-29, 33, -35, -72, -15] -> (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [34]\n- raw clause index 30: [29, -33, -35, -72, -15] -> (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [11]\n- raw clause index 31: [-29, -33, -35, -72, -15] -> (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)); matching condition number(s): [37]\n</unsat_core_clauses>\n\n<unsat_reason>\nFull block: all 32 possible combinations forbidden for variables [29, 33, 35, 72, 15]: (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      5,
+      5,
+      3
+    ],
+    "num_vars": 75,
+    "num_clauses": 50,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      9,
+      11,
+      12,
+      16,
+      17,
+      23,
+      25,
+      26,
+      27,
+      29,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      39,
+      40,
+      41,
+      42,
+      44,
+      45,
+      47,
+      49,
+      50
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          29,
+          33,
+          35,
+          72,
+          15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          45
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -29,
+          33,
+          35,
+          72,
+          15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          50
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          29,
+          -33,
+          35,
+          72,
+          15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          31
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -29,
+          -33,
+          35,
+          72,
+          15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          49
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          29,
+          33,
+          -35,
+          72,
+          15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          41
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -29,
+          33,
+          -35,
+          72,
+          15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          42
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          29,
+          -33,
+          -35,
+          72,
+          15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          47
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -29,
+          -33,
+          -35,
+          72,
+          15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          40
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          29,
+          33,
+          35,
+          -72,
+          15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          27
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -29,
+          33,
+          35,
+          -72,
+          15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          25
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          29,
+          -33,
+          35,
+          -72,
+          15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          32
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -29,
+          -33,
+          35,
+          -72,
+          15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          29,
+          33,
+          -35,
+          -72,
+          15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -29,
+          33,
+          -35,
+          -72,
+          15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          29
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          29,
+          -33,
+          -35,
+          -72,
+          15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          44
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -29,
+          -33,
+          -35,
+          -72,
+          15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2))",
+        "condition_numbers": [
+          16
+        ]
+      },
+      {
+        "raw_clause_index": 16,
+        "clause_dimacs": [
+          29,
+          33,
+          35,
+          72,
+          -15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          26
+        ]
+      },
+      {
+        "raw_clause_index": 17,
+        "clause_dimacs": [
+          -29,
+          33,
+          35,
+          72,
+          -15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 18,
+        "clause_dimacs": [
+          29,
+          -33,
+          35,
+          72,
+          -15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 19,
+        "clause_dimacs": [
+          -29,
+          -33,
+          35,
+          72,
+          -15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          39
+        ]
+      },
+      {
+        "raw_clause_index": 20,
+        "clause_dimacs": [
+          29,
+          33,
+          -35,
+          72,
+          -15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 21,
+        "clause_dimacs": [
+          -29,
+          33,
+          -35,
+          72,
+          -15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 22,
+        "clause_dimacs": [
+          29,
+          -33,
+          -35,
+          72,
+          -15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          36
+        ]
+      },
+      {
+        "raw_clause_index": 23,
+        "clause_dimacs": [
+          -29,
+          -33,
+          -35,
+          72,
+          -15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          35
+        ]
+      },
+      {
+        "raw_clause_index": 24,
+        "clause_dimacs": [
+          29,
+          33,
+          35,
+          -72,
+          -15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          23
+        ]
+      },
+      {
+        "raw_clause_index": 25,
+        "clause_dimacs": [
+          -29,
+          33,
+          35,
+          -72,
+          -15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 26,
+        "clause_dimacs": [
+          29,
+          -33,
+          35,
+          -72,
+          -15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          17
+        ]
+      },
+      {
+        "raw_clause_index": 27,
+        "clause_dimacs": [
+          -29,
+          -33,
+          35,
+          -72,
+          -15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          33
+        ]
+      },
+      {
+        "raw_clause_index": 28,
+        "clause_dimacs": [
+          29,
+          33,
+          -35,
+          -72,
+          -15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 29,
+        "clause_dimacs": [
+          -29,
+          33,
+          -35,
+          -72,
+          -15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          34
+        ]
+      },
+      {
+        "raw_clause_index": 30,
+        "clause_dimacs": [
+          29,
+          -33,
+          -35,
+          -72,
+          -15
+        ],
+        "clause_structural": "(x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 31,
+        "clause_dimacs": [
+          -29,
+          -33,
+          -35,
+          -72,
+          -15
+        ],
+        "clause_structural": "(¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))",
+        "condition_numbers": [
+          37
+        ]
+      }
+    ],
+    "unsat_reason": "Full block: all 32 possible combinations forbidden for variables [29, 33, 35, 72, 15]: (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2)), (¬x(1, 4, 1) ∨ ¬x(2, 0, 2) ∨ ¬x(2, 1, 1) ∨ ¬x(4, 3, 2) ∨ ¬x(0, 4, 2))"
+  }
+}

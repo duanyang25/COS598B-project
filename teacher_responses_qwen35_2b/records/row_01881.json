@@ -1,0 +1,255 @@
+{
+  "index": 1881,
+  "row_index_in_prompt_file": 1881,
+  "prompt_id": "satbench_01881",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "**Reasoning:**\n\n1.  **Analyze the Constraints:** The problem asks if there exists a valid assignment of study plans for three students across five subjects. We have explicit logical conditions (clauses) provided in the `<conditions>` section and a Z3-solver's definitive certificate indicating that the system is **Unsatisfiable**.\n\n2.  **Interpret the Certificate:**\n    *   The `<satisfiable>` tag explicitly states `false`.\n    *   The `<unsat_core_raw_clause_indices>` lists indices `[0, 1, ..., 14]` (all clauses), meaning the entire set of logical constraints creates a contradiction.\n    *   The `<unsat_core_mapped_condition_numbers>` maps these indices directly to the condition numbers `[1, 2, ..., 15]`. This indicates that every single constraint listed in the text is part of the unsatisfiable proof.\n    *   The `<unsat_reason>` provides a \"Frozen conflict chain.\" It shows a sequence of implications: if $X$ must be true, then $\\neg X \\lor Y$ forces $Y$, which forces $Z$, and so on, until we reach a variable that must be both true and false (or a direct contradiction). Specifically, the last clause `-11` corresponds to `(¬x(2, 0))`, forcing Jamie (student 2) to not study subject 0. However, the chain implies a loop or a direct impossibility derived from the initial conditions.\n\n3.  **Identify the Contradiction Path (Logical Verification):**\n    Let's trace the forced assignments suggested by the conflict chain in the `<unsat_reason>`:\n    *   Clause 11 (`[11]`) implies `(¬x(2, 0))`. So, **Jamie does not study Subject 0**.\n    *   Clause 10 (`[10]`) is `(¬x(0, 0) ∨ x(2, 2))`. Since Jamie doesn't study S0, this clause doesn't trigger immediately unless we assume something else. Wait, let's look closer at the chain provided in the reason:\n        *   `... → (¬x(1, 1) ∨ x(2, 0))` (Clause 13)\n        *   `... → (¬x(2, 0))` (Clause 10)\n    *   The chain effectively forces a situation where a specific variable must be both True and False relative to the chain's dependencies.\n    *   Crucially, looking at the `unsat_reason` text: `(x(2, 1))` is asserted first.\n        *   Clause 11 is `(¬x(2, 0))`. This forces `x(2, 1)` to be True? No, Clause 11 is `(¬x(2, 0))`. If we assume the chain holds, it seems the solver found a path where `x(2, 1)` is forced to True, but other clauses might force it False?\n        *   Actually, let's look at the mapping again. Clause 11 is mapped to `[-11]`. Clause 10 is `[-11]`? No.\n        *   Clause 11 in `clauses_dimacs` is `[-11]`. Wait, `clauses_dimacs` has 15 entries. Let's re-read carefully.\n        *   Entry 11: `[11]`. This is `[-11]`. Clause 11 is `(¬x(2, 0))`.\n        *   Entry 14: `[-14, 5]` -> Clause 14 is `(¬x(2, 3) ∨ x(0, 4))`? No, let's map indices to conditions properly.\n        *   Condition 11: `(¬x(2, 0))`.\n        *   Condition 14: `(¬x(2, 3) ∨ x(0, 4))`? Let's check the readable CNF.\n        *   Readable CNF:\n            *   ...\n            *   `[-11]` corresponds to `x(2, 1)`? Wait. The readable CNF shows `[-11]` as a positive clause? No, standard DIMACS uses `clauses` as `(-clause | clause)`.\n            *   Let's look at `clauses_dimacs` again.\n                *   Index 11: `[11]` -> `[-11]`. In readable CNF: `[-11]` appears? No, `[-11]` is listed as a clause?\n                *   Let's re-examine the `<clauses_dimacs>` list.\n                    *   Item 11: `[11]` -> This looks like a typo in my reading or the prompt's formatting. Let's look at the `<readable_cnf>` block.\n                    *   `[-11]` appears in the readable CNF? Yes: `[-11]` is present. But wait, `[-11]` usually means `x(2,1)`.\n                    *   Let's check the `<clauses_dimacs>` item 11 again: `[11]`. This is likely `[-11]`.\n                    *   Let's check `<clauses_dimacs>` item 14: `[-14, 5]`. This is `(¬x(2, 3) ∨ x(0, 4))`.\n                    *   Wait, the prompt says `<unsat_core_mapped_condition_numbers>` maps `0` to `1`. So index `i` in `clauses_dimacs` (0-indexed) corresponds to condition `i+1`.\n                    *   `clauses_dimacs[0]` is `[12]` -> Condition 12: `(¬x(2, 4) ∨ x(0, 0))`.\n                    *   `clauses_dimacs[1]` is `[-12, 9]` -> Condition 1: `(¬x(0, 4) ∨ x(0, 2))`.\n                    *   ...\n                    *   `clauses_dimacs[10]` is `[-11]` -> Condition 11: `(¬x(2, 0))`.\n                    *   `clauses_dimacs[14]` is `[-14, 5]` -> Condition 14: `(¬x(2, 3) ∨ x(0, 4))`.\n\n    *   Now let's trace the contradiction from the `<unsat_reason>` text provided by the certificate:\n        *   Chain starts: `(x(2, 1))` is forced.\n        *   Then `(¬x(2, 1) ∨ x(1, 3))` (Condition 3) forces `x(1, 3)`.\n        *   Then `(¬x(1, 3) ∨ x(1, 4))` (Condition 15) forces `x(1, 4)`.\n        *   Then `(¬x(1, 4) ∨ x(2, 3))` (Condition 8) forces `x(2, 3)`.\n        *   Then `(¬x(2, 3) ∨ x(0, 4))` (Condition 12) forces `x(0, 4)`.\n        *   Then `(¬x(0, 4) ∨ x(0, 2))` (Condition 1) forces `x(0, 2)`.\n        *   Then `(¬x(0, 2) ∨ x(0, 1))` (Condition 7) forces `x(0, 1)`.\n        *   Then `(¬x(0, 1) ∨ x(0, 3))` (Condition 4) forces `x(0, 3)`.\n        *   Then `(¬x(0, 3) ∨ x(2, 4))` (Condition 9) forces `x(2, 4)`.\n        *   Then `(¬x(2, 4) ∨ x(0, 0))` (Condition 10) forces `x(0, 0)`.\n        *   Then `(¬x(0, 0) ∨ x(2, 2))` (Condition 13) forces `x(2, 2)`.\n        *   Then `(¬x(2, 2) ∨ x(1, 0))` (Condition 11) forces `x(1, 0)`.\n        *   Then `(¬x(1, 0) ∨ x(1, 1))` (Condition 2) forces `x(1, 1)`.\n        *   Then `(¬x(1, 1) ∨ x(2, 0))` (Condition 14) forces `x(2, 0)`.\n        *   Then `(¬x(2, 0))` (Condition 10) forces **FALSE**.\n\n    *   The contradiction is circular or direct:\n        1.  We deduced `x(2, 0)` must be True.\n        2.  We also deduced `x(2, 0)` must be False (from Condition 10).\n        3.  Therefore, the system is Unsatisfiable.\n\n4.  **Conclusion:** The Z3 solver correctly determined that the combination of all 15 conditions leads to a logical contradiction. Every single condition contributes to building this chain of forced values that ultimately yields a false result.\n\n**Answer:**\nThe puzzle is **UNSAT**. All 15 conditions (mapped to condition numbers 1 through 15) create a chain of logical deductions that results in a direct contradiction. Specifically, the deduction chain forces `x(2, 0)` to be both true and false.\n\n**Final Label:**\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 2506,
+    "generated_tokens": 2212,
+    "batch_elapsed_seconds": 39.444467544555664,
+    "tokens_per_second_for_batch": 56.07884039761394,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777902974.111425,
+  "slurm_job_id": "3186246",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "188",
+  "hostname": "adroit-h11g1",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nThree students—Sam, Alex, and Jamie—are preparing for a series of five different subject exams (ranging from 0 to 4). Each student independently decides whether they will study for each subject. They can choose to study multiple subjects or none at all.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean student i plans to study for subject j. Here, student 0 is Sam, student 1 is Alex, and student 2 is Jamie.\n</variable_mapping>\n\n<conditions>\n1. Either Sam does not study for subject 4, or Sam studies for subject 2.\n2. Either Alex does not study for subject 0, or Alex studies for subject 1.\n3. Either Jamie does not study for subject 1, or Alex studies for subject 3.\n4. Either Sam does not study for subject 1, or Sam studies for subject 3.\n5. Either Jamie does not study for subject 4, or Sam studies for subject 0.\n6. Either Sam does not study for subject 0, or Jamie studies for subject 2.\n7. Either Sam does not study for subject 2, or Sam studies for subject 1.\n8. Either Alex does not study for subject 4, or Jamie studies for subject 3.\n9. Either Sam does not study for subject 3, or Jamie studies for subject 4.\n10. Jamie does not study for subject 0.\n11. Jamie studies for subject 1.\n12. Either Jamie does not study for subject 3, or Sam studies for subject 4.\n13. Either Alex does not study for subject 1, or Jamie studies for subject 0.\n14. Either Jamie does not study for subject 2, or Alex studies for subject 0.\n15. Either Alex does not study for subject 3, or Alex studies for subject 4.\n</conditions>\n\n<question>\nCan all these study plans be satisfied?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5]\n</dims>\n\n<num_vars>\n15\n</num_vars>\n\n<num_clauses>\n15\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    12\n  ],\n  [\n    -12,\n    9\n  ],\n  [\n    -9,\n    10\n  ],\n  [\n    -10,\n    14\n  ],\n  [\n    -14,\n    5\n  ],\n  [\n    -5,\n    3\n  ],\n  [\n    -3,\n    2\n  ],\n  [\n    -2,\n    4\n  ],\n  [\n    -4,\n    15\n  ],\n  [\n    -15,\n    1\n  ],\n  [\n    -1,\n    13\n  ],\n  [\n    -13,\n    6\n  ],\n  [\n    -6,\n    7\n  ],\n  [\n    -7,\n    11\n  ],\n  [\n    -11\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 4) ∨ x(0, 2)) ∧ (¬x(1, 0) ∨ x(1, 1)) ∧ (¬x(2, 1) ∨ x(1, 3)) ∧ (¬x(0, 1) ∨ x(0, 3)) ∧ (¬x(2, 4) ∨ x(0, 0)) ∧ (¬x(0, 0) ∨ x(2, 2)) ∧ (¬x(0, 2) ∨ x(0, 1)) ∧ (¬x(1, 4) ∨ x(2, 3)) ∧ (¬x(0, 3) ∨ x(2, 4)) ∧ (¬x(2, 0)) ∧ (x(2, 1)) ∧ (¬x(2, 3) ∨ x(0, 4)) ∧ (¬x(1, 1) ∨ x(2, 0)) ∧ (¬x(2, 2) ∨ x(1, 0)) ∧ (¬x(1, 3) ∨ x(1, 4))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [12] -> (x(2, 1)); matching condition number(s): [11]\n- raw clause index 1: [-12, 9] -> (¬x(2, 1) ∨ x(1, 3)); matching condition number(s): [3]\n- raw clause index 2: [-9, 10] -> (¬x(1, 3) ∨ x(1, 4)); matching condition number(s): [15]\n- raw clause index 3: [-10, 14] -> (¬x(1, 4) ∨ x(2, 3)); matching condition number(s): [8]\n- raw clause index 4: [-14, 5] -> (¬x(2, 3) ∨ x(0, 4)); matching condition number(s): [12]\n- raw clause index 5: [-5, 3] -> (¬x(0, 4) ∨ x(0, 2)); matching condition number(s): [1]\n- raw clause index 6: [-3, 2] -> (¬x(0, 2) ∨ x(0, 1)); matching condition number(s): [7]\n- raw clause index 7: [-2, 4] -> (¬x(0, 1) ∨ x(0, 3)); matching condition number(s): [4]\n- raw clause index 8: [-4, 15] -> (¬x(0, 3) ∨ x(2, 4)); matching condition number(s): [9]\n- raw clause index 9: [-15, 1] -> (¬x(2, 4) ∨ x(0, 0)); matching condition number(s): [5]\n- raw clause index 10: [-1, 13] -> (¬x(0, 0) ∨ x(2, 2)); matching condition number(s): [6]\n- raw clause index 11: [-13, 6] -> (¬x(2, 2) ∨ x(1, 0)); matching condition number(s): [14]\n- raw clause index 12: [-6, 7] -> (¬x(1, 0) ∨ x(1, 1)); matching condition number(s): [2]\n- raw clause index 13: [-7, 11] -> (¬x(1, 1) ∨ x(2, 0)); matching condition number(s): [13]\n- raw clause index 14: [-11] -> (¬x(2, 0)); matching condition number(s): [10]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 1)), (¬x(2, 1) ∨ x(1, 3)), (¬x(1, 3) ∨ x(1, 4)), (¬x(1, 4) ∨ x(2, 3)), (¬x(2, 3) ∨ x(0, 4)), (¬x(0, 4) ∨ x(0, 2)), (¬x(0, 2) ∨ x(0, 1)), (¬x(0, 1) ∨ x(0, 3)), (¬x(0, 3) ∨ x(2, 4)), (¬x(2, 4) ∨ x(0, 0)), (¬x(0, 0) ∨ x(2, 2)), (¬x(2, 2) ∨ x(1, 0)), (¬x(1, 0) ∨ x(1, 1)), (¬x(1, 1) ∨ x(2, 0)), (¬x(2, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nThree students—Sam, Alex, and Jamie—are preparing for a series of five different subject exams (ranging from 0 to 4). Each student independently decides whether they will study for each subject. They can choose to study multiple subjects or none at all.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean student i plans to study for subject j. Here, student 0 is Sam, student 1 is Alex, and student 2 is Jamie.\n</variable_mapping>\n\n<conditions>\n1. Either Sam does not study for subject 4, or Sam studies for subject 2.\n2. Either Alex does not study for subject 0, or Alex studies for subject 1.\n3. Either Jamie does not study for subject 1, or Alex studies for subject 3.\n4. Either Sam does not study for subject 1, or Sam studies for subject 3.\n5. Either Jamie does not study for subject 4, or Sam studies for subject 0.\n6. Either Sam does not study for subject 0, or Jamie studies for subject 2.\n7. Either Sam does not study for subject 2, or Sam studies for subject 1.\n8. Either Alex does not study for subject 4, or Jamie studies for subject 3.\n9. Either Sam does not study for subject 3, or Jamie studies for subject 4.\n10. Jamie does not study for subject 0.\n11. Jamie studies for subject 1.\n12. Either Jamie does not study for subject 3, or Sam studies for subject 4.\n13. Either Alex does not study for subject 1, or Jamie studies for subject 0.\n14. Either Jamie does not study for subject 2, or Alex studies for subject 0.\n15. Either Alex does not study for subject 3, or Alex studies for subject 4.\n</conditions>\n\n<question>\nCan all these study plans be satisfied?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5]\n</dims>\n\n<num_vars>\n15\n</num_vars>\n\n<num_clauses>\n15\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    12\n  ],\n  [\n    -12,\n    9\n  ],\n  [\n    -9,\n    10\n  ],\n  [\n    -10,\n    14\n  ],\n  [\n    -14,\n    5\n  ],\n  [\n    -5,\n    3\n  ],\n  [\n    -3,\n    2\n  ],\n  [\n    -2,\n    4\n  ],\n  [\n    -4,\n    15\n  ],\n  [\n    -15,\n    1\n  ],\n  [\n    -1,\n    13\n  ],\n  [\n    -13,\n    6\n  ],\n  [\n    -6,\n    7\n  ],\n  [\n    -7,\n    11\n  ],\n  [\n    -11\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 4) ∨ x(0, 2)) ∧ (¬x(1, 0) ∨ x(1, 1)) ∧ (¬x(2, 1) ∨ x(1, 3)) ∧ (¬x(0, 1) ∨ x(0, 3)) ∧ (¬x(2, 4) ∨ x(0, 0)) ∧ (¬x(0, 0) ∨ x(2, 2)) ∧ (¬x(0, 2) ∨ x(0, 1)) ∧ (¬x(1, 4) ∨ x(2, 3)) ∧ (¬x(0, 3) ∨ x(2, 4)) ∧ (¬x(2, 0)) ∧ (x(2, 1)) ∧ (¬x(2, 3) ∨ x(0, 4)) ∧ (¬x(1, 1) ∨ x(2, 0)) ∧ (¬x(2, 2) ∨ x(1, 0)) ∧ (¬x(1, 3) ∨ x(1, 4))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [12] -> (x(2, 1)); matching condition number(s): [11]\n- raw clause index 1: [-12, 9] -> (¬x(2, 1) ∨ x(1, 3)); matching condition number(s): [3]\n- raw clause index 2: [-9, 10] -> (¬x(1, 3) ∨ x(1, 4)); matching condition number(s): [15]\n- raw clause index 3: [-10, 14] -> (¬x(1, 4) ∨ x(2, 3)); matching condition number(s): [8]\n- raw clause index 4: [-14, 5] -> (¬x(2, 3) ∨ x(0, 4)); matching condition number(s): [12]\n- raw clause index 5: [-5, 3] -> (¬x(0, 4) ∨ x(0, 2)); matching condition number(s): [1]\n- raw clause index 6: [-3, 2] -> (¬x(0, 2) ∨ x(0, 1)); matching condition number(s): [7]\n- raw clause index 7: [-2, 4] -> (¬x(0, 1) ∨ x(0, 3)); matching condition number(s): [4]\n- raw clause index 8: [-4, 15] -> (¬x(0, 3) ∨ x(2, 4)); matching condition number(s): [9]\n- raw clause index 9: [-15, 1] -> (¬x(2, 4) ∨ x(0, 0)); matching condition number(s): [5]\n- raw clause index 10: [-1, 13] -> (¬x(0, 0) ∨ x(2, 2)); matching condition number(s): [6]\n- raw clause index 11: [-13, 6] -> (¬x(2, 2) ∨ x(1, 0)); matching condition number(s): [14]\n- raw clause index 12: [-6, 7] -> (¬x(1, 0) ∨ x(1, 1)); matching condition number(s): [2]\n- raw clause index 13: [-7, 11] -> (¬x(1, 1) ∨ x(2, 0)); matching condition number(s): [13]\n- raw clause index 14: [-11] -> (¬x(2, 0)); matching condition number(s): [10]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 1)), (¬x(2, 1) ∨ x(1, 3)), (¬x(1, 3) ∨ x(1, 4)), (¬x(1, 4) ∨ x(2, 3)), (¬x(2, 3) ∨ x(0, 4)), (¬x(0, 4) ∨ x(0, 2)), (¬x(0, 2) ∨ x(0, 1)), (¬x(0, 1) ∨ x(0, 3)), (¬x(0, 3) ∨ x(2, 4)), (¬x(2, 4) ∨ x(0, 0)), (¬x(0, 0) ∨ x(2, 2)), (¬x(2, 2) ∨ x(1, 0)), (¬x(1, 0) ∨ x(1, 1)), (¬x(1, 1) ∨ x(2, 0)), (¬x(2, 0))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      5
+    ],
+    "num_vars": 15,
+    "num_clauses": 15,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          12
+        ],
+        "clause_structural": "(x(2, 1))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -12,
+          9
+        ],
+        "clause_structural": "(¬x(2, 1) ∨ x(1, 3))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -9,
+          10
+        ],
+        "clause_structural": "(¬x(1, 3) ∨ x(1, 4))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -10,
+          14
+        ],
+        "clause_structural": "(¬x(1, 4) ∨ x(2, 3))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -14,
+          5
+        ],
+        "clause_structural": "(¬x(2, 3) ∨ x(0, 4))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -5,
+          3
+        ],
+        "clause_structural": "(¬x(0, 4) ∨ x(0, 2))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -3,
+          2
+        ],
+        "clause_structural": "(¬x(0, 2) ∨ x(0, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -2,
+          4
+        ],
+        "clause_structural": "(¬x(0, 1) ∨ x(0, 3))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          -4,
+          15
+        ],
+        "clause_structural": "(¬x(0, 3) ∨ x(2, 4))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -15,
+          1
+        ],
+        "clause_structural": "(¬x(2, 4) ∨ x(0, 0))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          -1,
+          13
+        ],
+        "clause_structural": "(¬x(0, 0) ∨ x(2, 2))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -13,
+          6
+        ],
+        "clause_structural": "(¬x(2, 2) ∨ x(1, 0))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          -6,
+          7
+        ],
+        "clause_structural": "(¬x(1, 0) ∨ x(1, 1))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -7,
+          11
+        ],
+        "clause_structural": "(¬x(1, 1) ∨ x(2, 0))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          -11
+        ],
+        "clause_structural": "(¬x(2, 0))",
+        "condition_numbers": [
+          10
+        ]
+      }
+    ],
+    "unsat_reason": "Frozen conflict chain: sequential forced assignments leading to contradiction: (x(2, 1)), (¬x(2, 1) ∨ x(1, 3)), (¬x(1, 3) ∨ x(1, 4)), (¬x(1, 4) ∨ x(2, 3)), (¬x(2, 3) ∨ x(0, 4)), (¬x(0, 4) ∨ x(0, 2)), (¬x(0, 2) ∨ x(0, 1)), (¬x(0, 1) ∨ x(0, 3)), (¬x(0, 3) ∨ x(2, 4)), (¬x(2, 4) ∨ x(0, 0)), (¬x(0, 0) ∨ x(2, 2)), (¬x(2, 2) ∨ x(1, 0)), (¬x(1, 0) ∨ x(1, 1)), (¬x(1, 1) ∨ x(2, 0)), (¬x(2, 0))"
+  }
+}

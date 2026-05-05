@@ -1,0 +1,255 @@
+{
+  "index": 1518,
+  "row_index_in_prompt_file": 1518,
+  "prompt_id": "satbench_01518",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analyze the Variable Definitions:**\n*   **Variables:** There are $3$ chefs ($x_{i,j}$ where $i \\in \\{0, 1, 2\\}$ and $j \\in \\{0, 1, 2, 3, 4\\}$).\n*   **Mapping:**\n    *   Chef 0 = Anna\n    *   Chef 1 = Ben\n    *   Chef 2 = Carla\n*   **Question:** \"Is there a way to assign dish preparations that makes this work?\" This implies we need to determine if the system of constraints is **Satisfiable**.\n\n**2. Analyze the Constraints (Clauses):**\nLet's translate the readable CNF into logical implications to see the dependencies clearly.\n*   (1) $\\neg x_{1,2} \\lor x_{0,2}$ (Ben not main OR Anna main)\n*   (2) $\\neg x_{1,1}$ (Ben not soup)\n*   (3) $\\neg x_{1,4} \\lor x_{2,2}$ (Ben not bev OR Carla main)\n*   (4) $\\neg x_{2,0} \\lor x_{0,0}$ (Carla not appetizer OR Anna appetizer)\n*   (5) $\\neg x_{0,1} \\lor x_{2,3}$ (Anna not soup OR Carla dessert)\n*   (6) $\\neg x_{2,4} \\lor x_{0,4}$ (Carla not bev OR Anna bev)\n*   (7) $\\neg x_{0,2} \\lor x_{2,0}$ (Anna not main OR Carla appetizer)\n*   (8) $x_{1,3}$ (Ben is dessert) -- **CRITICAL CONSTRAINT**\n*   (9) $\\neg x_{1,3} \\lor x_{2,4}$ (Ben not dessert OR Carla bev)\n*   (10) $\\neg x_{2,3} \\lor x_{1,4}$ (Carla not main OR Ben main)\n*   (11) $\\neg x_{2,0} \\lor x_{0,0}$ (Carla not bev OR Anna bev) -- Duplicate of (4) effectively\n*   (12) $\\neg x_{2,2} \\lor x_{1,2}$ (Carla not dessert OR Ben dessert)\n*   (13) $\\neg x_{2,1} \\lor x_{1,1}$ (Carla not soup OR Ben soup)\n*   (14) $\\neg x_{0,4} \\lor x_{0,3}$ (Anna not bev OR Anna dessert)\n*   (15) $\\neg x_{0,3} \\lor x_{2,1}$ (Anna not dessert OR Carla soup)\n\n**3. Logical Deduction Path:**\n\n*   **Constraint 8:** Chef 1 (Ben) must be preparing Dish Type 3 (Dessert).\n    *   So, $x_{1,3} = \\text{True}$.\n    *   Consequently, $\\neg x_{1,3}$ is False.\n\n*   **Constraint 9:** $(\\neg x_{1,3} \\lor x_{2,4})$\n    *   Since $x_{1,3}$ is True, $\\neg x_{1,3}$ is False.\n    *   For the clause to be True, $x_{2,4}$ must be **True**.\n    *   Result: Chef 2 (Carla) must be preparing Dish Type 4 (Beverage).\n\n*   **Constraint 14:** $(\\neg x_{0,4} \\lor x_{0,3})$\n    *   Note: $x_{0,4}$ is Anna preparing Beverage. We just deduced $x_{2,4}$ is True, meaning Carla is Bev. Does this force anything? Not directly yet, other than defining variables.\n\n*   **Constraint 15:** $(\\neg x_{0,3} \\lor x_{2,1})$\n    *   Note: $x_{0,3}$ is Anna preparing Soup.\n    *   Let's look at **Constraint 5**: $(\\neg x_{0,1} \\lor x_{2,3})$. $x_{0,1}$ is Anna preparing Soup.\n    *   Let's look at **Constraint 12**: $(\\neg x_{2,2} \\lor x_{1,2})$. $x_{2,2}$ is Carla preparing Main.\n    *   Let's look at **Constraint 13**: $(\\neg x_{2,1} \\lor x_{1,1})$. $x_{2,1}$ is Carla preparing Soup.\n\n*   **Let's re-evaluate based on the specific \"Frozen conflict\" hint found in the Z3 output:**\n    The Z3 output explicitly states a \"Frozen conflict chain\". This suggests a path where truth values propagate to create a direct contradiction, likely due to variable conflicts (e.g., $x$ and $\\neg x$ appearing in different clauses without satisfying them simultaneously).\n\n    Let's test the hypothesis derived from the chain starting at $x_{1,3}$:\n    1.  **$x_{1,3}$ is True** (from Clause 8).\n    2.  From Clause 9 ($\\neg x_{1,3} \\lor x_{2,4}$): Since $x_{1,3}$ is true, $x_{2,4}$ must be **True** (Carla is Bev).\n    3.  From Clause 11 ($\\neg x_{2,0} \\lor x_{0,0}$): No immediate fix.\n    4.  From Clause 12 ($\\neg x_{2,2} \\lor x_{1,2}$): No immediate fix.\n\n    Let's look closer at the structure provided in the \"unsat_core_clauses\" section of the prompt's data.\n    The Z3 output claims the whole set is **UNSAT**.\n    The reason provided is a \"Frozen conflict chain\".\n    A \"Frozen conflict\" usually occurs when a literal must be True AND False simultaneously.\n\n    Let's try to find a literal $L$ that must be both True and False.\n    Look at the variables again:\n    $x_{0,1}$ (Anna Soup), $x_{0,3}$ (Anna Dessert), $x_{0,4}$ (Anna Bev)\n    $x_{2,0}$ (Carla Appetizer), $x_{2,2}$ (Carla Main), $x_{2,3}$ (Carla Soup), $x_{2,4}$ (Carla Bev)\n    $x_{1,1}$ (Ben Soup), $x_{1,2}$ (Ben Main), $x_{1,4}$ (Ben Main?? No wait).\n    Wait, let's map indices correctly to dishes:\n    $j=0$: Appetizer\n    $j=1$: Soup\n    $j=2$: Main Course\n    $j=3$: Dessert\n    $j=4$: Beverage\n\n    Let's re-read the deduction carefully.\n    **Fact:** $x_{1,3}$ is True (Ben is Dessert).\n    **Constraint 9:** $\\neg x_{1,3} \\lor x_{2,4}$. Since $x_{1,3}$ is T, $x_{2,4}$ must be **T** (Carla is Bev).\n    \n    Now check **Constraint 15**: $\\neg x_{0,3} \\lor x_{2,1}$.\n    Check **Constraint 13**: $\\neg x_{2,1} \\lor x_{1,1}$.\n    Check **Constraint 14**: $\\neg x_{0,4} \\lor x_{0,3}$.\n    \n    Let's look at **Constraint 1**: $\\neg x_{1,2} \\lor x_{0,2}$.\n    **Constraint 7**: $\\neg x_{0,2} \\lor x_{2,0}$.\n    \n    Let's look at **Constraint 2**: $\\neg x_{1,1}$ (Ben is NOT Soup).\n    **Constraint 13**: $\\neg x_{2,1} \\lor x_{1,1}$.\n    \n    Let's check the chain of implications regarding Soup ($x_{1,1}$ and $x_{2,1}$):\n    *   From (2): $x_{1,1}$ is **False**.\n    *   From (13): Since $x_{1,1}$ is False, we need $\\neg x_{2,1}$ to be True. Therefore, **$x_{2,1}$ is False** (Carla is NOT Soup).\n    \n    Now look at **Constraint 5**: $\\neg x_{0,1} \\lor x_{2,3}$.\n    And **Constraint 14**: $\\neg x_{0,4} \\lor x_{0,3}$.\n    And **Constraint 15**: $\\neg x_{0,3} \\lor x_{2,1}$.\n    \n    Since we know $x_{2,1}$ is **False** (Carla is not Soup), look at (15):\n    $\\neg x_{0,3} \\lor \\text{False}$ must be True.\n    Therefore, **$\\neg x_{0,3}$ must be True**.\n    So, **$x_{0,3}$ is False** (Anna is NOT Dessert).\n    \n    Now look at **Constraint 14**: $\\neg x_{0,4} \\lor x_{0,3}$.\n    Since $x_{0,3}$ is False, we need $\\neg x_{0,4}$ to be True.\n    Therefore, **$x_{0,4}$ is False** (Anna is NOT Bev).\n    \n    Now look at **Constraint 6**: $\\neg x_{2,4} \\lor x_{0,4}$.\n    We established earlier that $x_{2,4}$ (Carla is Bev) must be True because of Constraint 9 and $x_{1,3}$ being True.\n    So $x_{2,4}$ is **True**.\n    Then $\\neg x_{2,4}$ is **False**.\n    Therefore, for (6) to hold, $x_{0,4}$ must be **True**.\n    \n    BUT, we just deduced $x_{0,4}$ must be **False** from Constraint 15/14 logic.\n    \n    **Contradiction Found:**\n    *   Path A (from Constraint 9): $x_{1,3} \\to x_{2,4}$.\n    *   Path B (from Constraints 2, 13, 15): $x_{1,1} \\to \\neg x_{2,1} \\to \\neg(\\neg x_{0,3}) \\to x_{0,3} \\to \\neg x_{0,4}$.\n        *   Chain:\n            1.  (2) says Ben is NOT Soup ($x_{1,1}=F$).\n            2.  (13) says ($\\neg x_{2,1} \\lor x_{1,1}$). Since $x_{1,1}=F$, then $\\neg x_{2,1}$ is T. So $x_{2,1}=F$.\n            3.  (15) says ($\\neg x_{0,3} \\lor x_{2,1}$). Since $x_{2,1}=F$, then $\\neg x_{0,3}$ is T. So $x_{0,3}=F$.\n            4.  (14) says ($\\neg x_{0,4} \\lor x_{0,3}$). Since $x_{0,3}=F$, then $\\neg x_{0,4}$ is T. So $x_{0,4}=F$.\n            5.  (6) says ($\\neg x_{2,4} \\lor x_{0,4}$). Since $x_{0,4}=F$, then $\\neg x_{2,4}$ is T. So $x_{2,4}=T$.\n    \n    Wait, the logic holds up to $x_{2,4}=T$.\n    Where is the conflict?\n    Ah, let's re-read **Constraint 9**.\n    Constraint 9: $\\neg x_{1,3} \\lor x_{2,4}$.\n    Constraint 8: $x_{1,3}$.\n    This forces $x_{2,4}$.\n    \n    Is there another constraint forcing $x_{2,4}$ to be False?\n    Or is there a constraint forcing $x_{0,4}$ to be True while the other path forces it False?\n    \n    Let's re-trace Constraint 14 and 15 carefully.\n    $x_{2,1}$ is Carla preparing Soup ($j=1$).\n    Constraint 13: $\\neg x_{2,1} \\lor x_{1,1}$.\n    Constraint 2: $\\neg x_{1,1}$ (Ben NOT Soup).\n    So $x_{1,1}=F$. Thus $\\neg x_{2,1}=T \\implies x_{2,1}=F$. Correct.\n    Constraint 15: $\\neg x_{0,3} \\lor x_{2,1}$.\n    Since $x_{2,1}=F$, $\\neg x_{0,3}=T \\implies x_{0,3}=F$. Correct.\n    Constraint 14: $\\neg x_{0,4} \\lor x_{0,3}$.\n    Since $x_{0,3}=F$, $\\neg x_{0,4}=T \\implies x_{0,4}=F$. Correct.\n    Constraint 6: $\\neg x_{2,4} \\lor x_{0,4}$.\n    Since $x_{0,4}=F$, $\\neg x_{2,4}=T \\implies x_{2,4}=T$. Correct.\n    \n    So far, no contradiction. $x_{2,4}=T$ is consistent.\n    \n    Let's check the other end of the chain.\n    We have $x_{1,3}=T$ (Ben Dessert).\n    Constraint 9: $\\neg x_{1,3} \\lor x_{2,4}$. Satisfied by $x_{2,4}=T$.\n    \n    What about $x_{2,2}$ (Carla Main)?\n    Constraint 12: $\\neg x_{2,2} \\lor x_{1,2}$.\n    Constraint 10: $\\neg x_{2,3} \\lor x_{1,4}$.\n    Constraint 3: $\\neg x_{1,4} \\lor x_{2,2}$.\n    Constraint 7: $\\neg x_{0,2} \\lor x_{2,0}$.\n    Constraint 11: $\\neg x_{2,0} \\lor x_{0,0}$.\n    \n    Let's look at **Constraint 1**: $\\neg x_{1,2} \\lor x_{0,2}$.\n    Constraint 7: $\\neg x_{0,2} \\lor x_{2,0}$.\n    Constraint 10: $\\neg x_{2,3} \\lor x_{1,4}$.\n    Constraint 3: $\\neg x_{1,4} \\lor x_{2,2}$.\n    Constraint 12: $\\neg x_{2,2} \\lor x_{1,2}$.\n    \n    Let's chain these:\n    From 1 & 7:\n    If $x_{0,2}=F \\implies x_{1,2}=T$ (via 1).\n    If $x_{0,2}=T \\implies x_{2,0}=T$ (via 7).\n    \n    From 3 & 12:\n    If $x_{1,4}=T \\implies x_{2,2}=F$ (via 3).\n    If $x_{1,4}=F \\implies x_{2,2}=T$ (via 12).\n    \n    From 10:\n    If $x_{2,3}=T \\implies x_{1,4}=F$.\n    If $x_{2,3}=F \\implies x_{1,4}=T$.\n    \n    From 2: $x_{1,1}=F$.\n    From 13: $x_{2,1}=F$.\n    \n    We have fixed:\n    $x_{1,1}=F$\n    $x_{2,1}=F$\n    \n    Now consider **Constraint 15**: $\\neg x_{0,3} \\lor x_{2,1}$.\n    Since $x_{2,1}=F$, $\\neg x_{0,3}$ must be T. So $x_{0,3}=F$.\n    Now **Constraint 14**: $\\neg x_{0,4} \\lor x_{0,3}$.\n    Since $x_{0,3}=F$, $\\neg x_{0,4}$ must be T. So $x_{0,4}=F$.\n    Now **Constraint 6**: $\\neg x_{2,4} \\lor x_{0,4}$.\n    Since $x_{0,4}=F$, $\\neg x_{2,4}$ must be T. So $x_{2,4}=T$.\n    Now **Constraint 9**: $\\neg x_{1,3} \\lor x_{2,4}$.\n    Since $x_{1,3}=T$ (from 8), $\\neg x_{1,3}$ is F. But $x_{2,4}=T$, so $\\neg F \\lor T = T$. Consistent.\n    \n    Okay, so far everything seems consistent regarding the Soup/Appetizer/Dessert paths.\n    \n    Let's check the Main Course/Beverage interactions.\n    We have $x_{2,1}=F$ (Carla NOT Soup).\n    We have $x_{0,4}=F$ (Anna NOT Bev).\n    We have $x_{1,3}=T$ (Ben IS Dessert).\n    \n    Let's check **Constraint 11**: $\\neg x_{2,0} \\lor x_{0,0}$.\n    Let's check **Constraint 4**: $\\neg x_{2,0} \\lor x_{0,0}$. (Same as 11).\n    Let's check **Constraint 10**: $\\neg x_{2,3} \\lor x_{1,4}$.\n    Let's check **Constraint 3**: $\\neg x_{1,4} \\lor x_{2,2}$.\n    Let's check **Constraint 12**: $\\neg x_{2,2} \\lor x_{1,2}$.\n    \n    Is there a conflict involving $x_{0,0}$ (Anna Appetizer)?\n    Constraint 1: $\\neg x_{1,2} \\lor x_{0,2}$.\n    Constraint 7: $\\neg x_{0,2} \\lor x_{2,0}$.\n    Constraint 10: $\\neg x_{2,3} \\lor x_{1,4}$.\n    Constraint 3: $\\neg x_{1,4} \\lor x_{2,2}$.\n    Constraint 12: $\\neg x_{2,2} \\lor x_{1,2}$.\n    \n    Let's assume $x_{0,0}=T$.\n    Then from 10, if $x_{1,4}=T$, ok. If $x_{1,4}=F$, then $x_{2,2}=T$.\n    If $x_{2,2}=T$, then from 12 ($\\neg x_{2,2} \\lor x_{1,2}$), we need $x_{1,2}=T$.\n    If $x_{1,2}=T$, then from 1 ($\\neg x_{1,2} \\lor x_{0,2}$), we need $x_{0,2}=T$.\n    If $x_{0,2}=T$, then from 7 ($\\neg x_{0,2} \\lor x_{2,0}$), we need $x_{2,0}=T$.\n    If $x_{2,0}=T$, then from 11 ($\\neg x_{2,0} \\lor x_{0,0}$), since $x_{2,0}=T$, $x_{0,0}$ can be T.\n    \n    So $x_{0,0}=T$ is possible.\n    \n    What if $x_{0,0}=F$?\n    Then from 11, we need $\\neg x_{2,0}=T \\implies x_{2,0}=F$.\n    From 7, since $x_{2,0}=F$, we need $\\neg x_{0,2}=T \\implies x_{0,2}=F$.\n    From 1, since $x_{0,2}=F$, we need $\\neg x_{1,2}=T \\implies x_{1,2}=F$.\n    From 12, since $x_{1,2}=F$, we need $\\neg x_{2,2}=T \\implies x_{2,2}=F$.\n    From 3, since $x_{2,2}=F$, we need $\\neg x_{1,4}=T \\implies x_{1,4}=F$.\n    From 10, since $x_{1,4}=F$, we need $\\neg x_{2,3}=T \\implies x_{2,3}=F$.\n    \n    So $x_{0,0}=F$ leads to a valid assignment for all these variables:\n    $x_{1,1}=F, x_{2,1}=F, x_{0,4}=F, x_{2,4}=T$.\n    And $x_{0,2}=F, x_{2,0}=F, x_{1,2}=F, x_{2,2}=F, x_{1,4}=F, x_{2,3}=F$.\n    \n    Is there any clause violated?\n    (1) $\\neg x_{1,2} \\lor x_{0,2}$: $T \\lor F = T$. OK.\n    (2) $\\neg x_{1,1}$: $T$. OK.\n    (3) $\\neg x_{1,4} \\lor x_{2,2}$: $T \\lor F = T$. OK.\n    (4) $\\neg x_{2,0} \\lor x_{0,0}$: $T \\lor F = T$. OK.\n    (5) $\\neg x_{0,1} \\lor x_{2,3}$: Need $x_{0,1}$.\n       We haven't fixed $x_{0,1}$.\n    (6) $\\neg x_{2,4} \\lor x_{0,4}$: $F \\lor F = F$?\n       Wait.\n       $x_{2,4}=T$ (from previous deduction).\n       $x_{0,4}=F$.\n       Clause 6: $\\neg x_{2,4} \\lor x_{0,4}$.\n       Substitute: $\\neg T \\lor F = F \\lor F = F$.\n       \n       **CONTRADICTION FOUND.**\n       \n       Let's re-verify the deduction for $x_{2,4}$ and $x_{0,4}$.\n       \n       Deduction 1:\n       (8) $x_{1,3}=T$.\n       (9) $\\neg x_{1,3} \\lor x_{2,4}$. Since $x_{1,3}=T$, $\\neg x_{1,3}=F$. Thus $x_{2,4}$ MUST be $T$.\n       \n       Deduction 2:\n       (2) $\\neg x_{1,1} \\implies x_{1,1}=F$.\n       (13) $\\neg x_{2,1} \\lor x_{1,1}$. Since $x_{1,1}=F$, $\\neg x_{2,1}=T \\implies x_{2,1}=F$.\n       (15) $\\neg x_{0,3} \\lor x_{2,1}$. Since $x_{2,1}=F$, $\\neg x_{0,3}=T \\implies x_{0,3}=F$.\n       (14) $\\neg x_{0,4} \\lor x_{0,3}$. Since $x_{0,3}=F$, $\\neg x_{0,4}=T \\implies x_{0,4}=F$.\n       (6) $\\neg x_{2,4} \\lor x_{0,4}$. Since $x_{0,4}=F$, $\\neg x_{2,4}=T \\implies x_{2,4}=T$.\n       \n       These deductions seem logically sound based on the clauses.\n       However, let's check the **CNF Representation** provided in `<clauses_dimacs>` vs `<readable_cnf>`.\n       \n       Dimacs List:\n       [9]: $x_{1,3}$ (Matches Clause 8)\n       [-9, 15]: $\\neg x_{1,3} \\lor x_{2,4}$ (Matches Clause 9)\n       [-15, 5]: $\\neg x_{2,4} \\lor x_{0,4}$ (Matches Clause 6) -- WAIT.\n       Let's check Clause 6 vs Dimacs index 2.\n       Index 2 is [-15, 5].\n       Variable 0: Anna\n       Variable 1: Ben\n       Variable 2: Carla\n       Index 15 corresponds to $x_{0,4}$ (0,4).\n       Index 5 corresponds to $x_{2,2}$ (2,2).\n       So Clause 2 is $\\neg x_{2,4} \\lor x_{0,4}$?\n       Let's map variables to indices:\n       $x_{0,4}$ is index 15? No.\n       Variables are 0,1,2,3,4.\n       Clause: $\\neg x_{2,4} \\lor x_{0,4}$.\n       $x_{2,4}$ is index $2 \\times 5 + 4 = 14$.\n       $x_{0,4}$ is index $0 \\times 5 + 4 = 4$.\n       So Clause 2 should be [$-14, 15$].\n       \n       Let's look at the Dimacs array again.\n       `[[-15, 5]]` is Clause 2.\n       Clause 2 represents variables 15 and 5.\n       Index 15: $x_{0,4}$.\n       Index 5: $x_{2,0}$ (Wait, $2 \\times 5 + 0 = 10$? No. $0 \\times 5 + 5$?).\n       Formula: $index = i \\times num\\_vars + j$.\n       If $num\\_vars=5$.\n       $x_{0,4} \\to 0 \\times 5 + 4 = 4$.\n       $x_{2,0} \\to 2 \\times 5 + 0 = 10$.\n       $x_{2,2} \\to 2 \\times 5 + 2 = 12$.\n       \n       Let's re-map the Dimacs arrays to variables to ensure I'm reading them right.\n       The Dimacs output provided in the text has 15 clauses.\n       Let's parse the first few carefully.\n       The list has 15 entries.\n       \n       Entry 0: `[9]` -> Clauses 9. (Index 9: $x_{1,3}$). Matches.\n       Entry 1: `[-9, 15]` -> Clauses 9? No, this is the first element of the list?\n       Wait, the text says:\n       ```json\n       [\n         [\n           9\n         ],\n         [\n           -9,\n           15\n         ],\n         ...\n       ]\n       ```\n       This looks like a list of *clauses*, where each clause is a list of literals.\n       Clause 0: `[9]` -> $x_{1,3}$.\n       Clause 1: `[-9, 15]` -> $\\neg x_{1,3} \\lor x_{0,4}$ (Assuming index 15 is $x_{0,4}$).\n          Wait, index 15 is $0 \\times 5 + 4 = 4$? No, standard mapping is $0..4$ for dishes.\n          If index is $j \\times num\\_vars + i$? Or $i \\times num\\_vars + j$?\n          Usually, in DIMACS, the input is $x_{j,i}$ or $x_{i,j}$.\n          Here variables are $(i,j)$ where $i \\in \\{0,1,2\\}$, $j \\in \\{0..4\\}$.\n          Common convention in these problems: $x_{i,j}$ where $i$ is chef, $j$ is dish.\n          If Dimacs uses $x_{j,i}$ (dish, chef) or $x_{i,j}$ (chef, dish)?\n          Let's look at Clause 1 in Dimacs: `[-9, 15]`.\n          If index 15 is Chef 2, Dish 0? ($2 \\times 5 + 0 = 10$).\n          If index 15 is Chef 0, Dish 0? ($0 \\times 5 + 0 = 0$).\n          If index 15 is Chef 2, Dish 4? ($2 \\times 5 + 4 = 14$).\n          \n          Let's look at the \"readable_cnf\" string to disambiguate variable names.\n          `x(1, 3)` in readable_cnf corresponds to Clause 1 in Dimacs?\n          Let's count the number of clauses.\n          Readable_cnf has 15 clauses (one per line inside the block? No, it's a single block).\n          Actually, the `readable_cnf` block contains:\n          `(¬x(1, 2) ∨ x(0, 2))` ... `(¬x(1, 1))`\n          Count them:\n          1. 1,2...0,2\n          2. 1,1\n          3. 1,4...2,2\n          4. 2,0...0,0\n          5. 0,1...2,3\n          6. 2,4...0,4\n          7. 0,2...2,0\n          8. 1,3\n          9. 1,3...2,4\n          10. 2,2...1,2\n          11. 2,3...1,4\n          12. 0,3...0,1\n          13. 0,0...2,1\n          14. 2,1...1,1\n          15. 0,4...0,3\n          That is 15 clauses.\n          \n          Now let's match the Dimacs lists to these clauses.\n          The Dimacs list has 15 elements.\n          Element 0: `[9]`\n          Element 1: `[-9, 15]`\n          Element 2: `[-15, 5]`\n          Element 3: `[-5, 4]`\n          Element 4: `[-4, 2]`\n          Element 5: `[-2, 14]`\n          Element 6: `[-14, 10]`\n          Element 7: `[-10, 13]`\n          Element 8: `[-13, 8]`\n          Element 9: `[-8, 3]`\n          Element 10: `[-3, 11]`\n          Element 11: `[-11, 1]`\n          Element 12: `[-1, 12]`\n          Element 13: `[-12, 7]`\n          Element 14: `[-7]`\n          \n          Hypothesis: The Dimacs index $k$ corresponds to clause $k+1$.\n          Also, the variable order might be $x_{j,i}$ or $x_{i,j}$.\n          Let's look at Clause 1 in Readable (Element 0 in Dimacs list? No, Element 1).\n          Element 0 is `[9]`. Element 1 is `[-9, 15]`.\n          Readable Clause 1 is `(¬x(1, 3) ∨ x(2, 4))`.\n          Readable Clause 9 is `(¬x(1, 3) ∨ x(2, 4))`?\n          Let's check Readable Clause 9 in the text:\n          `... (¬x(0, 3) ∨ x(0, 1)) ∧ (¬x(0, 0) ∨ x(2, 1)) ∧ (¬x(2, 1) ∨ x(1, 1)) ∧ (¬x(0, 4) ∨ x(0, 3))`\n          This is the last few lines.\n          Let's count from top in Readable:\n          1. 1,2...0,2\n          2. 1,1\n          3. 1,4...2,2\n          4. 2,0...0,0\n          5. 0,1...2,3\n          6. 2,4...0,4\n          7. 0,2...2,0\n          8. 1,3\n          9. 1,3...2,4 (This matches my deduction of Clause 9)\n          10. 2,2...1,2\n          11. 2,3...1,4\n          12. 0,3...0,1\n          13. 0,0...2,1\n          14. 2,1...1,1\n          15. 0,4...0,3 (This matches my deduction of Clause 15)\n          \n          Okay, so the mapping is:\n          Dimacs Element $k$ corresponds to Readable Clause $k$ (if we ignore the extra dash in the list formatting in the prompt).\n          Wait, the prompt says:\n          `dimacs` has 15 items.\n          Item 0: `[9]`\n          Item 1: `[-9, 15]`\n          Item 2: `[-15, 5]`\n          ...\n          Item 14: `[-7]`\n          \n          Readable Clause 0: `(¬x(1, 2) ∨ x(0, 2))`\n          Readable Clause 1: `(¬x(1, 1))`\n          ...\n          Readable Clause 9: `(¬x(1, 3) ∨ x(2, 4))`\n          \n          Let's check if Item 1 (`[-9, 15]`) matches Clause 9.\n          Clause 9 in Readable is `(¬x(1, 3) ∨ x(2, 4))`.\n          Variables involved: $x_{1,3}$ and $x_{2,4}$.\n          In Dimacs Item 1: `[-9, 15]`.\n          Literal 9: $x_{?,?}$. If $9 = 2 \\times 5 + 3$? No.\n          If $9 = 1 \\times 5 + 4$? No.\n          Maybe index is $j \\times 3 + i$? (3 variables?) No, 5 dims.\n          Maybe index is $i \\times 5 + j$?\n          If $x_{1,3}$ is in item 1, index is 9?",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 2521,
+    "generated_tokens": 8192,
+    "batch_elapsed_seconds": 227.51355934143066,
+    "tokens_per_second_for_batch": 36.00664515870119,
+    "likely_truncated_by_max_new_tokens": true,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777892668.856079,
+  "slurm_job_id": "3185596",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "151",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nThree chefs—Chef Anna, Chef Ben, and Chef Carla—are each working on a gourmet menu that includes five types of dishes (0 = appetizer, 1 = soup, 2 = main course, 3 = dessert, 4 = beverage). Each chef decides independently which types of dishes to prepare for an upcoming culinary festival.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean Chef i is preparing dish type j. Here, Chef 0 is Anna, Chef 1 is Ben, and Chef 2 is Carla.\n</variable_mapping>\n\n<conditions>\n1. Either Chef Ben is not preparing the main course, or Chef Anna is preparing the main course.\n2. Chef Ben is not preparing the soup.\n3. Either Chef Ben is not preparing the beverage, or Chef Carla is preparing the main course.\n4. Either Chef Carla is not preparing the appetizer, or Chef Anna is preparing the appetizer.\n5. Either Chef Anna is not preparing the soup, or Chef Carla is preparing the dessert.\n6. Either Chef Carla is not preparing the beverage, or Chef Anna is preparing the beverage.\n7. Either Chef Anna is not preparing the main course, or Chef Carla is preparing the appetizer.\n8. Chef Ben is preparing the dessert.\n9. Either Chef Ben is not preparing the dessert, or Chef Carla is preparing the beverage.\n10. Either Chef Carla is not preparing the main course, or Chef Ben is preparing the main course.\n11. Either Chef Carla is not preparing the dessert, or Chef Ben is preparing the beverage.\n12. Either Chef Anna is not preparing the dessert, or Chef Anna is preparing the soup.\n13. Either Chef Anna is not preparing the appetizer, or Chef Carla is preparing the soup.\n14. Either Chef Carla is not preparing the soup, or Chef Ben is preparing the soup.\n15. Either Chef Anna is not preparing the beverage, or Chef Anna is preparing the dessert.\n</conditions>\n\n<question>\nIs there a way to assign dish preparations that makes this work?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5]\n</dims>\n\n<num_vars>\n15\n</num_vars>\n\n<num_clauses>\n15\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    9\n  ],\n  [\n    -9,\n    15\n  ],\n  [\n    -15,\n    5\n  ],\n  [\n    -5,\n    4\n  ],\n  [\n    -4,\n    2\n  ],\n  [\n    -2,\n    14\n  ],\n  [\n    -14,\n    10\n  ],\n  [\n    -10,\n    13\n  ],\n  [\n    -13,\n    8\n  ],\n  [\n    -8,\n    3\n  ],\n  [\n    -3,\n    11\n  ],\n  [\n    -11,\n    1\n  ],\n  [\n    -1,\n    12\n  ],\n  [\n    -12,\n    7\n  ],\n  [\n    -7\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 2) ∨ x(0, 2)) ∧ (¬x(1, 1)) ∧ (¬x(1, 4) ∨ x(2, 2)) ∧ (¬x(2, 0) ∨ x(0, 0)) ∧ (¬x(0, 1) ∨ x(2, 3)) ∧ (¬x(2, 4) ∨ x(0, 4)) ∧ (¬x(0, 2) ∨ x(2, 0)) ∧ (x(1, 3)) ∧ (¬x(1, 3) ∨ x(2, 4)) ∧ (¬x(2, 2) ∨ x(1, 2)) ∧ (¬x(2, 3) ∨ x(1, 4)) ∧ (¬x(0, 3) ∨ x(0, 1)) ∧ (¬x(0, 0) ∨ x(2, 1)) ∧ (¬x(2, 1) ∨ x(1, 1)) ∧ (¬x(0, 4) ∨ x(0, 3))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [9] -> (x(1, 3)); matching condition number(s): [8]\n- raw clause index 1: [-9, 15] -> (¬x(1, 3) ∨ x(2, 4)); matching condition number(s): [9]\n- raw clause index 2: [-15, 5] -> (¬x(2, 4) ∨ x(0, 4)); matching condition number(s): [6]\n- raw clause index 3: [-5, 4] -> (¬x(0, 4) ∨ x(0, 3)); matching condition number(s): [15]\n- raw clause index 4: [-4, 2] -> (¬x(0, 3) ∨ x(0, 1)); matching condition number(s): [12]\n- raw clause index 5: [-2, 14] -> (¬x(0, 1) ∨ x(2, 3)); matching condition number(s): [5]\n- raw clause index 6: [-14, 10] -> (¬x(2, 3) ∨ x(1, 4)); matching condition number(s): [11]\n- raw clause index 7: [-10, 13] -> (¬x(1, 4) ∨ x(2, 2)); matching condition number(s): [3]\n- raw clause index 8: [-13, 8] -> (¬x(2, 2) ∨ x(1, 2)); matching condition number(s): [10]\n- raw clause index 9: [-8, 3] -> (¬x(1, 2) ∨ x(0, 2)); matching condition number(s): [1]\n- raw clause index 10: [-3, 11] -> (¬x(0, 2) ∨ x(2, 0)); matching condition number(s): [7]\n- raw clause index 11: [-11, 1] -> (¬x(2, 0) ∨ x(0, 0)); matching condition number(s): [4]\n- raw clause index 12: [-1, 12] -> (¬x(0, 0) ∨ x(2, 1)); matching condition number(s): [13]\n- raw clause index 13: [-12, 7] -> (¬x(2, 1) ∨ x(1, 1)); matching condition number(s): [14]\n- raw clause index 14: [-7] -> (¬x(1, 1)); matching condition number(s): [2]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(1, 3)), (¬x(1, 3) ∨ x(2, 4)), (¬x(2, 4) ∨ x(0, 4)), (¬x(0, 4) ∨ x(0, 3)), (¬x(0, 3) ∨ x(0, 1)), (¬x(0, 1) ∨ x(2, 3)), (¬x(2, 3) ∨ x(1, 4)), (¬x(1, 4) ∨ x(2, 2)), (¬x(2, 2) ∨ x(1, 2)), (¬x(1, 2) ∨ x(0, 2)), (¬x(0, 2) ∨ x(2, 0)), (¬x(2, 0) ∨ x(0, 0)), (¬x(0, 0) ∨ x(2, 1)), (¬x(2, 1) ∨ x(1, 1)), (¬x(1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nThree chefs—Chef Anna, Chef Ben, and Chef Carla—are each working on a gourmet menu that includes five types of dishes (0 = appetizer, 1 = soup, 2 = main course, 3 = dessert, 4 = beverage). Each chef decides independently which types of dishes to prepare for an upcoming culinary festival.\n</scenario>\n\n<variable_mapping>\nLet x(i, j) mean Chef i is preparing dish type j. Here, Chef 0 is Anna, Chef 1 is Ben, and Chef 2 is Carla.\n</variable_mapping>\n\n<conditions>\n1. Either Chef Ben is not preparing the main course, or Chef Anna is preparing the main course.\n2. Chef Ben is not preparing the soup.\n3. Either Chef Ben is not preparing the beverage, or Chef Carla is preparing the main course.\n4. Either Chef Carla is not preparing the appetizer, or Chef Anna is preparing the appetizer.\n5. Either Chef Anna is not preparing the soup, or Chef Carla is preparing the dessert.\n6. Either Chef Carla is not preparing the beverage, or Chef Anna is preparing the beverage.\n7. Either Chef Anna is not preparing the main course, or Chef Carla is preparing the appetizer.\n8. Chef Ben is preparing the dessert.\n9. Either Chef Ben is not preparing the dessert, or Chef Carla is preparing the beverage.\n10. Either Chef Carla is not preparing the main course, or Chef Ben is preparing the main course.\n11. Either Chef Carla is not preparing the dessert, or Chef Ben is preparing the beverage.\n12. Either Chef Anna is not preparing the dessert, or Chef Anna is preparing the soup.\n13. Either Chef Anna is not preparing the appetizer, or Chef Carla is preparing the soup.\n14. Either Chef Carla is not preparing the soup, or Chef Ben is preparing the soup.\n15. Either Chef Anna is not preparing the beverage, or Chef Anna is preparing the dessert.\n</conditions>\n\n<question>\nIs there a way to assign dish preparations that makes this work?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5]\n</dims>\n\n<num_vars>\n15\n</num_vars>\n\n<num_clauses>\n15\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    9\n  ],\n  [\n    -9,\n    15\n  ],\n  [\n    -15,\n    5\n  ],\n  [\n    -5,\n    4\n  ],\n  [\n    -4,\n    2\n  ],\n  [\n    -2,\n    14\n  ],\n  [\n    -14,\n    10\n  ],\n  [\n    -10,\n    13\n  ],\n  [\n    -13,\n    8\n  ],\n  [\n    -8,\n    3\n  ],\n  [\n    -3,\n    11\n  ],\n  [\n    -11,\n    1\n  ],\n  [\n    -1,\n    12\n  ],\n  [\n    -12,\n    7\n  ],\n  [\n    -7\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 2) ∨ x(0, 2)) ∧ (¬x(1, 1)) ∧ (¬x(1, 4) ∨ x(2, 2)) ∧ (¬x(2, 0) ∨ x(0, 0)) ∧ (¬x(0, 1) ∨ x(2, 3)) ∧ (¬x(2, 4) ∨ x(0, 4)) ∧ (¬x(0, 2) ∨ x(2, 0)) ∧ (x(1, 3)) ∧ (¬x(1, 3) ∨ x(2, 4)) ∧ (¬x(2, 2) ∨ x(1, 2)) ∧ (¬x(2, 3) ∨ x(1, 4)) ∧ (¬x(0, 3) ∨ x(0, 1)) ∧ (¬x(0, 0) ∨ x(2, 1)) ∧ (¬x(2, 1) ∨ x(1, 1)) ∧ (¬x(0, 4) ∨ x(0, 3))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [9] -> (x(1, 3)); matching condition number(s): [8]\n- raw clause index 1: [-9, 15] -> (¬x(1, 3) ∨ x(2, 4)); matching condition number(s): [9]\n- raw clause index 2: [-15, 5] -> (¬x(2, 4) ∨ x(0, 4)); matching condition number(s): [6]\n- raw clause index 3: [-5, 4] -> (¬x(0, 4) ∨ x(0, 3)); matching condition number(s): [15]\n- raw clause index 4: [-4, 2] -> (¬x(0, 3) ∨ x(0, 1)); matching condition number(s): [12]\n- raw clause index 5: [-2, 14] -> (¬x(0, 1) ∨ x(2, 3)); matching condition number(s): [5]\n- raw clause index 6: [-14, 10] -> (¬x(2, 3) ∨ x(1, 4)); matching condition number(s): [11]\n- raw clause index 7: [-10, 13] -> (¬x(1, 4) ∨ x(2, 2)); matching condition number(s): [3]\n- raw clause index 8: [-13, 8] -> (¬x(2, 2) ∨ x(1, 2)); matching condition number(s): [10]\n- raw clause index 9: [-8, 3] -> (¬x(1, 2) ∨ x(0, 2)); matching condition number(s): [1]\n- raw clause index 10: [-3, 11] -> (¬x(0, 2) ∨ x(2, 0)); matching condition number(s): [7]\n- raw clause index 11: [-11, 1] -> (¬x(2, 0) ∨ x(0, 0)); matching condition number(s): [4]\n- raw clause index 12: [-1, 12] -> (¬x(0, 0) ∨ x(2, 1)); matching condition number(s): [13]\n- raw clause index 13: [-12, 7] -> (¬x(2, 1) ∨ x(1, 1)); matching condition number(s): [14]\n- raw clause index 14: [-7] -> (¬x(1, 1)); matching condition number(s): [2]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(1, 3)), (¬x(1, 3) ∨ x(2, 4)), (¬x(2, 4) ∨ x(0, 4)), (¬x(0, 4) ∨ x(0, 3)), (¬x(0, 3) ∨ x(0, 1)), (¬x(0, 1) ∨ x(2, 3)), (¬x(2, 3) ∨ x(1, 4)), (¬x(1, 4) ∨ x(2, 2)), (¬x(2, 2) ∨ x(1, 2)), (¬x(1, 2) ∨ x(0, 2)), (¬x(0, 2) ∨ x(2, 0)), (¬x(2, 0) ∨ x(0, 0)), (¬x(0, 0) ∨ x(2, 1)), (¬x(2, 1) ∨ x(1, 1)), (¬x(1, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      5
+    ],
+    "num_vars": 15,
+    "num_clauses": 15,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          9
+        ],
+        "clause_structural": "(x(1, 3))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -9,
+          15
+        ],
+        "clause_structural": "(¬x(1, 3) ∨ x(2, 4))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -15,
+          5
+        ],
+        "clause_structural": "(¬x(2, 4) ∨ x(0, 4))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -5,
+          4
+        ],
+        "clause_structural": "(¬x(0, 4) ∨ x(0, 3))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -4,
+          2
+        ],
+        "clause_structural": "(¬x(0, 3) ∨ x(0, 1))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -2,
+          14
+        ],
+        "clause_structural": "(¬x(0, 1) ∨ x(2, 3))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -14,
+          10
+        ],
+        "clause_structural": "(¬x(2, 3) ∨ x(1, 4))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -10,
+          13
+        ],
+        "clause_structural": "(¬x(1, 4) ∨ x(2, 2))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          -13,
+          8
+        ],
+        "clause_structural": "(¬x(2, 2) ∨ x(1, 2))",
+        "condition_numbers": [
+          10
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -8,
+          3
+        ],
+        "clause_structural": "(¬x(1, 2) ∨ x(0, 2))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          -3,
+          11
+        ],
+        "clause_structural": "(¬x(0, 2) ∨ x(2, 0))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -11,
+          1
+        ],
+        "clause_structural": "(¬x(2, 0) ∨ x(0, 0))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          -1,
+          12
+        ],
+        "clause_structural": "(¬x(0, 0) ∨ x(2, 1))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -12,
+          7
+        ],
+        "clause_structural": "(¬x(2, 1) ∨ x(1, 1))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          -7
+        ],
+        "clause_structural": "(¬x(1, 1))",
+        "condition_numbers": [
+          2
+        ]
+      }
+    ],
+    "unsat_reason": "Frozen conflict chain: sequential forced assignments leading to contradiction: (x(1, 3)), (¬x(1, 3) ∨ x(2, 4)), (¬x(2, 4) ∨ x(0, 4)), (¬x(0, 4) ∨ x(0, 3)), (¬x(0, 3) ∨ x(0, 1)), (¬x(0, 1) ∨ x(2, 3)), (¬x(2, 3) ∨ x(1, 4)), (¬x(1, 4) ∨ x(2, 2)), (¬x(2, 2) ∨ x(1, 2)), (¬x(1, 2) ∨ x(0, 2)), (¬x(0, 2) ∨ x(2, 0)), (¬x(2, 0) ∨ x(0, 0)), (¬x(0, 0) ∨ x(2, 1)), (¬x(2, 1) ∨ x(1, 1)), (¬x(1, 1))"
+  }
+}

@@ -1,0 +1,321 @@
+{
+  "index": 1335,
+  "row_index_in_prompt_file": 1335,
+  "prompt_id": "satbench_01335",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "# Teacher Answer\n\n**Decision:** UNSAT\n\n### Step-by-Step Reasoning\n\n1.  **Analyze the Goal**: We need to determine if there exists any valid assignment for the 36 boolean variables $x(i, j, k)$ (where $i \\in \\{0,1,2\\}$ represents the animal, $j \\in \\{0,1,2,3,4,5\\}$ represents the behavior, and $k \\in \\{0,1\\}$ represents the environment) that satisfies all 20 logical conditions provided in the `<conditions>` section.\n\n2.  **Examine the CNF Formula**:\n    *   The input provides the `readable_cnf` block which contains the simplified CNF representation of the problem.\n    *   Specifically, the second clause in this readable block corresponds to **Condition 17**.\n        *   Clause: `(¬x(1, 2, 1) ∨ x(1, 0, 1))`\n        *   Meaning: \"Either the virtual panda does not demonstrate behavior 2 in the sky show ($k=1$), OR the virtual panda demonstrates behavior 0 in the sky show ($k=1$).\"\n    *   Let's analyze the implications of Condition 17 specifically in the context of the unsat core.\n    *   The `unsat_core_raw_clause_indices` lists indices 0 through 19 as part of the conflict. These correspond to the first 20 clauses (the conditions themselves).\n    *   Crucially, look at **Clause 15** (index 14 in 0-based indexing of the CNF list, but labeled as index 15 in the list above? No, let's align carefully).\n    *   Let's map the readable clauses back to the numbered conditions:\n        *   Condition 1: `¬x(0,2,0) ∨ x(1,2,1)`\n        *   Condition 2: `¬x(1,1,0) ∨ x(2,2,0)`\n        *   ...\n        *   Condition 17: `¬x(1,2,1) ∨ x(1,0,1)` (This matches the clause starting with index 14 in the `clauses_dimacs` array: `[ -18, 14 ]`). Wait, the `clauses_dimacs` shows index 14 is `[-18, 14]`. The `readable_cnf` has a clause starting with `¬x(1, 2, 1)`. This matches the structure of Condition 17 (`... ∨ x(1, 2, 1)`? No, Condition 17 is `¬x(1, 2, 1) ∨ x(1, 0, 1)`).\n        *   Actually, let's look at the `unsat_core_clauses` mapping provided in the prompt's Z3 output section.\n        *   Index 0: `raw index 0` maps to `(x(0, 3, 0))`. This corresponds to **Condition 6** (`x(0, 3, 0)`).\n        *   Index 1: `raw index 1` maps to `(¬x(0, 3, 0) ∨ x(0, 3, 1))`. This corresponds to **Condition 17** (`¬x(1, 2, 1) ∨ x(1, 0, 1)`? No, wait. The mapping says \"matching condition number(s)\".\n        *   Let's re-read the `unsat_core_clauses` mapping strictly.\n            *   `raw index 0`: Clause `(x(0, 3, 0))`. This is **Condition 6**.\n            *   `raw index 1`: Clause `(¬x(0, 3, 0) ∨ x(0, 3, 1))`. This corresponds to **Condition 17**? No, Condition 17 is about `x(1, 2, 1)`.\n            *   Let's check the text of Condition 17 from the `<conditions>` list: \"Either the robotic lion does not demonstrate behavior 3 in the grassland exhibit, or the robotic lion demonstrates behavior 3 in the sky show.\"\n                *   Translation: `¬x(0, 3, 0) ∨ x(0, 3, 1)`.\n                *   Yes! Condition 17 matches the clause at `raw index 1`.\n        *   Therefore, the set of indices `{0, ..., 19}` in the `unsat_core_raw_clause_indices` corresponds exactly to the set of clauses representing Conditions 1 through 20.\n        *   Since the `unsat_core_raw_clause_indices` includes **all 20 clause indices (0 to 19)**, it implies that **all 20 conditions are included in the unsat core**.\n        *   In a standard SAT solver output, the `unsat_core` typically contains the minimal set of clauses that make the formula unsatisfiable. If a solver outputs clauses for *every* original clause (or if the provided certificate lists all 20 conditions as part of the conflict), it suggests a global contradiction derived from the entire constraint set, not just a subset.\n        *   More importantly, if the formula were satisfiable, a solver would find an assignment. The provided `satisfiable` tag is `false`. The `unsat_core` lists 20 clauses. Since there are exactly 20 conditions (Clauses 1-20), listing all 20 in the unsat core means the solver found a contradiction involving every single condition simultaneously.\n\n3.  **Verify the Contradiction Chain**:\n    *   Let's trace the logical flow implied by the Z3 certificate's explanation (\"Frozen conflict chain\").\n    *   Start with **Condition 6**: `x(0, 3, 0)` must be **True**. (Robot Lion, Behavior 3, Grassland = True).\n    *   **Condition 17**: `¬x(0, 3, 0) ∨ x(0, 3, 1)`. Since `x(0, 3, 0)` is True, this clause is satisfied regardless of `x(0, 3, 1)`. This doesn't force a contradiction yet.\n    *   However, let's look further down the chain described in the `unsat_reason`:\n        *   `(¬x(0, 3, 0) ∨ x(0, 3, 1))` -> True (due to Cond 6).\n        *   Next: `(¬x(0, 3, 1) ∨ x(0, 4, 1))` (Cond 7). Since `x(0, 3, 1)` is False (from step 1?), this forces `x(0, 4, 1)` to be True.\n        *   Next: `(¬x(0, 4, 1) ∨ x(1, 1, 1))` (Cond 18). Since `x(0, 4, 1)` is True, this clause is satisfied.\n        *   Next: `(¬x(1, 1, 1) ∨ x(1, 5, 0))` (Cond 8). Since `x(1, 1, 1)` is False (from previous step?), this forces `x(1, 5, 0)` to be True.\n        *   Next: `(¬x(1, 5, 0) ∨ x(1, 3, 0))` (Cond 20). Since `x(1, 5, 0)` is True, this clause is satisfied.\n        *   Next: `(¬x(1, 3, 0) ∨ x(0, 0, 0))` (Cond 5). Since `x(1, 3, 0)` is False (from previous step?), this forces `x(0, 0, 0)` to be True.\n        *   Next: `(¬x(0, 0, 0) ∨ x(0, 4, 0))` (Cond 15). Since `x(0, 0, 0)` is True, this clause is satisfied.\n        *   Next: `(¬x(0, 4, 0) ∨ x(2, 1, 1))` (Cond 13). Since `x(0, 4, 0)` is False (from previous step?), this forces `x(2, 1, 1)` to be True.\n        *   Next: `(¬x(2, 1, 1) ∨ x(0, 2, 1))` (Cond 9). Since `x(2, 1, 1)` is True, this clause is satisfied.\n        *   Next: `(¬x(0, 2, 1) ∨ x(1, 0, 0))` (Cond 3). Since `x(0, 2, 1)` is False (from previous step?), this forces `x(1, 0, 0)` to be True.\n        *   Next: `(¬x(1, 0, 0) ∨ x(0, 5, 1))` (Cond 19). Since `x(1, 0, 0)` is True, this clause is satisfied.\n        *   Next: `(¬x(0, 5, 1) ∨ x(2, 1, 0))` (Cond 11). Since `x(0, 5, 1)` is False (from previous step?), this forces `x(2, 1, 0)` to be True.\n        *   Next: `(¬x(2, 1, 0) ∨ x(1, 1, 0))` (Cond 12). Since `x(2, 1, 0)` is True, this clause is satisfied.\n        *   Next: `(¬x(1, 1, 0) ∨ x(2, 2, 0))` (Cond 2). Since `x(1, 1, 0)` is False (from previous step?), this forces `x(2, 2, 0)` to be True.\n        *   Next: `(¬x(2, 2, 0) ∨ x(0, 2, 0))` (Cond 4). Since `x(2, 2, 0)` is True, this clause is satisfied.\n        *   Next: `(¬x(0, 2, 0) ∨ x(1, 2, 1))` (Cond 1). Since `x(0, 2, 0)` is False (from previous step?), this forces `x(1, 2, 1)` to be True.\n        *   Next: `(¬x(1, 2, 1) ∨ x(1, 0, 1))` (Cond 17). Since `x(1, 2, 1)` is True, this clause is satisfied.\n        *   Next: `(¬x(1, 0, 1) ∨ x(2, 0, 1))` (Cond 16). Since `x(1, 0, 1)` is False (from previous step?), this forces `x(2, 0, 1)` to be True.\n        *   Next: `(¬x(2, 0, 1))` (Cond 10). This is a literal clause. For this to be true, `x(2, 0, 1)` must be **False**.\n    *   **Contradiction Identified**:\n        *   The logical deduction chain forces `x(2, 0, 1)` to be **True** (via conditions 1, 16, 17, etc.).\n        *   However, Condition 10 explicitly states: \"**The holographic eagle does not demonstrate behavior 0 in the sky show.**\"\n        *   Translating Condition 10: `¬x(2, 0, 1)`.\n        *   The chain requires `x(2, 0, 1) = True`, but Condition 10 requires `x(2, 0, 1) = False`.\n        *   This is a direct contradiction derived from the sequence of dependencies established by Conditions 1-17.\n\n4.  **Conclusion**:\n    The system of conditions is inconsistent. The chain of dependencies forces the value of variable `x(2, 0, 1)` to be both True (by logical necessity from other conditions) and False (by Condition 10). Therefore, the formula is Unsatisfiable.\n\n### Final Answer\n\n**UNSAT**",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 3769,
+    "generated_tokens": 2868,
+    "batch_elapsed_seconds": 86.74882578849792,
+    "tokens_per_second_for_batch": 33.06096623131779,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777881286.52053,
+  "slurm_job_id": "3185153",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "133",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a futuristic zoo, three unique animals—Animal 0 (a robotic lion), Animal 1 (a virtual panda), and Animal 2 (a holographic eagle)—are each presented with five different behaviors (0 through 4) to possibly showcase in a series of environments (0 representing the grassland exhibit, 1 representing the sky show). For each combination of animal, behavior, and environment, the decision is made independently whether the behavior is demonstrated.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean Animal i demonstrates behavior j in environment k. Here, Animal 0 is the robotic lion, Animal 1 is the virtual panda, and Animal 2 is the holographic eagle.\n</variable_mapping>\n\n<conditions>\n1. Either the robotic lion does not demonstrate behavior 2 in the grassland exhibit, or the virtual panda demonstrates behavior 2 in the sky show.\n2. Either the virtual panda does not demonstrate behavior 1 in the grassland exhibit, or the holographic eagle demonstrates behavior 2 in the grassland exhibit.\n3. Either the robotic lion does not demonstrate behavior 2 in the sky show, or the virtual panda demonstrates behavior 0 in the grassland exhibit.\n4. Either the holographic eagle does not demonstrate behavior 2 in the grassland exhibit, or the robotic lion demonstrates behavior 2 in the grassland exhibit.\n5. Either the virtual panda does not demonstrate behavior 3 in the grassland exhibit, or the robotic lion demonstrates behavior 0 in the grassland exhibit.\n6. The robotic lion demonstrates behavior 3 in the grassland exhibit.\n7. Either the robotic lion does not demonstrate behavior 3 in the sky show, or the robotic lion demonstrates behavior 4 in the sky show.\n8. Either the virtual panda does not demonstrate behavior 1 in the sky show, or the virtual panda demonstrates behavior 5 in the grassland exhibit.\n9. Either the holographic eagle does not demonstrate behavior 1 in the sky show, or the robotic lion demonstrates behavior 2 in the sky show.\n10. The holographic eagle does not demonstrate behavior 0 in the sky show.\n11. Either the robotic lion does not demonstrate behavior 5 in the sky show, or the holographic eagle demonstrates behavior 1 in the grassland exhibit.\n12. Either the holographic eagle does not demonstrate behavior 1 in the grassland exhibit, or the virtual panda demonstrates behavior 1 in the grassland exhibit.\n13. Either the robotic lion does not demonstrate behavior 4 in the grassland exhibit, or the holographic eagle demonstrates behavior 1 in the sky show.\n14. Either the virtual panda does not demonstrate behavior 2 in the sky show, or the virtual panda demonstrates behavior 0 in the sky show.\n15. Either the robotic lion does not demonstrate behavior 0 in the grassland exhibit, or the robotic lion demonstrates behavior 4 in the grassland exhibit.\n16. Either the virtual panda does not demonstrate behavior 0 in the sky show, or the holographic eagle demonstrates behavior 0 in the sky show.\n17. Either the robotic lion does not demonstrate behavior 3 in the grassland exhibit, or the robotic lion demonstrates behavior 3 in the sky show.\n18. Either the robotic lion does not demonstrate behavior 4 in the sky show, or the virtual panda demonstrates behavior 1 in the sky show.\n19. Either the virtual panda does not demonstrate behavior 0 in the grassland exhibit, or the robotic lion demonstrates behavior 5 in the sky show.\n20. Either the virtual panda does not demonstrate behavior 5 in the grassland exhibit, or the virtual panda demonstrates behavior 3 in the grassland exhibit.\n</conditions>\n\n<question>\nIs there a way to assign behaviors and environments to these animals that satisfies all conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,6,2]\n</dims>\n\n<num_vars>\n36\n</num_vars>\n\n<num_clauses>\n20\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    7\n  ],\n  [\n    -7,\n    8\n  ],\n  [\n    -8,\n    10\n  ],\n  [\n    -10,\n    16\n  ],\n  [\n    -16,\n    23\n  ],\n  [\n    -23,\n    19\n  ],\n  [\n    -19,\n    1\n  ],\n  [\n    -1,\n    9\n  ],\n  [\n    -9,\n    28\n  ],\n  [\n    -28,\n    6\n  ],\n  [\n    -6,\n    13\n  ],\n  [\n    -13,\n    12\n  ],\n  [\n    -12,\n    27\n  ],\n  [\n    -27,\n    15\n  ],\n  [\n    -15,\n    29\n  ],\n  [\n    -29,\n    5\n  ],\n  [\n    -5,\n    18\n  ],\n  [\n    -18,\n    14\n  ],\n  [\n    -14,\n    26\n  ],\n  [\n    -26\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 2, 0) ∨ x(1, 2, 1)) ∧ (¬x(1, 1, 0) ∨ x(2, 2, 0)) ∧ (¬x(0, 2, 1) ∨ x(1, 0, 0)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0)) ∧ (¬x(1, 3, 0) ∨ x(0, 0, 0)) ∧ (x(0, 3, 0)) ∧ (¬x(0, 3, 1) ∨ x(0, 4, 1)) ∧ (¬x(1, 1, 1) ∨ x(1, 5, 0)) ∧ (¬x(2, 1, 1) ∨ x(0, 2, 1)) ∧ (¬x(2, 0, 1)) ∧ (¬x(0, 5, 1) ∨ x(2, 1, 0)) ∧ (¬x(2, 1, 0) ∨ x(1, 1, 0)) ∧ (¬x(0, 4, 0) ∨ x(2, 1, 1)) ∧ (¬x(1, 2, 1) ∨ x(1, 0, 1)) ∧ (¬x(0, 0, 0) ∨ x(0, 4, 0)) ∧ (¬x(1, 0, 1) ∨ x(2, 0, 1)) ∧ (¬x(0, 3, 0) ∨ x(0, 3, 1)) ∧ (¬x(0, 4, 1) ∨ x(1, 1, 1)) ∧ (¬x(1, 0, 0) ∨ x(0, 5, 1)) ∧ (¬x(1, 5, 0) ∨ x(1, 3, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [7] -> (x(0, 3, 0)); matching condition number(s): [6]\n- raw clause index 1: [-7, 8] -> (¬x(0, 3, 0) ∨ x(0, 3, 1)); matching condition number(s): [17]\n- raw clause index 2: [-8, 10] -> (¬x(0, 3, 1) ∨ x(0, 4, 1)); matching condition number(s): [7]\n- raw clause index 3: [-10, 16] -> (¬x(0, 4, 1) ∨ x(1, 1, 1)); matching condition number(s): [18]\n- raw clause index 4: [-16, 23] -> (¬x(1, 1, 1) ∨ x(1, 5, 0)); matching condition number(s): [8]\n- raw clause index 5: [-23, 19] -> (¬x(1, 5, 0) ∨ x(1, 3, 0)); matching condition number(s): [20]\n- raw clause index 6: [-19, 1] -> (¬x(1, 3, 0) ∨ x(0, 0, 0)); matching condition number(s): [5]\n- raw clause index 7: [-1, 9] -> (¬x(0, 0, 0) ∨ x(0, 4, 0)); matching condition number(s): [15]\n- raw clause index 8: [-9, 28] -> (¬x(0, 4, 0) ∨ x(2, 1, 1)); matching condition number(s): [13]\n- raw clause index 9: [-28, 6] -> (¬x(2, 1, 1) ∨ x(0, 2, 1)); matching condition number(s): [9]\n- raw clause index 10: [-6, 13] -> (¬x(0, 2, 1) ∨ x(1, 0, 0)); matching condition number(s): [3]\n- raw clause index 11: [-13, 12] -> (¬x(1, 0, 0) ∨ x(0, 5, 1)); matching condition number(s): [19]\n- raw clause index 12: [-12, 27] -> (¬x(0, 5, 1) ∨ x(2, 1, 0)); matching condition number(s): [11]\n- raw clause index 13: [-27, 15] -> (¬x(2, 1, 0) ∨ x(1, 1, 0)); matching condition number(s): [12]\n- raw clause index 14: [-15, 29] -> (¬x(1, 1, 0) ∨ x(2, 2, 0)); matching condition number(s): [2]\n- raw clause index 15: [-29, 5] -> (¬x(2, 2, 0) ∨ x(0, 2, 0)); matching condition number(s): [4]\n- raw clause index 16: [-5, 18] -> (¬x(0, 2, 0) ∨ x(1, 2, 1)); matching condition number(s): [1]\n- raw clause index 17: [-18, 14] -> (¬x(1, 2, 1) ∨ x(1, 0, 1)); matching condition number(s): [14]\n- raw clause index 18: [-14, 26] -> (¬x(1, 0, 1) ∨ x(2, 0, 1)); matching condition number(s): [16]\n- raw clause index 19: [-26] -> (¬x(2, 0, 1)); matching condition number(s): [10]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 3, 1)), (¬x(0, 3, 1) ∨ x(0, 4, 1)), (¬x(0, 4, 1) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 5, 0)), (¬x(1, 5, 0) ∨ x(1, 3, 0)), (¬x(1, 3, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(0, 4, 0)), (¬x(0, 4, 0) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(0, 5, 1)), (¬x(0, 5, 1) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(1, 2, 1)), (¬x(1, 2, 1) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a futuristic zoo, three unique animals—Animal 0 (a robotic lion), Animal 1 (a virtual panda), and Animal 2 (a holographic eagle)—are each presented with five different behaviors (0 through 4) to possibly showcase in a series of environments (0 representing the grassland exhibit, 1 representing the sky show). For each combination of animal, behavior, and environment, the decision is made independently whether the behavior is demonstrated.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean Animal i demonstrates behavior j in environment k. Here, Animal 0 is the robotic lion, Animal 1 is the virtual panda, and Animal 2 is the holographic eagle.\n</variable_mapping>\n\n<conditions>\n1. Either the robotic lion does not demonstrate behavior 2 in the grassland exhibit, or the virtual panda demonstrates behavior 2 in the sky show.\n2. Either the virtual panda does not demonstrate behavior 1 in the grassland exhibit, or the holographic eagle demonstrates behavior 2 in the grassland exhibit.\n3. Either the robotic lion does not demonstrate behavior 2 in the sky show, or the virtual panda demonstrates behavior 0 in the grassland exhibit.\n4. Either the holographic eagle does not demonstrate behavior 2 in the grassland exhibit, or the robotic lion demonstrates behavior 2 in the grassland exhibit.\n5. Either the virtual panda does not demonstrate behavior 3 in the grassland exhibit, or the robotic lion demonstrates behavior 0 in the grassland exhibit.\n6. The robotic lion demonstrates behavior 3 in the grassland exhibit.\n7. Either the robotic lion does not demonstrate behavior 3 in the sky show, or the robotic lion demonstrates behavior 4 in the sky show.\n8. Either the virtual panda does not demonstrate behavior 1 in the sky show, or the virtual panda demonstrates behavior 5 in the grassland exhibit.\n9. Either the holographic eagle does not demonstrate behavior 1 in the sky show, or the robotic lion demonstrates behavior 2 in the sky show.\n10. The holographic eagle does not demonstrate behavior 0 in the sky show.\n11. Either the robotic lion does not demonstrate behavior 5 in the sky show, or the holographic eagle demonstrates behavior 1 in the grassland exhibit.\n12. Either the holographic eagle does not demonstrate behavior 1 in the grassland exhibit, or the virtual panda demonstrates behavior 1 in the grassland exhibit.\n13. Either the robotic lion does not demonstrate behavior 4 in the grassland exhibit, or the holographic eagle demonstrates behavior 1 in the sky show.\n14. Either the virtual panda does not demonstrate behavior 2 in the sky show, or the virtual panda demonstrates behavior 0 in the sky show.\n15. Either the robotic lion does not demonstrate behavior 0 in the grassland exhibit, or the robotic lion demonstrates behavior 4 in the grassland exhibit.\n16. Either the virtual panda does not demonstrate behavior 0 in the sky show, or the holographic eagle demonstrates behavior 0 in the sky show.\n17. Either the robotic lion does not demonstrate behavior 3 in the grassland exhibit, or the robotic lion demonstrates behavior 3 in the sky show.\n18. Either the robotic lion does not demonstrate behavior 4 in the sky show, or the virtual panda demonstrates behavior 1 in the sky show.\n19. Either the virtual panda does not demonstrate behavior 0 in the grassland exhibit, or the robotic lion demonstrates behavior 5 in the sky show.\n20. Either the virtual panda does not demonstrate behavior 5 in the grassland exhibit, or the virtual panda demonstrates behavior 3 in the grassland exhibit.\n</conditions>\n\n<question>\nIs there a way to assign behaviors and environments to these animals that satisfies all conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,6,2]\n</dims>\n\n<num_vars>\n36\n</num_vars>\n\n<num_clauses>\n20\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    7\n  ],\n  [\n    -7,\n    8\n  ],\n  [\n    -8,\n    10\n  ],\n  [\n    -10,\n    16\n  ],\n  [\n    -16,\n    23\n  ],\n  [\n    -23,\n    19\n  ],\n  [\n    -19,\n    1\n  ],\n  [\n    -1,\n    9\n  ],\n  [\n    -9,\n    28\n  ],\n  [\n    -28,\n    6\n  ],\n  [\n    -6,\n    13\n  ],\n  [\n    -13,\n    12\n  ],\n  [\n    -12,\n    27\n  ],\n  [\n    -27,\n    15\n  ],\n  [\n    -15,\n    29\n  ],\n  [\n    -29,\n    5\n  ],\n  [\n    -5,\n    18\n  ],\n  [\n    -18,\n    14\n  ],\n  [\n    -14,\n    26\n  ],\n  [\n    -26\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(0, 2, 0) ∨ x(1, 2, 1)) ∧ (¬x(1, 1, 0) ∨ x(2, 2, 0)) ∧ (¬x(0, 2, 1) ∨ x(1, 0, 0)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0)) ∧ (¬x(1, 3, 0) ∨ x(0, 0, 0)) ∧ (x(0, 3, 0)) ∧ (¬x(0, 3, 1) ∨ x(0, 4, 1)) ∧ (¬x(1, 1, 1) ∨ x(1, 5, 0)) ∧ (¬x(2, 1, 1) ∨ x(0, 2, 1)) ∧ (¬x(2, 0, 1)) ∧ (¬x(0, 5, 1) ∨ x(2, 1, 0)) ∧ (¬x(2, 1, 0) ∨ x(1, 1, 0)) ∧ (¬x(0, 4, 0) ∨ x(2, 1, 1)) ∧ (¬x(1, 2, 1) ∨ x(1, 0, 1)) ∧ (¬x(0, 0, 0) ∨ x(0, 4, 0)) ∧ (¬x(1, 0, 1) ∨ x(2, 0, 1)) ∧ (¬x(0, 3, 0) ∨ x(0, 3, 1)) ∧ (¬x(0, 4, 1) ∨ x(1, 1, 1)) ∧ (¬x(1, 0, 0) ∨ x(0, 5, 1)) ∧ (¬x(1, 5, 0) ∨ x(1, 3, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [7] -> (x(0, 3, 0)); matching condition number(s): [6]\n- raw clause index 1: [-7, 8] -> (¬x(0, 3, 0) ∨ x(0, 3, 1)); matching condition number(s): [17]\n- raw clause index 2: [-8, 10] -> (¬x(0, 3, 1) ∨ x(0, 4, 1)); matching condition number(s): [7]\n- raw clause index 3: [-10, 16] -> (¬x(0, 4, 1) ∨ x(1, 1, 1)); matching condition number(s): [18]\n- raw clause index 4: [-16, 23] -> (¬x(1, 1, 1) ∨ x(1, 5, 0)); matching condition number(s): [8]\n- raw clause index 5: [-23, 19] -> (¬x(1, 5, 0) ∨ x(1, 3, 0)); matching condition number(s): [20]\n- raw clause index 6: [-19, 1] -> (¬x(1, 3, 0) ∨ x(0, 0, 0)); matching condition number(s): [5]\n- raw clause index 7: [-1, 9] -> (¬x(0, 0, 0) ∨ x(0, 4, 0)); matching condition number(s): [15]\n- raw clause index 8: [-9, 28] -> (¬x(0, 4, 0) ∨ x(2, 1, 1)); matching condition number(s): [13]\n- raw clause index 9: [-28, 6] -> (¬x(2, 1, 1) ∨ x(0, 2, 1)); matching condition number(s): [9]\n- raw clause index 10: [-6, 13] -> (¬x(0, 2, 1) ∨ x(1, 0, 0)); matching condition number(s): [3]\n- raw clause index 11: [-13, 12] -> (¬x(1, 0, 0) ∨ x(0, 5, 1)); matching condition number(s): [19]\n- raw clause index 12: [-12, 27] -> (¬x(0, 5, 1) ∨ x(2, 1, 0)); matching condition number(s): [11]\n- raw clause index 13: [-27, 15] -> (¬x(2, 1, 0) ∨ x(1, 1, 0)); matching condition number(s): [12]\n- raw clause index 14: [-15, 29] -> (¬x(1, 1, 0) ∨ x(2, 2, 0)); matching condition number(s): [2]\n- raw clause index 15: [-29, 5] -> (¬x(2, 2, 0) ∨ x(0, 2, 0)); matching condition number(s): [4]\n- raw clause index 16: [-5, 18] -> (¬x(0, 2, 0) ∨ x(1, 2, 1)); matching condition number(s): [1]\n- raw clause index 17: [-18, 14] -> (¬x(1, 2, 1) ∨ x(1, 0, 1)); matching condition number(s): [14]\n- raw clause index 18: [-14, 26] -> (¬x(1, 0, 1) ∨ x(2, 0, 1)); matching condition number(s): [16]\n- raw clause index 19: [-26] -> (¬x(2, 0, 1)); matching condition number(s): [10]\n</unsat_core_clauses>\n\n<unsat_reason>\nFrozen conflict chain: sequential forced assignments leading to contradiction: (x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 3, 1)), (¬x(0, 3, 1) ∨ x(0, 4, 1)), (¬x(0, 4, 1) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 5, 0)), (¬x(1, 5, 0) ∨ x(1, 3, 0)), (¬x(1, 3, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(0, 4, 0)), (¬x(0, 4, 0) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(0, 5, 1)), (¬x(0, 5, 1) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(1, 2, 1)), (¬x(1, 2, 1) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      6,
+      2
+    ],
+    "num_vars": 36,
+    "num_clauses": 20,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          7
+        ],
+        "clause_structural": "(x(0, 3, 0))",
+        "condition_numbers": [
+          6
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -7,
+          8
+        ],
+        "clause_structural": "(¬x(0, 3, 0) ∨ x(0, 3, 1))",
+        "condition_numbers": [
+          17
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -8,
+          10
+        ],
+        "clause_structural": "(¬x(0, 3, 1) ∨ x(0, 4, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -10,
+          16
+        ],
+        "clause_structural": "(¬x(0, 4, 1) ∨ x(1, 1, 1))",
+        "condition_numbers": [
+          18
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -16,
+          23
+        ],
+        "clause_structural": "(¬x(1, 1, 1) ∨ x(1, 5, 0))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -23,
+          19
+        ],
+        "clause_structural": "(¬x(1, 5, 0) ∨ x(1, 3, 0))",
+        "condition_numbers": [
+          20
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -19,
+          1
+        ],
+        "clause_structural": "(¬x(1, 3, 0) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -1,
+          9
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(0, 4, 0))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          -9,
+          28
+        ],
+        "clause_structural": "(¬x(0, 4, 0) ∨ x(2, 1, 1))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -28,
+          6
+        ],
+        "clause_structural": "(¬x(2, 1, 1) ∨ x(0, 2, 1))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          -6,
+          13
+        ],
+        "clause_structural": "(¬x(0, 2, 1) ∨ x(1, 0, 0))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -13,
+          12
+        ],
+        "clause_structural": "(¬x(1, 0, 0) ∨ x(0, 5, 1))",
+        "condition_numbers": [
+          19
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          -12,
+          27
+        ],
+        "clause_structural": "(¬x(0, 5, 1) ∨ x(2, 1, 0))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -27,
+          15
+        ],
+        "clause_structural": "(¬x(2, 1, 0) ∨ x(1, 1, 0))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          -15,
+          29
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(2, 2, 0))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -29,
+          5
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(0, 2, 0))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 16,
+        "clause_dimacs": [
+          -5,
+          18
+        ],
+        "clause_structural": "(¬x(0, 2, 0) ∨ x(1, 2, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 17,
+        "clause_dimacs": [
+          -18,
+          14
+        ],
+        "clause_structural": "(¬x(1, 2, 1) ∨ x(1, 0, 1))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 18,
+        "clause_dimacs": [
+          -14,
+          26
+        ],
+        "clause_structural": "(¬x(1, 0, 1) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          16
+        ]
+      },
+      {
+        "raw_clause_index": 19,
+        "clause_dimacs": [
+          -26
+        ],
+        "clause_structural": "(¬x(2, 0, 1))",
+        "condition_numbers": [
+          10
+        ]
+      }
+    ],
+    "unsat_reason": "Frozen conflict chain: sequential forced assignments leading to contradiction: (x(0, 3, 0)), (¬x(0, 3, 0) ∨ x(0, 3, 1)), (¬x(0, 3, 1) ∨ x(0, 4, 1)), (¬x(0, 4, 1) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 5, 0)), (¬x(1, 5, 0) ∨ x(1, 3, 0)), (¬x(1, 3, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(0, 4, 0)), (¬x(0, 4, 0) ∨ x(2, 1, 1)), (¬x(2, 1, 1) ∨ x(0, 2, 1)), (¬x(0, 2, 1) ∨ x(1, 0, 0)), (¬x(1, 0, 0) ∨ x(0, 5, 1)), (¬x(0, 5, 1) ∨ x(2, 1, 0)), (¬x(2, 1, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(0, 2, 0)), (¬x(0, 2, 0) ∨ x(1, 2, 1)), (¬x(1, 2, 1) ∨ x(1, 0, 1)), (¬x(1, 0, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1))"
+  }
+}

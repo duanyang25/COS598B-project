@@ -1,0 +1,311 @@
+{
+  "index": 1877,
+  "row_index_in_prompt_file": 1877,
+  "prompt_id": "satbench_01877",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Reasoning\n\n**1. Analyze the Problem Structure and Variables**\nThe problem involves 5 researchers (Alice, Bob, Claire, David, Eve) and 6 projects (0-5).\nThere are 3 environments: Lab (0), Field (1), Simulation (2).\nEach researcher makes an independent decision. A decision is represented by a triple $(i, j, k)$ where $i$ is the researcher index (0-4), $j$ is the project index (0-5), and $k$ is the environment index (0-2).\nTotal variables = $5 \\text{ researchers} \\times 6 \\text{ projects} \\times 3 \\text{ environments} = 90$.\n\n**2. Translate Conditions to Logical Constraints**\nWe need to find an assignment of values (True/False) to the 90 variables such that all 45 clauses from the CNF are satisfied. The provided CNF is already a Disjunctive Normal Form (DNF) representation of the clauses (OR conditions). In Z3/CNF logic, a clause $(a \\lor b)$ must be true if at least one part is true. If we interpret the CNF as \"If both parts are false, the whole clause is violated,\" then finding a satisfying assignment means assigning the variables so that **no** clause has both parts false.\n\nLet's look at the \"implications\" derived from the negation of clauses (which appear in the `readable_cnf` as positive disjunctions):\n*   Clause $(\\neg x \\lor y)$ implies $x \\implies y$ or simply that we cannot have $x=False$ AND $y=False$.\n*   Clause $(\\neg x \\lor \\neg y)$ implies $x \\implies \\neg y$ or $\\neg x \\implies y$.\n*   Clause $(\\neg x \\lor z)$ implies $x \\implies \\neg z$.\n\nLet's examine specific contradictions or forced assignments based on the text description and the formal constraints.\n\n**3. Identify Forced Assignments (The Core Conflict)**\n\n*   **Constraint from Condition 31:**\n    `(x(1, 2, 1) ∨ x(4, 2, 1) ∨ x(4, 2, 2) ∨ x(3, 5, 1) ∨ x(3, 1, 0) ∨ x(4, 3, 1) ∨ x(4, 0, 2) ∨ x(4, 5, 1) ∨ x(0, 5, 2))`\n    This says at least one of these combinations must be True.\n\n*   **Constraint from Condition 2:**\n    `(¬x(1, 2, 1) ∨ ¬x(3, 1, 0))`\n    This means: If Dr. Bob is NOT in Project 2 (Field), THEN Dr. David IS NOT in Project 1 (Lab).\n    Equivalently: If Dr. David IS in Project 1 (Lab), THEN Dr. Bob MUST be in Project 2 (Field).\n\n*   **Constraint from Condition 9:**\n    `(¬x(3, 5, 1) ∨ ¬x(3, 1, 0))`\n    If Dr. David is NOT in Project 5 (Field), then Dr. David IS NOT in Project 1 (Lab).\n    Wait, let's re-read carefully.\n    Condition 9: `(¬x(3, 5, 1) ∨ ¬x(3, 1, 0))`.\n    This translates to: It is not the case that (David is not in Proj 5 AND David is not in Proj 1).\n    Logic: $(\\neg x_{3,5}) \\lor (\\neg x_{3,1})$.\n    Contrapositive: $x_{3,5} \\to x_{3,1}$ OR $\\neg x_{3,1} \\to \\neg x_{3,5}$.\n    Essentially: If David is in Lab (Proj 1), he MUST be in Field (Proj 5)? No, that's not right.\n    Let's stick to the implication form:\n    $\\neg(\\neg P \\land \\neg Q) \\equiv P \\lor Q$.\n    So: (David in Field) $\\lor$ (David in Lab).\n    Meaning: **David is in either the Field or the Lab.** He cannot be in Simulation.\n    *Correction:* The text says \"David is not engaged in project 5 in the field\".\n    Condition 3 says: $\\neg x(3, 5, 1)$.\n    Condition 9 says: $\\neg x(3, 5, 1) \\lor \\neg x(3, 1, 0)$.\n    If $\\neg x(3, 5, 1)$ is true (David not in Field), then $\\neg x(3, 1, 0)$ must be true (David not in Lab).\n    Wait, standard CNF: $(A \\lor B)$. If A is False, B must be True.\n    Let A = \"David not in Field\". Let B = \"David not in Lab\".\n    If A is True, A is True regardless of B.\n    If A is False (David IS in Field), then B must be True (David IS NOT in Lab).\n    So: **If David is in Field, he is not in Lab.**\n    But we also know from Condition 14: $\\neg x(4, 5, 1)$ -> Eve not in Field.\n    And Condition 18: $(\\neg x(4, 5, 1) \\lor \\neg x(4, 5, 1))$ -> Redundant.\n    Actually, Condition 3 is just $\\neg x(3, 5, 1)$.\n    Condition 9 is $\\neg x(3, 5, 1) \\lor \\neg x(3, 1, 0)$.\n    This doesn't force David's location to be Field/Lab exclusively. It just forces consistency if he is in Field, or if he isn't in Field, he isn't in Lab.\n    However, Condition 3 alone says: **Dr. David is not engaged in project 5 in the field.** ($\\neg x(3, 5, 1)$).\n\n    Now let's look at Condition 14: **Dr. Eve is not engaged in project 5 in the field.** ($\\neg x(4, 5, 1)$).\n    \n    Let's look at Condition 2 again: $(\\neg x(1, 2, 1) \\lor \\neg x(3, 1, 0))$.\n    If we set $x(1, 2, 1) = \\text{True}$ (Bob in Field, Proj 2), then $\\neg x(1, 2, 1)$ is False.\n    Therefore, $\\neg x(3, 1, 0)$ must be True.\n    This means **Dr. David is NOT engaged in project 1 in the lab.**\n    \n    Let's check Condition 21: $\\neg x(3, 1, 0)$.\n    This states directly: **Dr. David is not engaged in project 1 in the lab.**\n    Condition 21 is an explicit clause.\n\n    Now consider Condition 9: $(\\neg x(3, 5, 1) \\lor \\neg x(3, 1, 0))$.\n    We know $x(3, 1, 0)$ is False (from Cond 21).\n    So $(\\text{False} \\lor \\text{True})$ is True.\n    Condition 9 is satisfied regardless of $x(3, 5, 1)$.\n\n    Now consider Condition 14: $\\neg x(4, 5, 1)$. (Eve not in Field, Proj 5).\n\n    Consider Condition 15: $\\neg x(4, 0, 2)$. (Eve not in Simulation, Proj 0).\n\n    Consider Condition 17: $(\\neg x(4, 2, 2) \\lor \\neg x(4, 0, 2))$.\n    Since $x(4, 0, 2)$ is False (Cond 15), $\\neg x(4, 0, 2)$ is True.\n    So Cond 17 is satisfied.\n\n    Consider Condition 23: $\\neg x(4, 2, 1)$. (Eve not in Field, Proj 2).\n    Consider Condition 12: $(\\neg x(4, 3, 1) \\lor \\neg x(4, 0, 2))$. Satisfied since $x(4, 0, 2)$ is False.\n\n    Consider Condition 29: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 0, 2))$. Satisfied.\n    \n    Consider Condition 26: $\\neg x(0, 5, 2)$. (Alice not in Simulation, Proj 5).\n    \n    Consider Condition 28: $(\\neg x(4, 5, 1) \\lor \\neg x(0, 5, 2))$.\n    We know $x(4, 5, 1)$ is False (Cond 14).\n    So $(\\text{True} \\lor \\dots)$ is True.\n\n    Consider Condition 30: $\\neg x(1, 2, 1)$. (Bob not in Field, Proj 2).\n    \n    Consider Condition 31: $(x(1, 2, 1) \\lor x(4, 2, 1) \\lor x(4, 2, 2) \\lor x(3, 5, 1) \\dots)$.\n    We need to satisfy this.\n    If we set $x(1, 2, 1) = \\text{True}$ (Bob in Field, Proj 2).\n    Then the first term is True. All terms become True.\n    So Condition 31 is satisfied by setting Bob in Field, Proj 2.\n    \n    Let's check if setting Bob in Field, Proj 2 violates anything.\n    From Cond 2: If Bob in Field (Proj 2), then $\\neg x(3, 1, 0)$ must be True.\n    $\\neg x(3, 1, 0)$ means David is NOT in Lab, Proj 1.\n    Condition 21 says $\\neg x(3, 1, 0)$. Consistent.\n    Condition 9: $(\\neg x(3, 5, 1) \\lor \\neg x(3, 1, 0))$. Since $\\neg x(3, 1, 0)$ is True, this is True.\n    Condition 14: $\\neg x(4, 5, 1)$ (Eve not in Field, Proj 5).\n    Condition 15: $\\neg x(4, 0, 2)$ (Eve not in Sim, Proj 0).\n    Condition 30: $\\neg x(1, 2, 1)$ (Bob not in Field, Proj 2).\n    **CONTRADICTION FOUND.**\n    \n    Wait, Condition 30 says: \"Dr. Bob is not engaged in project 2 in the field.\"\n    My proposed assignment: Set $x(1, 2, 1) = \\text{True}$ (Bob IS in Field, Proj 2).\n    Condition 30 requires: $\\neg x(1, 2, 1)$.\n    Therefore, $x(1, 2, 1)$ **MUST BE FALSE**.\n    \n    Let's re-evaluate Condition 31 with this constraint.\n    Condition 31 requires: $x(1, 2, 1) \\lor x(4, 2, 1) \\lor x(4, 2, 2) \\lor x(3, 5, 1) \\lor x(3, 1, 0) \\lor x(4, 3, 1) \\lor x(4, 0, 2) \\lor x(4, 5, 1) \\lor x(0, 5, 2)$.\n    We established $x(1, 2, 1)$ must be False (due to Cond 30).\n    So the term $x(1, 2, 1)$ is False.\n    We need the remaining terms to be True.\n    Remaining terms: $x(4, 2, 1) \\lor x(4, 2, 2) \\lor x(3, 5, 1) \\lor x(3, 1, 0) \\lor x(4, 3, 1) \\lor x(4, 0, 2) \\lor x(4, 5, 1) \\lor x(0, 5, 2)$.\n    \n    Let's look at other constraints.\n    Condition 14: $\\neg x(4, 5, 1)$. So $x(4, 5, 1)$ is False.\n    Condition 15: $\\neg x(4, 0, 2)$. So $x(4, 0, 2)$ is False.\n    Condition 30: $\\neg x(1, 2, 1)$. So $x(1, 2, 1)$ is False.\n    \n    Now we need to satisfy Condition 31.\n    Available terms to make True: $x(4, 2, 1) \\lor x(4, 2, 2) \\lor x(3, 5, 1) \\lor x(3, 1, 0) \\lor x(4, 3, 1) \\lor x(0, 5, 2)$.\n    We need at least one of these to be True.\n    \n    Let's check Condition 32: $(\\neg x(4, 2, 2) \\lor \\neg x(4, 5, 1))$.\n    Since $x(4, 5, 1)$ is False, $\\neg x(4, 5, 1)$ is True.\n    So Cond 32 is satisfied.\n    \n    Let's check Condition 33: $(\\neg x(4, 5, 1) \\lor \\neg x(0, 5, 2))$.\n    Since $x(4, 5, 1)$ is False, this is satisfied.\n    \n    Let's check Condition 34: $(\\neg x(4, 5, 1) \\lor \\neg x(4, 0, 2))$.\n    Since $x(4, 5, 1)$ is False, this is satisfied.\n    \n    Let's check Condition 35: $(\\neg x(4, 5, 1) \\lor \\neg x(4, 3, 1))$.\n    Since $x(4, 5, 1)$ is False, this is satisfied.\n    \n    Let's check Condition 36: $(\\neg x(4, 2, 1) \\lor \\neg x(3, 1, 0))$.\n    If we set $x(4, 2, 1) = \\text{True}$, then this is satisfied.\n    If we set $x(3, 1, 0) = \\text{True}$, then this is satisfied.\n    \n    Let's check Condition 37: $(\\neg x(4, 2, 1) \\lor \\neg x(0, 5, 2))$.\n    If we set $x(4, 2, 1) = \\text{True}$, this is satisfied.\n    \n    Let's check Condition 38: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 3, 1))$.\n    If we set $x(4, 2, 1) = \\text{True}$, this is satisfied.\n    \n    Let's check Condition 39: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 5, 1))$.\n    Since $x(4, 5, 1)$ is False, this is satisfied.\n    \n    Let's check Condition 40: $\\neg x(4, 2, 2)$.\n    So $x(4, 2, 2)$ must be False.\n    \n    Let's check Condition 41: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 0, 2))$.\n    $x(4, 0, 2)$ is False, so this is satisfied.\n    \n    Let's check Condition 42: $(\\neg x(4, 3, 1) \\lor \\neg x(0, 5, 2))$.\n    We need to satisfy this.\n    Options: $\\neg x(4, 3, 1)$ is True OR $\\neg x(0, 5, 2)$ is True.\n    So either $x(4, 3, 1)$ is False OR $x(0, 5, 2)$ is False.\n    Recall from Cond 31, the term $x(0, 5, 2)$ is needed to satisfy the main clause (since $x(1, 2, 1), x(4, 2, 1), x(4, 2, 2), x(4, 5, 1)$ are likely False or constrained).\n    Actually, Cond 31 says: $A \\lor B \\lor C \\lor D \\lor E \\lor F \\lor G \\lor H \\lor I$.\n    Where:\n    $A = x(1, 2, 1)$ (False)\n    $B = x(4, 2, 1)$\n    $C = x(4, 2, 2)$ (False from Cond 40)\n    $D = x(3, 5, 1)$\n    $E = x(3, 1, 0)$\n    $F = x(4, 3, 1)$\n    $G = x(4, 0, 2)$ (False)\n    $H = x(4, 5, 1)$ (False)\n    $I = x(0, 5, 2)$\n    \n    We need $B \\lor D \\lor E \\lor F \\lor I$ to be True.\n    Also Cond 36 says: $\\neg B \\lor \\neg E$.\n    So we need $\\neg B \\lor \\neg E$.\n    If $B$ is False, $E$ must be True.\n    If $E$ is False, $B$ must be True.\n    \n    Let's try to construct a solution.\n    Hypothesis: Set $x(4, 3, 1) = \\text{True}$ (Dr. Eve in Field, Project 3).\n    Check Constraints with $x(4, 3, 1) = T$:\n    - Cond 41: $\\neg x(4, 2, 1) \\lor \\neg x(4, 0, 2)$. Satisfied.\n    - Cond 42: $\\neg x(4, 3, 1) \\lor \\neg x(0, 5, 2)$. Since $x(4, 3, 1)=T$, $\\neg x(4, 3, 1)=F$. Need $\\neg x(0, 5, 2)=T$. So $x(0, 5, 2)=F$.\n    - Cond 31: Need $B \\lor D \\lor E \\lor F \\lor I$ (others are F).\n      $B=x(4, 2, 1)$, $D=x(3, 5, 1)$, $E=x(3, 1, 0)$, $F=x(4, 3, 1)$, $I=x(0, 5, 2)$.\n      $F=T$ (True). So Cond 31 is satisfied.\n    \n    Now verify $x(4, 3, 1)=T$ against all conditions.\n    1. Cond 1: $(\\neg x(4, 2, 2) \\lor \\neg x(4, 5, 1))$. $x(4, 2, 2)=F$, $x(4, 5, 1)=F$. OK.\n    2. Cond 2: $(\\neg x(1, 2, 1) \\lor \\neg x(3, 1, 0))$. Need to ensure this is True.\n       If $x(1, 2, 1)=F$ (Bob not in Field 2), then need $\\neg x(3, 1, 0)=T$.\n       We haven't fixed $x(3, 1, 0)$. Let's set $x(3, 1, 0)=F$.\n       Then $\\neg F = T$. Cond 2 OK.\n    3. Cond 3: $\\neg x(3, 5, 1)$. Set $x(3, 5, 1)=F$. OK.\n    4. Cond 4: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 5, 1))$. Both F. Need one T.\n       Wait, Cond 4 is $(\\neg x(4, 2, 1) \\lor \\neg x(4, 5, 1))$.\n       $x(4, 5, 1)=F$ (from Cond 14). So $\\neg x(4, 5, 1)=T$.\n       Cond 4 is satisfied regardless of $x(4, 2, 1)$.\n    5. Cond 5: $(\\neg x(1, 2, 1) \\lor \\neg x(4, 5, 1))$. Satisfied.\n    6. Cond 6: $(\\neg x(1, 2, 1) \\lor \\neg x(4, 0, 2))$. Satisfied.\n    7. Cond 7: $(\\neg x(4, 2, 2) \\lor \\neg x(0, 5, 2))$. $x(4, 2, 2)=F$. Need $x(0, 5, 2)=F$.\n       Earlier we deduced $x(0, 5, 2)=F$ from Cond 42. OK.\n    8. Cond 8: $(\\neg x(4, 2, 1) \\lor \\neg x(0, 5, 2))$. $x(0, 5, 2)=F$, so $\\neg x(0, 5, 2)=T$. OK.\n    9. Cond 9: $(\\neg x(3, 5, 1) \\lor \\neg x(3, 1, 0))$. $x(3, 5, 1)=F$. OK.\n    10. Cond 10: $(\\neg x(1, 2, 1) \\lor \\neg x(4, 2, 1))$. If $x(1, 2, 1)=F$, need $\\neg x(4, 2, 1)=T$.\n        So $x(4, 2, 1)=F$.\n        Wait, earlier I assumed $x(4, 3, 1)=T$ to satisfy Cond 31.\n        But Cond 10 forces $x(4, 2, 1)=F$.\n        Does Cond 31 allow $x(4, 2, 1)=F$?\n        Cond 31 needs $B \\lor D \\lor E \\lor F \\lor I$ (where $B=x(4, 2, 1)$).\n        If $B=F$, we need $D \\lor E \\lor F \\lor I$.\n        $F=x(4, 3, 1)=T$. So yes, satisfied.\n        \n    Let's refine the assignment:\n    - $x(1, 2, 1) = F$ (Bob not in Field 2)\n    - $x(3, 1, 0) = F$ (David not in Lab 1)\n    - $x(4, 5, 1) = F$ (Eve not in Field 5)\n    - $x(4, 0, 2) = F$ (Eve not in Sim 0)\n    - $x(4, 2, 2) = F$ (Eve not in Sim 2)\n    - $x(3, 5, 1) = F$ (David not in Field 5)\n    - $x(3, 1, 0) = F$ (David not in Lab 1)\n    - $x(4, 3, 1) = T$ (Eve in Field 3)\n    - $x(0, 5, 2) = F$ (Alice not in Sim 5)\n    - $x(4, 2, 1) = F$ (Eve not in Field 2) -- Derived from Cond 10.\n    \n    Let's check Cond 36: $(\\neg x(4, 2, 1) \\lor \\neg x(3, 1, 0))$.\n    $x(4, 2, 1)=F$, so $\\neg F=T$. OK.\n    \n    Let's check Cond 42: $(\\neg x(4, 3, 1) \\lor \\neg x(0, 5, 2))$.\n    $x(4, 3, 1)=T$, so $\\neg T=F$.\n    Need $\\neg x(0, 5, 2)=T$. So $x(0, 5, 2)=F$.\n    Matches previous deduction.\n    \n    Let's check Cond 31 again with this set:\n    Terms: $x(1, 2, 1)(F) \\lor x(4, 2, 1)(F) \\lor x(4, 2, 2)(F) \\lor x(3, 5, 1)(F) \\lor x(3, 1, 0)(F) \\lor x(4, 3, 1)(T) \\dots$\n    Sum is True. OK.\n    \n    Are there any conflicts with $x(4, 3, 1)=T$?\n    Any clause containing $(\\neg x(4, 3, 1))$?\n    Cond 16: $(\\neg x(4, 3, 1) \\lor \\neg x(4, 0, 2))$. Since $x(4, 0, 2)=F$, $\\neg x(4, 0, 2)=T$. OK.\n    Cond 35: $(\\neg x(4, 5, 1) \\lor \\neg x(4, 3, 1))$. Since $x(4, 5, 1)=F$, $\\neg x(4, 5, 1)=T$. OK.\n    Cond 38: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 3, 1))$. $x(4, 3, 1)=T$. Need $\\neg x(4, 3, 1)=F$.\n    Wait! **Contradiction Found.**\n    \n    Cond 38: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 3, 1))$.\n    If we set $x(4, 3, 1) = \\text{True}$, then $\\neg x(4, 3, 1) = \\text{False}$.\n    Therefore, $\\neg x(4, 2, 1)$ must be True.\n    So $x(4, 2, 1)$ must be False.\n    This matches my previous deduction from Cond 10 ($x(4, 2, 1)=F$).\n    So Cond 38 is satisfied if $x(4, 2, 1)=F$.\n    \n    Let's check Cond 44: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 3, 1))$.\n    Same as Cond 38. Satisfied if $x(4, 2, 1)=F$ (or $x(4, 3, 1)=F$).\n    Since we chose $x(4, 3, 1)=T$, we must have $x(4, 2, 1)=F$.\n    \n    Let's check Cond 45: $(\\neg x(1, 2, 1) \\lor \\neg x(4, 2, 1))$.\n    $x(1, 2, 1)=F$, so $\\neg x(1, 2, 1)=T$.\n    $x(4, 2, 1)=F$, so $\\neg x(4, 2, 1)=T$.\n    Satisfied.\n    \n    So the assignment seems consistent.\n    \n    **Final Proposed Assignment Summary:**\n    - Researchers 0 (Alice): All False. (Condition 26, 28, 37 imply she can't be in many places, but she needs to satisfy those disjunctions).\n      Cond 26: $\\neg x(0, 5, 2)$ -> $x(0, 5, 2)=F$.\n      Cond 28: $\\neg x(4, 5, 1) \\lor \\neg x(0, 5, 2)$. $x(4, 5, 1)=F$, so this holds.\n      Cond 37: $\\neg x(4, 2, 1) \\lor \\neg x(0, 5, 2)$. Holds.\n      Wait, does Alice have to be False everywhere?\n      Cond 26 says $\\neg x(0, 5, 2)$. She can be elsewhere.\n      However, looking at the pattern of constraints (many are $\\neg x \\lor \\neg y$), often one side is forced to be False.\n      In our derived solution, we had $x(0, 5, 2)=F$.\n      Is $x(0, 0, \\dots)$ constrained?\n      Cond 26 is the only one mentioning \"Alice is not engaged in project 5 in simulation\".\n      Wait, look at Cond 31. $I = x(0, 5, 2)$. We found $I=F$.\n      Look at Cond 26. It's a negative constraint clause: $\\neg x(0, 5, 2)$.\n      This means $x(0, 5, 2)$ MUST be False.\n      \n      What about other variables?\n      The prompt asks \"Is there a way...\". The answer is YES.\n      We found a valid assignment.\n      \n      **Assignment:**\n      x(0, ., .) = F (All False)\n      x(1, 2, 1) = F\n      x(3, 1, 0) = F\n      x(3, 5, 1) = F\n      x(4, 2, 1) = F\n      x(4, 2, 2) = F\n      x(4, 3, 1) = T\n      x(4, 0, 2) = F\n      x(4, 5, 1) = F\n      x(0, 5, 2) = F\n      \n      Let's double check Cond 1: $(\\neg x(4, 2, 2) \\lor \\neg x(4, 5, 1))$. $F \\lor T = T$. OK.\n      Cond 2: $(\\neg x(1, 2, 1) \\lor \\neg x(3, 1, 0))$. $T \\lor T = T$. OK.\n      Cond 3: $\\neg x(3, 5, 1)$. $T$. OK.\n      Cond 4: $(\\neg x(4, 2, 1) \\lor \\neg x(4, 5, 1))$. $T \\lor T = T$. OK.\n      Cond 5: $(\\neg x(1, 2, 1) \\lor \\neg x(4, 5, 1))$. $T \\lor T = T$. OK.\n      Cond 6: $(\\neg x(1, 2, 1) \\lor \\neg x(4, 0, 2))$. $T \\lor T = T$. OK.\n      Cond 7: $(\\neg x(4, 2, 2) \\lor \\neg x(0, 5, 2))$. $F \\lor T = T$. OK.\n      Cond 8: $(\\neg x(4, 2, 1) \\lor \\neg x(0, 5, 2))$. $T \\lor T = T$. OK.\n      Cond 9: $(\\neg x(3, 5, 1) \\lor \\neg x(3, 1, 0))$. $T \\lor T = T$. OK.\n      Cond 10: $(\\neg x(1, 2, 1) \\lor \\neg x(4, 2, 1))$. $T \\lor T = T$. OK.\n      Cond 11: $(\\neg x(1, 2, 1) \\lor \\neg x(0, 5, 2))$. $T \\lor T = T$. OK.\n      Cond 12: $(\\neg x(4, 3, 1) \\lor \\neg x(4, 0, 2))$. $F \\lor T = T$. OK.\n      Cond 13: $(\\neg x(3, 1, 0) \\lor \\neg x(4, 0, 2))$. $T \\lor T = T$. OK.\n      Cond 14: $\\neg x(4, 5, 1)$. $T$. OK.\n      Cond 15: $\\neg x(4, 0, 2)$. $T$. OK.\n      Cond 16: $(\\neg x(4, 3, 1) \\lor \\neg x(4, 0, 2))$. $F \\lor T = T$. OK.\n      Cond 17: $(\\neg x(4, 2, 2) \\lor \\neg x(4, 0, 2))$. $F \\lor T = T$. OK.\n      Cond 18: $(\\neg x(4, 5, 1) \\lor \\neg x(4, 5, 1))$. $T \\lor T = T$. OK.\n      Cond 19: $(\\neg x(4, 3, 1) \\lor \\neg x(4, 5, 1))$. $F \\lor T = T$. OK.\n      Cond 20: $(\\neg x(4, 0, 2) \\lor \\neg x(4, 5, 1))$. $T \\lor T = T$. OK.\n      Cond 21: $\\neg x(3, 1, 0)$. $T$. OK.\n      Cond 22: $(\\neg x(4, 2, 2) \\lor \\neg x(4, 5, 1))$. $F \\lor T = T$. OK.\n      Cond 23: $\\neg x(4, 2, 1)$. $T$. OK.\n      Cond 24: $(\\neg x(4, 0, 2) \\lor \\neg x(0,",
+  "teacher_extracted_label": null,
+  "ground_truth_label": "SAT",
+  "teacher_label_matches_ground_truth": null,
+  "generation_info": {
+    "input_tokens": 7259,
+    "generated_tokens": 8192,
+    "batch_elapsed_seconds": 216.49298214912415,
+    "tokens_per_second_for_batch": 37.8395637524971,
+    "likely_truncated_by_max_new_tokens": true,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777903469.130934,
+  "slurm_job_id": "3186235",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "187",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a bustling space colony, there are five researchers—Dr. Alice, Dr. Bob, Dr. Claire, Dr. David, and Dr. Eve—each exploring different cosmic phenomena during their mission. There are six specific projects being conducted (numbered 0 to 5), and three distinct environments (labeled 0 for lab, 1 for field, and 2 for simulation) where these projects can take place. Each researcher independently decides whether to focus on any of the projects in any of the environments without affecting the others' decisions.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean that researcher i is engaged in project j within environment k. Here, researcher 0 is Dr. Alice, researcher 1 is Dr. Bob, researcher 2 is Dr. Claire, researcher 3 is Dr. David, and researcher 4 is Dr. Eve.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. David is not engaged in project 1 in the lab.\n2. Either Dr. Bob is not engaged in project 2 in the field, or Dr. David is not engaged in project 1 in the lab.\n3. Dr. David is not engaged in project 5 in the field.\n4. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 5 in the field.\n5. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 5 in the field.\n6. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 0 in simulation.\n7. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. Alice is not engaged in project 5 in simulation.\n8. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n9. Either Dr. David is not engaged in project 5 in the field, or Dr. David is not engaged in project 1 in the lab.\n10. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 2 in the field.\n11. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n12. Either Dr. Eve is not engaged in project 3 in the field, or Dr. Eve is not engaged in project 0 in simulation.\n13. Either Dr. David is not engaged in project 1 in the lab, or Dr. Eve is not engaged in project 0 in simulation.\n14. Dr. Eve is not engaged in project 5 in the field.\n15. Dr. Eve is not engaged in project 0 in simulation.\n16. Either Dr. David is not engaged in project 1 in the lab, or Dr. Eve is not engaged in project 3 in the field.\n17. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. Eve is not engaged in project 0 in simulation.\n18. Either Dr. David is not engaged in project 5 in the field, or Dr. Eve is not engaged in project 5 in the field.\n19. Either Dr. Eve is not engaged in project 3 in the field, or Dr. Eve is not engaged in project 5 in the field.\n20. Either Dr. Eve is not engaged in project 0 in simulation, or Dr. Eve is not engaged in project 5 in the field.\n21. Dr. David is not engaged in project 1 in the lab.\n22. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. David is not engaged in project 5 in the field.\n23. Dr. Eve is not engaged in project 2 in the field.\n24. Either Dr. Eve is not engaged in project 0 in simulation, or Dr. Alice is not engaged in project 5 in simulation.\n25. Either Dr. David is not engaged in project 1 in the lab, or Dr. Eve is not engaged in project 5 in the field.\n26. Dr. Alice is not engaged in project 5 in simulation.\n27. Either Dr. Bob is not engaged in project 2 in the field, or Dr. David is not engaged in project 5 in the field.\n28. Either Dr. Eve is not engaged in project 5 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n29. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 0 in simulation.\n30. Dr. Bob is not engaged in project 2 in the field.\n31. Either Dr. Bob is engaged in project 2 in the field, or Dr. Eve is engaged in project 2 in the field, or Dr. Eve is engaged in project 2 in simulation, or Dr. David is engaged in project 5 in the field, or Dr. David is engaged in project 1 in the lab, or Dr. Eve is engaged in project 3 in the field, or Dr. Eve is engaged in project 0 in simulation, or Dr. Eve is engaged in project 5 in the field, or Dr. Alice is engaged in project 5 in simulation.\n32. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. Eve is not engaged in project 5 in the field.\n33. Either Dr. David is not engaged in project 5 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n34. Either Dr. David is not engaged in project 5 in the field, or Dr. Eve is not engaged in project 0 in simulation.\n35. Either Dr. David is not engaged in project 5 in the field, or Dr. Eve is not engaged in project 3 in the field.\n36. Either Dr. Eve is not engaged in project 2 in the field, or Dr. David is not engaged in project 1 in the lab.\n37. Either Dr. David is not engaged in project 1 in the lab, or Dr. Alice is not engaged in project 5 in simulation.\n38. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 3 in the field.\n39. Either Dr. Eve is not engaged in project 2 in the field, or Dr. David is not engaged in project 5 in the field.\n40. Dr. Eve is not engaged in project 2 in simulation.\n41. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 2 in simulation.\n42. Either Dr. Eve is not engaged in project 3 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n43. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. Eve is not engaged in project 3 in the field.\n44. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 3 in the field.\n45. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 2 in simulation.\n</conditions>\n\n<question>\nIs there a way to assign projects to researchers in environments that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[5,6,3]\n</dims>\n\n<num_vars>\n90\n</num_vars>\n\n<num_clauses>\n45\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    26,\n    80,\n    81,\n    71,\n    58,\n    83,\n    75,\n    89,\n    18\n  ],\n  [\n    -26,\n    -80\n  ],\n  [\n    -26,\n    -81\n  ],\n  [\n    -26,\n    -71\n  ],\n  [\n    -26,\n    -58\n  ],\n  [\n    -26,\n    -83\n  ],\n  [\n    -26,\n    -75\n  ],\n  [\n    -26,\n    -89\n  ],\n  [\n    -26,\n    -18\n  ],\n  [\n    -80,\n    -81\n  ],\n  [\n    -80,\n    -71\n  ],\n  [\n    -80,\n    -58\n  ],\n  [\n    -80,\n    -83\n  ],\n  [\n    -80,\n    -75\n  ],\n  [\n    -80,\n    -89\n  ],\n  [\n    -80,\n    -18\n  ],\n  [\n    -81,\n    -71\n  ],\n  [\n    -81,\n    -58\n  ],\n  [\n    -81,\n    -83\n  ],\n  [\n    -81,\n    -75\n  ],\n  [\n    -81,\n    -89\n  ],\n  [\n    -81,\n    -18\n  ],\n  [\n    -71,\n    -58\n  ],\n  [\n    -71,\n    -83\n  ],\n  [\n    -71,\n    -75\n  ],\n  [\n    -71,\n    -89\n  ],\n  [\n    -71,\n    -18\n  ],\n  [\n    -58,\n    -83\n  ],\n  [\n    -58,\n    -75\n  ],\n  [\n    -58,\n    -89\n  ],\n  [\n    -58,\n    -18\n  ],\n  [\n    -83,\n    -75\n  ],\n  [\n    -83,\n    -89\n  ],\n  [\n    -83,\n    -18\n  ],\n  [\n    -75,\n    -89\n  ],\n  [\n    -75,\n    -18\n  ],\n  [\n    -89,\n    -18\n  ],\n  [\n    -26\n  ],\n  [\n    -80\n  ],\n  [\n    -81\n  ],\n  [\n    -71\n  ],\n  [\n    -58\n  ],\n  [\n    -75\n  ],\n  [\n    -89\n  ],\n  [\n    -18\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(4, 2, 2) ∨ ¬x(3, 1, 0)) ∧ (¬x(1, 2, 1) ∨ ¬x(3, 1, 0)) ∧ (¬x(3, 5, 1)) ∧ (¬x(4, 2, 1) ∨ ¬x(4, 5, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 5, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 0, 2)) ∧ (¬x(4, 2, 2) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 2, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(3, 5, 1) ∨ ¬x(3, 1, 0)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 2, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 3, 1) ∨ ¬x(4, 0, 2)) ∧ (¬x(3, 1, 0) ∨ ¬x(4, 0, 2)) ∧ (¬x(4, 5, 1)) ∧ (¬x(4, 0, 2)) ∧ (¬x(3, 1, 0) ∨ ¬x(4, 3, 1)) ∧ (¬x(4, 2, 2) ∨ ¬x(4, 0, 2)) ∧ (¬x(3, 5, 1) ∨ ¬x(4, 5, 1)) ∧ (¬x(4, 3, 1) ∨ ¬x(4, 5, 1)) ∧ (¬x(4, 0, 2) ∨ ¬x(4, 5, 1)) ∧ (¬x(3, 1, 0)) ∧ (¬x(4, 2, 2) ∨ ¬x(3, 5, 1)) ∧ (¬x(4, 2, 1)) ∧ (¬x(4, 0, 2) ∨ ¬x(0, 5, 2)) ∧ (¬x(3, 1, 0) ∨ ¬x(4, 5, 1)) ∧ (¬x(0, 5, 2)) ∧ (¬x(1, 2, 1) ∨ ¬x(3, 5, 1)) ∧ (¬x(4, 5, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 2, 1) ∨ ¬x(4, 0, 2)) ∧ (¬x(1, 2, 1)) ∧ (x(1, 2, 1) ∨ x(4, 2, 1) ∨ x(4, 2, 2) ∨ x(3, 5, 1) ∨ x(3, 1, 0) ∨ x(4, 3, 1) ∨ x(4, 0, 2) ∨ x(4, 5, 1) ∨ x(0, 5, 2)) ∧ (¬x(4, 2, 2) ∨ ¬x(4, 5, 1)) ∧ (¬x(3, 5, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(3, 5, 1) ∨ ¬x(4, 0, 2)) ∧ (¬x(3, 5, 1) ∨ ¬x(4, 3, 1)) ∧ (¬x(4, 2, 1) ∨ ¬x(3, 1, 0)) ∧ (¬x(3, 1, 0) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 2, 1) ∨ ¬x(4, 3, 1)) ∧ (¬x(4, 2, 1) ∨ ¬x(3, 5, 1)) ∧ (¬x(4, 2, 2)) ∧ (¬x(4, 2, 1) ∨ ¬x(4, 2, 2)) ∧ (¬x(4, 3, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 2, 2) ∨ ¬x(4, 3, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 3, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 2, 2))\n</readable_cnf>\n\n<satisfiable>\ntrue\n</satisfiable>\n\n<label>\nSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nSAT satisfying assignment\n</certificate_type>\n\n<assignment_structured_0_1>\n[\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      1,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ]\n]\n</assignment_structured_0_1>\n\n<assignment_per_variable>\n- x(0, 0, 0) = False\n- x(0, 0, 1) = False\n- x(0, 0, 2) = False\n- x(0, 1, 0) = False\n- x(0, 1, 1) = False\n- x(0, 1, 2) = False\n- x(0, 2, 0) = False\n- x(0, 2, 1) = False\n- x(0, 2, 2) = False\n- x(0, 3, 0) = False\n- x(0, 3, 1) = False\n- x(0, 3, 2) = False\n- x(0, 4, 0) = False\n- x(0, 4, 1) = False\n- x(0, 4, 2) = False\n- x(0, 5, 0) = False\n- x(0, 5, 1) = False\n- x(0, 5, 2) = False\n- x(1, 0, 0) = False\n- x(1, 0, 1) = False\n- x(1, 0, 2) = False\n- x(1, 1, 0) = False\n- x(1, 1, 1) = False\n- x(1, 1, 2) = False\n- x(1, 2, 0) = False\n- x(1, 2, 1) = False\n- x(1, 2, 2) = False\n- x(1, 3, 0) = False\n- x(1, 3, 1) = False\n- x(1, 3, 2) = False\n- x(1, 4, 0) = False\n- x(1, 4, 1) = False\n- x(1, 4, 2) = False\n- x(1, 5, 0) = False\n- x(1, 5, 1) = False\n- x(1, 5, 2) = False\n- x(2, 0, 0) = False\n- x(2, 0, 1) = False\n- x(2, 0, 2) = False\n- x(2, 1, 0) = False\n- x(2, 1, 1) = False\n- x(2, 1, 2) = False\n- x(2, 2, 0) = False\n- x(2, 2, 1) = False\n- x(2, 2, 2) = False\n- x(2, 3, 0) = False\n- x(2, 3, 1) = False\n- x(2, 3, 2) = False\n- x(2, 4, 0) = False\n- x(2, 4, 1) = False\n- x(2, 4, 2) = False\n- x(2, 5, 0) = False\n- x(2, 5, 1) = False\n- x(2, 5, 2) = False\n- x(3, 0, 0) = False\n- x(3, 0, 1) = False\n- x(3, 0, 2) = False\n- x(3, 1, 0) = False\n- x(3, 1, 1) = False\n- x(3, 1, 2) = False\n- x(3, 2, 0) = False\n- x(3, 2, 1) = False\n- x(3, 2, 2) = False\n- x(3, 3, 0) = False\n- x(3, 3, 1) = False\n- x(3, 3, 2) = False\n- x(3, 4, 0) = False\n- x(3, 4, 1) = False\n- x(3, 4, 2) = False\n- x(3, 5, 0) = False\n- x(3, 5, 1) = False\n- x(3, 5, 2) = False\n- x(4, 0, 0) = False\n- x(4, 0, 1) = False\n- x(4, 0, 2) = False\n- x(4, 1, 0) = False\n- x(4, 1, 1) = False\n- x(4, 1, 2) = False\n- x(4, 2, 0) = False\n- x(4, 2, 1) = False\n- x(4, 2, 2) = False\n- x(4, 3, 0) = False\n- x(4, 3, 1) = True\n- x(4, 3, 2) = False\n- x(4, 4, 0) = False\n- x(4, 4, 1) = False\n- x(4, 4, 2) = False\n- x(4, 5, 0) = False\n- x(4, 5, 1) = False\n- x(4, 5, 2) = False\n</assignment_per_variable>\n<sat_reason>\nOriginally UNSAT because: Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(1, 2, 1) ∨ x(4, 2, 1) ∨ x(4, 2, 2) ∨ x(3, 5, 1) ∨ x(3, 1, 0) ∨ x(4, 3, 1) ∨ x(4, 0, 2) ∨ x(4, 5, 1) ∨ x(0, 5, 2)), (¬x(1, 2, 1) ∨ ¬x(4, 2, 1)), (¬x(1, 2, 1) ∨ ¬x(4, 2, 2)), (¬x(1, 2, 1) ∨ ¬x(3, 5, 1)), (¬x(1, 2, 1) ∨ ¬x(3, 1, 0)), (¬x(1, 2, 1) ∨ ¬x(4, 3, 1)), (¬x(1, 2, 1) ∨ ¬x(4, 0, 2)), (¬x(1, 2, 1) ∨ ¬x(4, 5, 1)), (¬x(1, 2, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 2, 1) ∨ ¬x(4, 2, 2)), (¬x(4, 2, 1) ∨ ¬x(3, 5, 1)), (¬x(4, 2, 1) ∨ ¬x(3, 1, 0)), (¬x(4, 2, 1) ∨ ¬x(4, 3, 1)), (¬x(4, 2, 1) ∨ ¬x(4, 0, 2)), (¬x(4, 2, 1) ∨ ¬x(4, 5, 1)), (¬x(4, 2, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 2, 2) ∨ ¬x(3, 5, 1)), (¬x(4, 2, 2) ∨ ¬x(3, 1, 0)), (¬x(4, 2, 2) ∨ ¬x(4, 3, 1)), (¬x(4, 2, 2) ∨ ¬x(4, 0, 2)), (¬x(4, 2, 2) ∨ ¬x(4, 5, 1)), (¬x(4, 2, 2) ∨ ¬x(0, 5, 2)), (¬x(3, 5, 1) ∨ ¬x(3, 1, 0)), (¬x(3, 5, 1) ∨ ¬x(4, 3, 1)), (¬x(3, 5, 1) ∨ ¬x(4, 0, 2)), (¬x(3, 5, 1) ∨ ¬x(4, 5, 1)), (¬x(3, 5, 1) ∨ ¬x(0, 5, 2)), (¬x(3, 1, 0) ∨ ¬x(4, 3, 1)), (¬x(3, 1, 0) ∨ ¬x(4, 0, 2)), (¬x(3, 1, 0) ∨ ¬x(4, 5, 1)), (¬x(3, 1, 0) ∨ ¬x(0, 5, 2)), (¬x(4, 3, 1) ∨ ¬x(4, 0, 2)), (¬x(4, 3, 1) ∨ ¬x(4, 5, 1)), (¬x(4, 3, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 0, 2) ∨ ¬x(4, 5, 1)), (¬x(4, 0, 2) ∨ ¬x(0, 5, 2)), (¬x(4, 5, 1) ∨ ¬x(0, 5, 2)), (¬x(1, 2, 1)), (¬x(4, 2, 1)), (¬x(4, 2, 2)), (¬x(3, 5, 1)), (¬x(3, 1, 0)), (¬x(4, 3, 1)), (¬x(4, 0, 2)), (¬x(4, 5, 1)), (¬x(0, 5, 2)). After removing clause (¬x(4, 3, 1)), the conflict is resolved, making the problem satisfiable.\n</sat_reason>\n\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a bustling space colony, there are five researchers—Dr. Alice, Dr. Bob, Dr. Claire, Dr. David, and Dr. Eve—each exploring different cosmic phenomena during their mission. There are six specific projects being conducted (numbered 0 to 5), and three distinct environments (labeled 0 for lab, 1 for field, and 2 for simulation) where these projects can take place. Each researcher independently decides whether to focus on any of the projects in any of the environments without affecting the others' decisions.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean that researcher i is engaged in project j within environment k. Here, researcher 0 is Dr. Alice, researcher 1 is Dr. Bob, researcher 2 is Dr. Claire, researcher 3 is Dr. David, and researcher 4 is Dr. Eve.\n</variable_mapping>\n\n<conditions>\n1. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. David is not engaged in project 1 in the lab.\n2. Either Dr. Bob is not engaged in project 2 in the field, or Dr. David is not engaged in project 1 in the lab.\n3. Dr. David is not engaged in project 5 in the field.\n4. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 5 in the field.\n5. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 5 in the field.\n6. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 0 in simulation.\n7. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. Alice is not engaged in project 5 in simulation.\n8. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n9. Either Dr. David is not engaged in project 5 in the field, or Dr. David is not engaged in project 1 in the lab.\n10. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 2 in the field.\n11. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n12. Either Dr. Eve is not engaged in project 3 in the field, or Dr. Eve is not engaged in project 0 in simulation.\n13. Either Dr. David is not engaged in project 1 in the lab, or Dr. Eve is not engaged in project 0 in simulation.\n14. Dr. Eve is not engaged in project 5 in the field.\n15. Dr. Eve is not engaged in project 0 in simulation.\n16. Either Dr. David is not engaged in project 1 in the lab, or Dr. Eve is not engaged in project 3 in the field.\n17. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. Eve is not engaged in project 0 in simulation.\n18. Either Dr. David is not engaged in project 5 in the field, or Dr. Eve is not engaged in project 5 in the field.\n19. Either Dr. Eve is not engaged in project 3 in the field, or Dr. Eve is not engaged in project 5 in the field.\n20. Either Dr. Eve is not engaged in project 0 in simulation, or Dr. Eve is not engaged in project 5 in the field.\n21. Dr. David is not engaged in project 1 in the lab.\n22. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. David is not engaged in project 5 in the field.\n23. Dr. Eve is not engaged in project 2 in the field.\n24. Either Dr. Eve is not engaged in project 0 in simulation, or Dr. Alice is not engaged in project 5 in simulation.\n25. Either Dr. David is not engaged in project 1 in the lab, or Dr. Eve is not engaged in project 5 in the field.\n26. Dr. Alice is not engaged in project 5 in simulation.\n27. Either Dr. Bob is not engaged in project 2 in the field, or Dr. David is not engaged in project 5 in the field.\n28. Either Dr. Eve is not engaged in project 5 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n29. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 0 in simulation.\n30. Dr. Bob is not engaged in project 2 in the field.\n31. Either Dr. Bob is engaged in project 2 in the field, or Dr. Eve is engaged in project 2 in the field, or Dr. Eve is engaged in project 2 in simulation, or Dr. David is engaged in project 5 in the field, or Dr. David is engaged in project 1 in the lab, or Dr. Eve is engaged in project 3 in the field, or Dr. Eve is engaged in project 0 in simulation, or Dr. Eve is engaged in project 5 in the field, or Dr. Alice is engaged in project 5 in simulation.\n32. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. Eve is not engaged in project 5 in the field.\n33. Either Dr. David is not engaged in project 5 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n34. Either Dr. David is not engaged in project 5 in the field, or Dr. Eve is not engaged in project 0 in simulation.\n35. Either Dr. David is not engaged in project 5 in the field, or Dr. Eve is not engaged in project 3 in the field.\n36. Either Dr. Eve is not engaged in project 2 in the field, or Dr. David is not engaged in project 1 in the lab.\n37. Either Dr. David is not engaged in project 1 in the lab, or Dr. Alice is not engaged in project 5 in simulation.\n38. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 3 in the field.\n39. Either Dr. Eve is not engaged in project 2 in the field, or Dr. David is not engaged in project 5 in the field.\n40. Dr. Eve is not engaged in project 2 in simulation.\n41. Either Dr. Eve is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 2 in simulation.\n42. Either Dr. Eve is not engaged in project 3 in the field, or Dr. Alice is not engaged in project 5 in simulation.\n43. Either Dr. Eve is not engaged in project 2 in simulation, or Dr. Eve is not engaged in project 3 in the field.\n44. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 3 in the field.\n45. Either Dr. Bob is not engaged in project 2 in the field, or Dr. Eve is not engaged in project 2 in simulation.\n</conditions>\n\n<question>\nIs there a way to assign projects to researchers in environments that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[5,6,3]\n</dims>\n\n<num_vars>\n90\n</num_vars>\n\n<num_clauses>\n45\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    26,\n    80,\n    81,\n    71,\n    58,\n    83,\n    75,\n    89,\n    18\n  ],\n  [\n    -26,\n    -80\n  ],\n  [\n    -26,\n    -81\n  ],\n  [\n    -26,\n    -71\n  ],\n  [\n    -26,\n    -58\n  ],\n  [\n    -26,\n    -83\n  ],\n  [\n    -26,\n    -75\n  ],\n  [\n    -26,\n    -89\n  ],\n  [\n    -26,\n    -18\n  ],\n  [\n    -80,\n    -81\n  ],\n  [\n    -80,\n    -71\n  ],\n  [\n    -80,\n    -58\n  ],\n  [\n    -80,\n    -83\n  ],\n  [\n    -80,\n    -75\n  ],\n  [\n    -80,\n    -89\n  ],\n  [\n    -80,\n    -18\n  ],\n  [\n    -81,\n    -71\n  ],\n  [\n    -81,\n    -58\n  ],\n  [\n    -81,\n    -83\n  ],\n  [\n    -81,\n    -75\n  ],\n  [\n    -81,\n    -89\n  ],\n  [\n    -81,\n    -18\n  ],\n  [\n    -71,\n    -58\n  ],\n  [\n    -71,\n    -83\n  ],\n  [\n    -71,\n    -75\n  ],\n  [\n    -71,\n    -89\n  ],\n  [\n    -71,\n    -18\n  ],\n  [\n    -58,\n    -83\n  ],\n  [\n    -58,\n    -75\n  ],\n  [\n    -58,\n    -89\n  ],\n  [\n    -58,\n    -18\n  ],\n  [\n    -83,\n    -75\n  ],\n  [\n    -83,\n    -89\n  ],\n  [\n    -83,\n    -18\n  ],\n  [\n    -75,\n    -89\n  ],\n  [\n    -75,\n    -18\n  ],\n  [\n    -89,\n    -18\n  ],\n  [\n    -26\n  ],\n  [\n    -80\n  ],\n  [\n    -81\n  ],\n  [\n    -71\n  ],\n  [\n    -58\n  ],\n  [\n    -75\n  ],\n  [\n    -89\n  ],\n  [\n    -18\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(4, 2, 2) ∨ ¬x(3, 1, 0)) ∧ (¬x(1, 2, 1) ∨ ¬x(3, 1, 0)) ∧ (¬x(3, 5, 1)) ∧ (¬x(4, 2, 1) ∨ ¬x(4, 5, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 5, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 0, 2)) ∧ (¬x(4, 2, 2) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 2, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(3, 5, 1) ∨ ¬x(3, 1, 0)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 2, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 3, 1) ∨ ¬x(4, 0, 2)) ∧ (¬x(3, 1, 0) ∨ ¬x(4, 0, 2)) ∧ (¬x(4, 5, 1)) ∧ (¬x(4, 0, 2)) ∧ (¬x(3, 1, 0) ∨ ¬x(4, 3, 1)) ∧ (¬x(4, 2, 2) ∨ ¬x(4, 0, 2)) ∧ (¬x(3, 5, 1) ∨ ¬x(4, 5, 1)) ∧ (¬x(4, 3, 1) ∨ ¬x(4, 5, 1)) ∧ (¬x(4, 0, 2) ∨ ¬x(4, 5, 1)) ∧ (¬x(3, 1, 0)) ∧ (¬x(4, 2, 2) ∨ ¬x(3, 5, 1)) ∧ (¬x(4, 2, 1)) ∧ (¬x(4, 0, 2) ∨ ¬x(0, 5, 2)) ∧ (¬x(3, 1, 0) ∨ ¬x(4, 5, 1)) ∧ (¬x(0, 5, 2)) ∧ (¬x(1, 2, 1) ∨ ¬x(3, 5, 1)) ∧ (¬x(4, 5, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 2, 1) ∨ ¬x(4, 0, 2)) ∧ (¬x(1, 2, 1)) ∧ (x(1, 2, 1) ∨ x(4, 2, 1) ∨ x(4, 2, 2) ∨ x(3, 5, 1) ∨ x(3, 1, 0) ∨ x(4, 3, 1) ∨ x(4, 0, 2) ∨ x(4, 5, 1) ∨ x(0, 5, 2)) ∧ (¬x(4, 2, 2) ∨ ¬x(4, 5, 1)) ∧ (¬x(3, 5, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(3, 5, 1) ∨ ¬x(4, 0, 2)) ∧ (¬x(3, 5, 1) ∨ ¬x(4, 3, 1)) ∧ (¬x(4, 2, 1) ∨ ¬x(3, 1, 0)) ∧ (¬x(3, 1, 0) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 2, 1) ∨ ¬x(4, 3, 1)) ∧ (¬x(4, 2, 1) ∨ ¬x(3, 5, 1)) ∧ (¬x(4, 2, 2)) ∧ (¬x(4, 2, 1) ∨ ¬x(4, 2, 2)) ∧ (¬x(4, 3, 1) ∨ ¬x(0, 5, 2)) ∧ (¬x(4, 2, 2) ∨ ¬x(4, 3, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 3, 1)) ∧ (¬x(1, 2, 1) ∨ ¬x(4, 2, 2))\n</readable_cnf>\n\n<satisfiable>\ntrue\n</satisfiable>\n\n<label>\nSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nSAT satisfying assignment\n</certificate_type>\n\n<assignment_structured_0_1>\n[\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ],\n  [\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      1,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ],\n    [\n      0,\n      0,\n      0\n    ]\n  ]\n]\n</assignment_structured_0_1>\n\n<assignment_per_variable>\n- x(0, 0, 0) = False\n- x(0, 0, 1) = False\n- x(0, 0, 2) = False\n- x(0, 1, 0) = False\n- x(0, 1, 1) = False\n- x(0, 1, 2) = False\n- x(0, 2, 0) = False\n- x(0, 2, 1) = False\n- x(0, 2, 2) = False\n- x(0, 3, 0) = False\n- x(0, 3, 1) = False\n- x(0, 3, 2) = False\n- x(0, 4, 0) = False\n- x(0, 4, 1) = False\n- x(0, 4, 2) = False\n- x(0, 5, 0) = False\n- x(0, 5, 1) = False\n- x(0, 5, 2) = False\n- x(1, 0, 0) = False\n- x(1, 0, 1) = False\n- x(1, 0, 2) = False\n- x(1, 1, 0) = False\n- x(1, 1, 1) = False\n- x(1, 1, 2) = False\n- x(1, 2, 0) = False\n- x(1, 2, 1) = False\n- x(1, 2, 2) = False\n- x(1, 3, 0) = False\n- x(1, 3, 1) = False\n- x(1, 3, 2) = False\n- x(1, 4, 0) = False\n- x(1, 4, 1) = False\n- x(1, 4, 2) = False\n- x(1, 5, 0) = False\n- x(1, 5, 1) = False\n- x(1, 5, 2) = False\n- x(2, 0, 0) = False\n- x(2, 0, 1) = False\n- x(2, 0, 2) = False\n- x(2, 1, 0) = False\n- x(2, 1, 1) = False\n- x(2, 1, 2) = False\n- x(2, 2, 0) = False\n- x(2, 2, 1) = False\n- x(2, 2, 2) = False\n- x(2, 3, 0) = False\n- x(2, 3, 1) = False\n- x(2, 3, 2) = False\n- x(2, 4, 0) = False\n- x(2, 4, 1) = False\n- x(2, 4, 2) = False\n- x(2, 5, 0) = False\n- x(2, 5, 1) = False\n- x(2, 5, 2) = False\n- x(3, 0, 0) = False\n- x(3, 0, 1) = False\n- x(3, 0, 2) = False\n- x(3, 1, 0) = False\n- x(3, 1, 1) = False\n- x(3, 1, 2) = False\n- x(3, 2, 0) = False\n- x(3, 2, 1) = False\n- x(3, 2, 2) = False\n- x(3, 3, 0) = False\n- x(3, 3, 1) = False\n- x(3, 3, 2) = False\n- x(3, 4, 0) = False\n- x(3, 4, 1) = False\n- x(3, 4, 2) = False\n- x(3, 5, 0) = False\n- x(3, 5, 1) = False\n- x(3, 5, 2) = False\n- x(4, 0, 0) = False\n- x(4, 0, 1) = False\n- x(4, 0, 2) = False\n- x(4, 1, 0) = False\n- x(4, 1, 1) = False\n- x(4, 1, 2) = False\n- x(4, 2, 0) = False\n- x(4, 2, 1) = False\n- x(4, 2, 2) = False\n- x(4, 3, 0) = False\n- x(4, 3, 1) = True\n- x(4, 3, 2) = False\n- x(4, 4, 0) = False\n- x(4, 4, 1) = False\n- x(4, 4, 2) = False\n- x(4, 5, 0) = False\n- x(4, 5, 1) = False\n- x(4, 5, 2) = False\n</assignment_per_variable>\n<sat_reason>\nOriginally UNSAT because: Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(1, 2, 1) ∨ x(4, 2, 1) ∨ x(4, 2, 2) ∨ x(3, 5, 1) ∨ x(3, 1, 0) ∨ x(4, 3, 1) ∨ x(4, 0, 2) ∨ x(4, 5, 1) ∨ x(0, 5, 2)), (¬x(1, 2, 1) ∨ ¬x(4, 2, 1)), (¬x(1, 2, 1) ∨ ¬x(4, 2, 2)), (¬x(1, 2, 1) ∨ ¬x(3, 5, 1)), (¬x(1, 2, 1) ∨ ¬x(3, 1, 0)), (¬x(1, 2, 1) ∨ ¬x(4, 3, 1)), (¬x(1, 2, 1) ∨ ¬x(4, 0, 2)), (¬x(1, 2, 1) ∨ ¬x(4, 5, 1)), (¬x(1, 2, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 2, 1) ∨ ¬x(4, 2, 2)), (¬x(4, 2, 1) ∨ ¬x(3, 5, 1)), (¬x(4, 2, 1) ∨ ¬x(3, 1, 0)), (¬x(4, 2, 1) ∨ ¬x(4, 3, 1)), (¬x(4, 2, 1) ∨ ¬x(4, 0, 2)), (¬x(4, 2, 1) ∨ ¬x(4, 5, 1)), (¬x(4, 2, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 2, 2) ∨ ¬x(3, 5, 1)), (¬x(4, 2, 2) ∨ ¬x(3, 1, 0)), (¬x(4, 2, 2) ∨ ¬x(4, 3, 1)), (¬x(4, 2, 2) ∨ ¬x(4, 0, 2)), (¬x(4, 2, 2) ∨ ¬x(4, 5, 1)), (¬x(4, 2, 2) ∨ ¬x(0, 5, 2)), (¬x(3, 5, 1) ∨ ¬x(3, 1, 0)), (¬x(3, 5, 1) ∨ ¬x(4, 3, 1)), (¬x(3, 5, 1) ∨ ¬x(4, 0, 2)), (¬x(3, 5, 1) ∨ ¬x(4, 5, 1)), (¬x(3, 5, 1) ∨ ¬x(0, 5, 2)), (¬x(3, 1, 0) ∨ ¬x(4, 3, 1)), (¬x(3, 1, 0) ∨ ¬x(4, 0, 2)), (¬x(3, 1, 0) ∨ ¬x(4, 5, 1)), (¬x(3, 1, 0) ∨ ¬x(0, 5, 2)), (¬x(4, 3, 1) ∨ ¬x(4, 0, 2)), (¬x(4, 3, 1) ∨ ¬x(4, 5, 1)), (¬x(4, 3, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 0, 2) ∨ ¬x(4, 5, 1)), (¬x(4, 0, 2) ∨ ¬x(0, 5, 2)), (¬x(4, 5, 1) ∨ ¬x(0, 5, 2)), (¬x(1, 2, 1)), (¬x(4, 2, 1)), (¬x(4, 2, 2)), (¬x(3, 5, 1)), (¬x(3, 1, 0)), (¬x(4, 3, 1)), (¬x(4, 0, 2)), (¬x(4, 5, 1)), (¬x(0, 5, 2)). After removing clause (¬x(4, 3, 1)), the conflict is resolved, making the problem satisfiable.\n</sat_reason>\n\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "SAT",
+  "satisfiable": true,
+  "certificate_type": "sat_assignment",
+  "ground_truth": {
+    "dims": [
+      5,
+      6,
+      3
+    ],
+    "num_vars": 90,
+    "num_clauses": 45,
+    "satisfiable": true,
+    "label": "SAT",
+    "certificate_type": "sat_assignment",
+    "assignment_structured_0_1": [
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    ],
+    "assignment_flat": {
+      "1": false,
+      "2": false,
+      "3": false,
+      "4": false,
+      "5": false,
+      "6": false,
+      "7": false,
+      "8": false,
+      "9": false,
+      "10": false,
+      "11": false,
+      "12": false,
+      "13": false,
+      "14": false,
+      "15": false,
+      "16": false,
+      "17": false,
+      "18": false,
+      "19": false,
+      "20": false,
+      "21": false,
+      "22": false,
+      "23": false,
+      "24": false,
+      "25": false,
+      "26": false,
+      "27": false,
+      "28": false,
+      "29": false,
+      "30": false,
+      "31": false,
+      "32": false,
+      "33": false,
+      "34": false,
+      "35": false,
+      "36": false,
+      "37": false,
+      "38": false,
+      "39": false,
+      "40": false,
+      "41": false,
+      "42": false,
+      "43": false,
+      "44": false,
+      "45": false,
+      "46": false,
+      "47": false,
+      "48": false,
+      "49": false,
+      "50": false,
+      "51": false,
+      "52": false,
+      "53": false,
+      "54": false,
+      "55": false,
+      "56": false,
+      "57": false,
+      "58": false,
+      "59": false,
+      "60": false,
+      "61": false,
+      "62": false,
+      "63": false,
+      "64": false,
+      "65": false,
+      "66": false,
+      "67": false,
+      "68": false,
+      "69": false,
+      "70": false,
+      "71": false,
+      "72": false,
+      "73": false,
+      "74": false,
+      "75": false,
+      "76": false,
+      "77": false,
+      "78": false,
+      "79": false,
+      "80": false,
+      "81": false,
+      "82": false,
+      "83": true,
+      "84": false,
+      "85": false,
+      "86": false,
+      "87": false,
+      "88": false,
+      "89": false,
+      "90": false
+    },
+    "sat_reason": "Originally UNSAT because: Exactly-one conflict: forced to select at least one, but every option is individually forbidden: (x(1, 2, 1) ∨ x(4, 2, 1) ∨ x(4, 2, 2) ∨ x(3, 5, 1) ∨ x(3, 1, 0) ∨ x(4, 3, 1) ∨ x(4, 0, 2) ∨ x(4, 5, 1) ∨ x(0, 5, 2)), (¬x(1, 2, 1) ∨ ¬x(4, 2, 1)), (¬x(1, 2, 1) ∨ ¬x(4, 2, 2)), (¬x(1, 2, 1) ∨ ¬x(3, 5, 1)), (¬x(1, 2, 1) ∨ ¬x(3, 1, 0)), (¬x(1, 2, 1) ∨ ¬x(4, 3, 1)), (¬x(1, 2, 1) ∨ ¬x(4, 0, 2)), (¬x(1, 2, 1) ∨ ¬x(4, 5, 1)), (¬x(1, 2, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 2, 1) ∨ ¬x(4, 2, 2)), (¬x(4, 2, 1) ∨ ¬x(3, 5, 1)), (¬x(4, 2, 1) ∨ ¬x(3, 1, 0)), (¬x(4, 2, 1) ∨ ¬x(4, 3, 1)), (¬x(4, 2, 1) ∨ ¬x(4, 0, 2)), (¬x(4, 2, 1) ∨ ¬x(4, 5, 1)), (¬x(4, 2, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 2, 2) ∨ ¬x(3, 5, 1)), (¬x(4, 2, 2) ∨ ¬x(3, 1, 0)), (¬x(4, 2, 2) ∨ ¬x(4, 3, 1)), (¬x(4, 2, 2) ∨ ¬x(4, 0, 2)), (¬x(4, 2, 2) ∨ ¬x(4, 5, 1)), (¬x(4, 2, 2) ∨ ¬x(0, 5, 2)), (¬x(3, 5, 1) ∨ ¬x(3, 1, 0)), (¬x(3, 5, 1) ∨ ¬x(4, 3, 1)), (¬x(3, 5, 1) ∨ ¬x(4, 0, 2)), (¬x(3, 5, 1) ∨ ¬x(4, 5, 1)), (¬x(3, 5, 1) ∨ ¬x(0, 5, 2)), (¬x(3, 1, 0) ∨ ¬x(4, 3, 1)), (¬x(3, 1, 0) ∨ ¬x(4, 0, 2)), (¬x(3, 1, 0) ∨ ¬x(4, 5, 1)), (¬x(3, 1, 0) ∨ ¬x(0, 5, 2)), (¬x(4, 3, 1) ∨ ¬x(4, 0, 2)), (¬x(4, 3, 1) ∨ ¬x(4, 5, 1)), (¬x(4, 3, 1) ∨ ¬x(0, 5, 2)), (¬x(4, 0, 2) ∨ ¬x(4, 5, 1)), (¬x(4, 0, 2) ∨ ¬x(0, 5, 2)), (¬x(4, 5, 1) ∨ ¬x(0, 5, 2)), (¬x(1, 2, 1)), (¬x(4, 2, 1)), (¬x(4, 2, 2)), (¬x(3, 5, 1)), (¬x(3, 1, 0)), (¬x(4, 3, 1)), (¬x(4, 0, 2)), (¬x(4, 5, 1)), (¬x(0, 5, 2)). After removing clause (¬x(4, 3, 1)), the conflict is resolved, making the problem satisfiable."
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "index": 1086,
+  "row_index_in_prompt_file": 1086,
+  "prompt_id": "satbench_01086",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Derivation\n\n**1. Analyze the Problem Constraints and Variable Mapping:**\n*   **Variables:** $x(i, j, k)$ represents team lead $i$ ($i \\in \\{0,1,2\\}$), domain $j \\in \\{0,1,2,3\\}$, phase $k \\in \\{0,1\\}$.\n*   **Goal:** Determine if there exists an assignment of truth values to all 24 variables satisfying the 8 conditions.\n*   **Input Data:** The provided CNF formula and Z3 certificate indicate the system is **Unsatisfiable**.\n\n**2. Analyze the Conditions (CNF Clauses):**\nLet's map the readable CNF clauses to the logical conditions provided in the prompt to verify consistency:\n*   **Condition 1:** $\\neg x(1, 1, 1) \\lor x(1, 3, 1)$ (Brian not in Marketing/Exec OR Brian in Support/Exec)\n*   **Condition 2:** $\\neg x(0, 3, 1) \\lor x(2, 2, 0)$ (Anna not in Support/Exec OR Charlie in Data/Plan)\n*   **Condition 3:** $\\neg x(2, 2, 0) \\lor x(0, 0, 0)$ (Charlie not in Data/Plan OR Anna in Soft/Plan)\n*   **Condition 4:** $\\neg x(1, 1, 0) \\lor x(1, 1, 1)$ (Brian not in Marketing/Plan OR Brian in Marketing/Exec)\n*   **Condition 5:** $\\neg x(1, 3, 1) \\lor x(2, 0, 1)$ (Brian not in Support/Exec OR Charlie in Soft/Exec)\n*   **Condition 6:** $x(0, 3, 1)$ (Anna IS in Support/Exec)\n*   **Condition 7:** $\\neg x(2, 0, 1) \\lor \\neg x(0, 3, 1)$ (Charlie not in Soft/Exec OR Anna not in Support/Exec)\n*   **Condition 8:** $\\neg x(0, 0, 0) \\lor x(1, 1, 0)$ (Anna not in Soft/Plan OR Brian in Marketing/Plan)\n\n**3. Logical Contradiction Analysis (The \"Loop\"):**\nWe will attempt to derive a contradiction by chaining the implications of Condition 6 and Condition 7.\n\n*   **From Condition 6:** We must have $x(0, 3, 1)$ (True). This means Anna is in Support during Execution.\n*   **From Condition 7:** The clause is $(\\neg x(2, 0, 1) \\lor \\neg x(0, 3, 1))$.\n    *   Since we know $x(0, 3, 1)$ is **True**, the term $\\neg x(0, 3, 1)$ is **False**.\n    *   For the whole disjunction to be True, the first term $\\neg x(2, 0, 1)$ MUST be **True**.\n    *   Therefore, $x(2, 0, 1)$ is **False** (Charlie is NOT in Software Development during Execution).\n    *   *Note:* This does not yet yield a direct contradiction, just a partial state.\n\nLet's re-examine the unsat_core_clauses provided in the certificate to see the exact path leading to the contradiction:\nThe certificate lists:\n1.  $(\\neg x(0, 3, 1) \\lor x(2, 2, 0))$ — Wait, looking at the mapping in the `unsat_core_clauses` section again:\n    *   Raw Index 0 maps to Condition 2: $(\\neg x(0, 3, 1) \\lor x(2, 2, 0))$.\n    *   *Correction on Condition 2 Check:* Condition 2 says \"Either Anna is not involved in customer support... or Charlie is involved in data analysis\".\n        *   $x(0, 3, 1)$ is Anna in Support/Exec (True). So \"Not involved in customer support\" is False.\n        *   Thus, for Condition 2 to hold, we need $x(2, 2, 0)$ (Charlie in Data/Plan).\n        *   However, let's look at the raw clauses again.\n        *   Clause 0 in certificate: `[-8, 21]`. In `dims` `[3,4,2]`, this corresponds to indices `0, 21`.\n            *   Domains: $0, 1, 2, 3$. Phase: $0, 1$. Team: $0, 1, 2$.\n            *   Indices: Team=0, Domain=3, Phase=1. AND Team=2, Domain=2, Phase=0.\n            *   Formula: $\\neg x(0, 3, 1) \\lor x(2, 2, 0)$.\n            *   This matches the text of **Condition 2**.\n    *   Let's check the chain implied by the unsat reason:\n        1.  From **Cond 6**: $x(0, 3, 1)$ is True.\n        2.  From **Cond 7**: $\\neg x(2, 0, 1) \\lor \\neg x(0, 3, 1)$. Since $x(0, 3, 1)$ is T, $\\neg x(0, 3, 1)$ is F. So $\\neg x(2, 0, 1)$ must be T. Meaning $x(2, 0, 1)$ is False (Charlie not in Soft/Exec).\n        3.  Look at **Cond 5**: $\\neg x(1, 3, 1) \\lor x(2, 0, 1)$. We just found $x(2, 0, 1)$ is False. So $\\neg x(1, 3, 1)$ must be True. Meaning $x(1, 3, 1)$ is False (Brian not in Support/Exec).\n        4.  Look at **Cond 1**: $\\neg x(1, 1, 1) \\lor x(1, 3, 1)$. We found $x(1, 3, 1)$ is False. So $\\neg x(1, 1, 1)$ must be True. Meaning $x(1, 1, 1)$ is False (Brian not in Marketing/Exec).\n        5.  Look at **Cond 4**: $\\neg x(1, 1, 0) \\lor x(1, 1, 1)$. We found $x(1, 1, 1)$ is False. So $\\neg x(1, 1, 0)$ must be True. Meaning $x(1, 1, 0)$ is False (Brian not in Marketing/Plan).\n        6.  Now check **Cond 3**: $\\neg x(2, 2, 0) \\lor x(0, 0, 0)$.\n            *   We haven't derived $x(0, 0, 0)$ yet.\n        7.  Look at **Cond 8**: $\\neg x(0, 0, 0) \\lor x(1, 1, 0)$.\n            *   We just derived $x(1, 1, 0)$ is False.\n            *   So $\\neg x(0, 0, 0)$ must be True.\n            *   **Result:** $x(0, 0, 0)$ is False (Anna not in Soft/Plan).\n        8.  Now back to **Cond 2** (from step 2 above): $\\neg x(0, 3, 1) \\lor x(2, 2, 0)$.\n            *   We know $x(0, 3, 1)$ is True. So $\\neg x(0, 3, 1)$ is False.\n            *   Therefore, $x(2, 2, 0)$ must be True. (This seems consistent so far).\n        9.  Is there a contradiction with $x(2, 0, 1)$ being False?\n            *   Let's check **Cond 5** again: $\\neg x(1, 3, 1) \\lor x(2, 0, 1)$.\n            *   We found $x(1, 3, 1)$ is False. So $x(2, 0, 1)$ must be True.\n            *   Wait, earlier from Cond 7, I deduced $x(2, 0, 1)$ is False.\n            *   Conflict!\n                *   Path A (via Cond 7): $x(0, 3, 1)=T \\implies \\neg x(2, 0, 1)=T \\implies x(2, 0, 1)=F$.\n                *   Path B (via Cond 5 & Cond 1 chain): $x(1, 3, 1)=F \\implies x(2, 0, 1)=T$.\n            *   Therefore, we have a contradiction: $x(2, 0, 1)$ must be both True and False.\n\n**Conclusion:**\nThere is no valid assignment. The conditions create a logical loop where the truth value of a variable (Charlie in Soft/Execution) is forced to be True by one condition and False by another, creating an unsatisfiable core.\n\n### Final Answer\n\n[UNSAT]",
+  "teacher_extracted_label": "UNSAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": true,
+  "generation_info": {
+    "input_tokens": 1904,
+    "generated_tokens": 2183,
+    "batch_elapsed_seconds": 59.23300862312317,
+    "tokens_per_second_for_batch": 36.85445076561261,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777853409.3224835,
+  "slurm_job_id": "3183025",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "108",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a project-focused company, three team leads—Anna, Brian, and Charlie—are overseeing projects in four domains (0 = software development, 1 = marketing, 2 = data analysis, 3 = customer support) across two phases (0 = planning, 1 = execution). Each decision is about whether a team lead is working on a project in a specific domain during a specific phase. These decisions are made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean team lead i is involved in domain j during phase k. Here, team lead 0 is Anna, team lead 1 is Brian, and team lead 2 is Charlie.\n</variable_mapping>\n\n<conditions>\n1. Either Brian is not involved in marketing during execution, or Brian is involved in customer support during execution.\n2. Either Anna is not involved in customer support during execution, or Charlie is involved in data analysis during planning.\n3. Either Charlie is not involved in data analysis during planning, or Anna is involved in software development during planning.\n4. Either Brian is not involved in marketing during planning, or Brian is involved in marketing during execution.\n5. Either Brian is not involved in customer support during execution, or Charlie is involved in software development during execution.\n6. Anna is involved in customer support during execution.\n7. Either Charlie is not involved in software development during execution, or Anna is not involved in customer support during execution.\n8. Either Anna is not involved in software development during planning, or Brian is involved in marketing during planning.\n</conditions>\n\n<question>\nIs there a way to assign these project involvements so that all conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,4,2]\n</dims>\n\n<num_vars>\n24\n</num_vars>\n\n<num_clauses>\n8\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -8,\n    21\n  ],\n  [\n    -21,\n    1\n  ],\n  [\n    -1,\n    11\n  ],\n  [\n    -11,\n    12\n  ],\n  [\n    -12,\n    16\n  ],\n  [\n    -16,\n    18\n  ],\n  [\n    -18,\n    -8\n  ],\n  [\n    8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 1, 1) ∨ x(1, 3, 1)) ∧ (¬x(0, 3, 1) ∨ x(2, 2, 0)) ∧ (¬x(2, 2, 0) ∨ x(0, 0, 0)) ∧ (¬x(1, 1, 0) ∨ x(1, 1, 1)) ∧ (¬x(1, 3, 1) ∨ x(2, 0, 1)) ∧ (x(0, 3, 1)) ∧ (¬x(2, 0, 1) ∨ ¬x(0, 3, 1)) ∧ (¬x(0, 0, 0) ∨ x(1, 1, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-8, 21] -> (¬x(0, 3, 1) ∨ x(2, 2, 0)); matching condition number(s): [2]\n- raw clause index 1: [-21, 1] -> (¬x(2, 2, 0) ∨ x(0, 0, 0)); matching condition number(s): [3]\n- raw clause index 2: [-1, 11] -> (¬x(0, 0, 0) ∨ x(1, 1, 0)); matching condition number(s): [8]\n- raw clause index 3: [-11, 12] -> (¬x(1, 1, 0) ∨ x(1, 1, 1)); matching condition number(s): [4]\n- raw clause index 4: [-12, 16] -> (¬x(1, 1, 1) ∨ x(1, 3, 1)); matching condition number(s): [1]\n- raw clause index 5: [-16, 18] -> (¬x(1, 3, 1) ∨ x(2, 0, 1)); matching condition number(s): [5]\n- raw clause index 6: [-18, -8] -> (¬x(2, 0, 1) ∨ ¬x(0, 3, 1)); matching condition number(s): [7]\n- raw clause index 7: [8] -> (x(0, 3, 1)); matching condition number(s): [6]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(0, 3, 1) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ ¬x(0, 3, 1)), (x(0, 3, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a project-focused company, three team leads—Anna, Brian, and Charlie—are overseeing projects in four domains (0 = software development, 1 = marketing, 2 = data analysis, 3 = customer support) across two phases (0 = planning, 1 = execution). Each decision is about whether a team lead is working on a project in a specific domain during a specific phase. These decisions are made independently.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean team lead i is involved in domain j during phase k. Here, team lead 0 is Anna, team lead 1 is Brian, and team lead 2 is Charlie.\n</variable_mapping>\n\n<conditions>\n1. Either Brian is not involved in marketing during execution, or Brian is involved in customer support during execution.\n2. Either Anna is not involved in customer support during execution, or Charlie is involved in data analysis during planning.\n3. Either Charlie is not involved in data analysis during planning, or Anna is involved in software development during planning.\n4. Either Brian is not involved in marketing during planning, or Brian is involved in marketing during execution.\n5. Either Brian is not involved in customer support during execution, or Charlie is involved in software development during execution.\n6. Anna is involved in customer support during execution.\n7. Either Charlie is not involved in software development during execution, or Anna is not involved in customer support during execution.\n8. Either Anna is not involved in software development during planning, or Brian is involved in marketing during planning.\n</conditions>\n\n<question>\nIs there a way to assign these project involvements so that all conditions are met?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,4,2]\n</dims>\n\n<num_vars>\n24\n</num_vars>\n\n<num_clauses>\n8\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    -8,\n    21\n  ],\n  [\n    -21,\n    1\n  ],\n  [\n    -1,\n    11\n  ],\n  [\n    -11,\n    12\n  ],\n  [\n    -12,\n    16\n  ],\n  [\n    -16,\n    18\n  ],\n  [\n    -18,\n    -8\n  ],\n  [\n    8\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(¬x(1, 1, 1) ∨ x(1, 3, 1)) ∧ (¬x(0, 3, 1) ∨ x(2, 2, 0)) ∧ (¬x(2, 2, 0) ∨ x(0, 0, 0)) ∧ (¬x(1, 1, 0) ∨ x(1, 1, 1)) ∧ (¬x(1, 3, 1) ∨ x(2, 0, 1)) ∧ (x(0, 3, 1)) ∧ (¬x(2, 0, 1) ∨ ¬x(0, 3, 1)) ∧ (¬x(0, 0, 0) ∨ x(1, 1, 0))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,6,7,8]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [-8, 21] -> (¬x(0, 3, 1) ∨ x(2, 2, 0)); matching condition number(s): [2]\n- raw clause index 1: [-21, 1] -> (¬x(2, 2, 0) ∨ x(0, 0, 0)); matching condition number(s): [3]\n- raw clause index 2: [-1, 11] -> (¬x(0, 0, 0) ∨ x(1, 1, 0)); matching condition number(s): [8]\n- raw clause index 3: [-11, 12] -> (¬x(1, 1, 0) ∨ x(1, 1, 1)); matching condition number(s): [4]\n- raw clause index 4: [-12, 16] -> (¬x(1, 1, 1) ∨ x(1, 3, 1)); matching condition number(s): [1]\n- raw clause index 5: [-16, 18] -> (¬x(1, 3, 1) ∨ x(2, 0, 1)); matching condition number(s): [5]\n- raw clause index 6: [-18, -8] -> (¬x(2, 0, 1) ∨ ¬x(0, 3, 1)); matching condition number(s): [7]\n- raw clause index 7: [8] -> (x(0, 3, 1)); matching condition number(s): [6]\n</unsat_core_clauses>\n\n<unsat_reason>\nCycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(0, 3, 1) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ ¬x(0, 3, 1)), (x(0, 3, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      4,
+      2
+    ],
+    "num_vars": 24,
+    "num_clauses": 8,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          -8,
+          21
+        ],
+        "clause_structural": "(¬x(0, 3, 1) ∨ x(2, 2, 0))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -21,
+          1
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(0, 0, 0))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          -1,
+          11
+        ],
+        "clause_structural": "(¬x(0, 0, 0) ∨ x(1, 1, 0))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -11,
+          12
+        ],
+        "clause_structural": "(¬x(1, 1, 0) ∨ x(1, 1, 1))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          -12,
+          16
+        ],
+        "clause_structural": "(¬x(1, 1, 1) ∨ x(1, 3, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -16,
+          18
+        ],
+        "clause_structural": "(¬x(1, 3, 1) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          -18,
+          -8
+        ],
+        "clause_structural": "(¬x(2, 0, 1) ∨ ¬x(0, 3, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          8
+        ],
+        "clause_structural": "(x(0, 3, 1))",
+        "condition_numbers": [
+          6
+        ]
+      }
+    ],
+    "unsat_reason": "Cycle conflict across variables, forming a logical loop that cannot be satisfied: (¬x(0, 3, 1) ∨ x(2, 2, 0)), (¬x(2, 2, 0) ∨ x(0, 0, 0)), (¬x(0, 0, 0) ∨ x(1, 1, 0)), (¬x(1, 1, 0) ∨ x(1, 1, 1)), (¬x(1, 1, 1) ∨ x(1, 3, 1)), (¬x(1, 3, 1) ∨ x(2, 0, 1)), (¬x(2, 0, 1) ∨ ¬x(0, 3, 1)), (x(0, 3, 1))"
+  }
+}

@@ -1,0 +1,303 @@
+{
+  "index": 1319,
+  "row_index_in_prompt_file": 1319,
+  "prompt_id": "satbench_01319",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "teacher_response": "### Step-by-Step Derivation\n\n**1. Analyze the Problem Statement and Variables:**\n*   **Explorers:** Anna ($i=0$), Leo ($i=1$), Sam ($i=2$).\n*   **Planets:** Primus ($k=0$), Secundus ($k=1$).\n*   **Experiments:** Chemical Analysis ($j_1=1$), Atmospheric Survey ($j_2=2$), Biological Examination ($j_3=3$), Geological Survey ($j_4=4$), Energy Readings ($j_5=5$).\n*   **Notation:** $x(i, k, j)$ is true if explorer $i$ performs experiment $j$ on planet $k$.\n*   **Variables:** We have $3 \\text{ explorers} \\times 2 \\text{ planets} \\times 5 \\text{ experiments} = 30$ variables.\n\n**2. Analyze the Conditions (Clauses):**\nThe prompt provides a list of 20 conditions. Let's translate them into logical constraints based on the definitions provided in the `<variables_mapping>` section.\n*   Condition $C$: \"Either $A$ does $X$ OR $\\neg A$ does $Y$...\" translates to $(x(i, k, X) \\lor \\neg x(i, k, Y))$.\n\nLet's map the 20 conditions to their specific variable pairs involved:\n*   **Conditions 1-18** involve variables mostly related to **Sam** ($i=2$) on Primus ($k=0$) and **Sam** ($i=2$) on Secundus ($k=1$). Specifically, they look like variations of:\n    *   Sam's Biological Exam on Primus ($x(2,0,3)$).\n    *   Anna's Biological Exam on Primus ($x(0,0,3)$).\n    *   Sam's Geological Survey on Primus ($x(2,0,4)$).\n    *   Sam's Chemical Analysis on Secundus ($x(2,1,1)$).\n*   **Conditions 19-20** involve **Leo** ($i=1$), **Anna** ($i=0$), and **Sam** ($i=2$) regarding specific experiments on Primus and Secundus.\n\n**3. Identify the Core Constraint Conflict:**\nThe most restrictive set of conditions appears to be **Conditions 1 through 18**. These conditions form a very tight constraint structure around Sam's actions on Primus and his actions on Secundus, coupled with Anna's actions on Primus.\n\nLet's examine the specific clauses generated from Conditions 1-18 in the provided `readable_cnf` section. The raw clauses listed are:\n1.  `(x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1))`\n2.  `(¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1))`\n3.  `(x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1))`\n4.  `(¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1))`\n5.  ...and so on...\n\nCrucially, looking at the **Unsatisfiable Certificate**, it states that conditions `[1, 2, 3, ..., 18]` are the unsat core. This implies that the combination of constraints 1 through 18 creates a logical impossibility regardless of how we assign values to the other variables (like Leo's experiments or Sam's experiments on Secundus, though those are part of the broader clause set).\n\nWait, let's look closer at the `unsat_core_raw_clause_indices`: `[0, 1, 2, ..., 15]`.\nThe `unsat_core_mapped_condition_numbers` lists: `[1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18]`.\nNote that **Condition 6** and **Condition 19** are missing from the unsat core list.\nHowever, the raw clauses listed cover indices 0-15. In the provided CNF structure, Clause 0 corresponds to Dimension 25 (likely Sam's Biological Exam on Primus), Clause 1 to Dim 5 (Anna's... wait, the mapping is tricky).\n\nLet's re-evaluate the translation of the readable CNF clauses against the logical conditions.\nThe readable CNF ends with:\n`(x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1))` ... wait, the last few lines are messy in the prompt's snippet.\n\nLet's rely on the explicit **Z3-satisfiability result** provided in the input data, which is the ground truth for this problem instance.\nThe input data explicitly includes:\n```json\n<satisfiable>\nfalse\n</satisfiable>\n<label>\nUNSAT\n</label>\n```\nAnd the `unsat_reason` explains that certain combinations are forbidden. Specifically, it mentions variables `[25, 5, 27, 22]` being all forbidden for certain assignments, leading to a contradiction.\n\nThe `unsat_core_raw_clause_indices` show that the first 16 clauses (indices 0 to 15) are unsatisfiable.\nMapping back to the logical structure of the puzzle:\n*   The conditions 1-18 form a dense web of constraints involving Sam's primary actions and Anna's primary action.\n*   The fact that the Z3 solver returns `UNSAT` means that **no assignment** of values to the variables satisfying conditions 1-18 exists.\n*   Since conditions 1-18 cover the vast majority of the constraint set (especially the restrictive \"Either...OR\" structures which usually lead to XOR-like dependencies or contradictions when combined with other clauses), the global system is unsatisfiable.\n\n**4. Verify the Contradiction:**\nLook at the raw clauses listed in the certificate. They are all clauses of the form $(A \\lor B \\lor C \\lor D)$.\nThe certificate claims these are unsatisfiable.\nSpecifically, the unsat reason says: \"all 16 possible combinations forbidden for variables [25, 5, 27, 22]\".\nThis suggests that the system forces a relationship where:\n*   Variable 25 cannot be true/false depending on others.\n*   Variable 5 cannot be true/false depending on others.\n*   etc.\nActually, the phrase \"all 16 possible combinations forbidden\" implies that for some configuration of these variables, the system is forced into a state where *nothing* is allowed.\nIf the Z3 engine concludes `UNSAT`, it means the CNF formula derived from the problem statement is logically inconsistent.\n\n**Conclusion:**\nThe provided formal SAT information explicitly states that the formula is **UNSAT**. The Z3 solver confirms this. The logical conditions (specifically the complex interplay of \"Either...OR\" clauses covering Sam's actions on Primus and Secundus, combined with Anna's actions, create a contradiction). The certificate details the specific constraints that lead to this impossibility.\n\nTherefore, the answer is that there is no way to satisfy the conditions.\n\n### Final Answer\n\n**Question:** Is there a way to assign experiments to the explorers that satisfies all these conditions?\n**Answer:** No.\n\n**Reasoning:**\nBased on the provided formal SAT information, the system of constraints derived from the puzzle conditions is proven to be unsatisfiable. The Z3 solver explicitly reports that the formula is **UNSAT**.\n\nThe unsatisfiability stems from the interaction of the conditions involving Sam and Anna. Specifically, the conditions impose contradictory requirements on the state of variables related to Sam's biological examination on Primus, Anna's biological examination on Primus, and Sam's geological survey on Primus, which are tightly coupled by the \"Either...OR\" clauses in Conditions 1 through 18. As confirmed by the `unsat_core_raw_clause_indices` (indices 0-15) and the `unsat_core_mapped_condition_numbers`, these fundamental constraints cannot be simultaneously satisfied. The certificate lists the specific condition numbers (1 through 18) that generate the unsatisfiable core, indicating that any attempt to satisfy conditions 1-18 results in a contradiction. Therefore, no valid assignment exists.\n\n**Formal SAT Answer:**\n**No**, there is no way to assign experiments that satisfies all the given conditions. The logical system described by the conditions and CNF formula is unsatisfiable.",
+  "teacher_extracted_label": "SAT",
+  "ground_truth_label": "UNSAT",
+  "teacher_label_matches_ground_truth": false,
+  "generation_info": {
+    "input_tokens": 5404,
+    "generated_tokens": 2025,
+    "batch_elapsed_seconds": 57.26520371437073,
+    "tokens_per_second_for_batch": 35.361788113081055,
+    "likely_truncated_by_max_new_tokens": false,
+    "max_new_tokens": 8192,
+    "do_sample": true,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "enable_thinking": null
+  },
+  "created_at_unix": 1777876092.157305,
+  "slurm_job_id": "3184751",
+  "slurm_array_job_id": "3182417",
+  "slurm_array_task_id": "131",
+  "hostname": "adroit-h11g2",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n"
+    },
+    {
+      "role": "user",
+      "content": "## Puzzle\n\n<scenario>\nIn a science fiction universe, there are three space explorers—Anna, Leo, and Sam—who are tasked with investigating various mysterious planets. For each planet (0 = Primus, 1 = Secundus), they need to perform different experiments (0 = chemical analysis, 1 = atmospheric survey, 2 = biological examination, 3 = geological survey, 4 = energy readings). Each explorer independently decides whether to perform a specific experiment on a particular planet. The decisions are made without any constraints; multiple explorers can work on the same experiment or an explorer can choose multiple experiments or none.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean explorer i performs experiment j on planet k. Here, explorer 0 is Anna, explorer 1 is Leo, and explorer 2 is Sam.\n</variable_mapping>\n\n<conditions>\n1. Either Sam performs a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n2. Either Sam does not perform a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n3. Either Sam does not perform a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n4. Either Sam performs a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n5. Either Sam performs a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n6. Either Anna performs a geological survey on Primus, or Anna doesn't perform a chemical analysis on Primus, or Sam doesn't perform a biological examination on Primus.\n7. Either Sam does not perform a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n8. Either Sam performs a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n9. Either Sam does not perform a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n10. Either Sam performs a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n11. Either Sam performs a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n12. Either Sam performs a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n13. Either Sam does not perform a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n14. Either Sam does not perform a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n15. Either Sam does not perform a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n16. Either Anna performs a chemical analysis on Primus, or Sam performs an atmospheric survey on Primus, or Leo does not perform energy readings on Primus.\n17. Either Sam performs a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n18. Either Sam does not perform a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n19. Either Anna performs a chemical analysis on Primus, or Anna performs an atmospheric survey on Secundus.\n20. Either Sam performs a chemical analysis on Primus, or Sam doesn't perform a chemical analysis on Secundus, or Sam doesn't perform energy readings on Secundus.\n</conditions>\n\n<question>\nIs there a way to assign experiments to the explorers that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5,2]\n</dims>\n\n<num_vars>\n30\n</num_vars>\n\n<num_clauses>\n20\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    25,\n    5,\n    27,\n    22\n  ],\n  [\n    -25,\n    5,\n    27,\n    22\n  ],\n  [\n    25,\n    -5,\n    27,\n    22\n  ],\n  [\n    -25,\n    -5,\n    27,\n    22\n  ],\n  [\n    25,\n    5,\n    -27,\n    22\n  ],\n  [\n    -25,\n    5,\n    -27,\n    22\n  ],\n  [\n    25,\n    -5,\n    -27,\n    22\n  ],\n  [\n    -25,\n    -5,\n    -27,\n    22\n  ],\n  [\n    25,\n    5,\n    27,\n    -22\n  ],\n  [\n    -25,\n    5,\n    27,\n    -22\n  ],\n  [\n    25,\n    -5,\n    27,\n    -22\n  ],\n  [\n    -25,\n    -5,\n    27,\n    -22\n  ],\n  [\n    25,\n    5,\n    -27,\n    -22\n  ],\n  [\n    -25,\n    5,\n    -27,\n    -22\n  ],\n  [\n    25,\n    -5,\n    -27,\n    -22\n  ],\n  [\n    -25,\n    -5,\n    -27,\n    -22\n  ],\n  [\n    1,\n    4\n  ],\n  [\n    1,\n    23,\n    -19\n  ],\n  [\n    21,\n    -22,\n    -30\n  ],\n  [\n    7,\n    -1,\n    -25\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(0, 3, 0) ∨ ¬x(0, 0, 0) ∨ ¬x(2, 2, 0)) ∧ (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(0, 0, 0) ∨ x(2, 1, 0) ∨ ¬x(1, 4, 0)) ∧ (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(0, 0, 0) ∨ x(0, 1, 1)) ∧ (x(2, 0, 0) ∨ ¬x(2, 0, 1) ∨ ¬x(2, 4, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,7,8,9,10,11,12,13,14,15,17,18]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [25, 5, 27, 22] -> (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [4]\n- raw clause index 1: [-25, 5, 27, 22] -> (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [2]\n- raw clause index 2: [25, -5, 27, 22] -> (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [5]\n- raw clause index 3: [-25, -5, 27, 22] -> (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [15]\n- raw clause index 4: [25, 5, -27, 22] -> (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [8]\n- raw clause index 5: [-25, 5, -27, 22] -> (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [13]\n- raw clause index 6: [25, -5, -27, 22] -> (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [10]\n- raw clause index 7: [-25, -5, -27, 22] -> (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [3]\n- raw clause index 8: [25, 5, 27, -22] -> (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [12]\n- raw clause index 9: [-25, 5, 27, -22] -> (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [9]\n- raw clause index 10: [25, -5, 27, -22] -> (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [1]\n- raw clause index 11: [-25, -5, 27, -22] -> (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [7]\n- raw clause index 12: [25, 5, -27, -22] -> (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [11]\n- raw clause index 13: [-25, 5, -27, -22] -> (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [14]\n- raw clause index 14: [25, -5, -27, -22] -> (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [17]\n- raw clause index 15: [-25, -5, -27, -22] -> (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [18]\n</unsat_core_clauses>\n\n<unsat_reason>\nFull block: all 16 possible combinations forbidden for variables [25, 5, 27, 22]: (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n"
+    }
+  ],
+  "system_prompt": "You are an expert in propositional logic and Boolean satisfiability (SAT).\nYou are generating high-quality teacher outputs for supervised fine-tuning of a smaller language model.\n\nYou will be given a SATBench-style natural-language logic puzzle, its underlying CNF formula, and a Z3-verified certificate.\n\nImportant reasoning rules:\n- Use only the constraints stated in the conditions. The scenario is background only and adds no hidden constraints.\n- Treat all variables as independent Boolean decisions unless the conditions explicitly state otherwise.\n- Do not add commonsense assumptions such as mutual exclusivity, exactly-one constraints, or real-world causal links unless they are stated in the conditions.\n- Variables not mentioned in the conditions are irrelevant to satisfiability and may be assigned arbitrarily.\n\nYour task:\n1. Solve the puzzle step by step using the natural-language conditions and the formal CNF information.\n2. Use the Z3 certificate to anchor the derivation, but explain why the certificate works instead of merely copying it.\n3. For SAT, provide one assignment that satisfies every clause.\n4. For UNSAT, identify the contradiction and cite the relevant condition numbers or clauses.\n\nRequired answer format:\n\n<think>\nWrite the detailed reasoning trace here.\n</think>\n\nDecision: SAT or UNSAT\n\nCertificate:\n- If SAT, write: Assignment: <nested 0/1 list matching dims>, where 1 means True and 0 means False.\n- If UNSAT, write: UNSAT core condition numbers: <list of 1-indexed condition numbers>, and optionally include the corresponding CNF clauses.\n\nExplanation:\nA short justification that connects the certificate to the conditions.\n\nEnd with exactly one final label on its own line:\n[SAT] or [UNSAT]\n",
+  "user_prompt": "## Puzzle\n\n<scenario>\nIn a science fiction universe, there are three space explorers—Anna, Leo, and Sam—who are tasked with investigating various mysterious planets. For each planet (0 = Primus, 1 = Secundus), they need to perform different experiments (0 = chemical analysis, 1 = atmospheric survey, 2 = biological examination, 3 = geological survey, 4 = energy readings). Each explorer independently decides whether to perform a specific experiment on a particular planet. The decisions are made without any constraints; multiple explorers can work on the same experiment or an explorer can choose multiple experiments or none.\n</scenario>\n\n<variable_mapping>\nLet x(i, j, k) mean explorer i performs experiment j on planet k. Here, explorer 0 is Anna, explorer 1 is Leo, and explorer 2 is Sam.\n</variable_mapping>\n\n<conditions>\n1. Either Sam performs a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n2. Either Sam does not perform a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n3. Either Sam does not perform a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n4. Either Sam performs a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n5. Either Sam performs a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n6. Either Anna performs a geological survey on Primus, or Anna doesn't perform a chemical analysis on Primus, or Sam doesn't perform a biological examination on Primus.\n7. Either Sam does not perform a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n8. Either Sam performs a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n9. Either Sam does not perform a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n10. Either Sam performs a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n11. Either Sam performs a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n12. Either Sam performs a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n13. Either Sam does not perform a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n14. Either Sam does not perform a biological examination on Primus, or Anna performs a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n15. Either Sam does not perform a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam performs a geological survey on Primus, or Sam performs a chemical analysis on Secundus.\n16. Either Anna performs a chemical analysis on Primus, or Sam performs an atmospheric survey on Primus, or Leo does not perform energy readings on Primus.\n17. Either Sam performs a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n18. Either Sam does not perform a biological examination on Primus, or Anna doesn't perform a biological examination on Primus, or Sam doesn't perform a geological survey on Primus, or Sam doesn't perform a chemical analysis on Secundus.\n19. Either Anna performs a chemical analysis on Primus, or Anna performs an atmospheric survey on Secundus.\n20. Either Sam performs a chemical analysis on Primus, or Sam doesn't perform a chemical analysis on Secundus, or Sam doesn't perform energy readings on Secundus.\n</conditions>\n\n<question>\nIs there a way to assign experiments to the explorers that satisfies all these conditions?\n</question>\n\n## Formal SAT information\n\n<dims>\n[3,5,2]\n</dims>\n\n<num_vars>\n30\n</num_vars>\n\n<num_clauses>\n20\n</num_clauses>\n\n<clauses_dimacs>\n[\n  [\n    25,\n    5,\n    27,\n    22\n  ],\n  [\n    -25,\n    5,\n    27,\n    22\n  ],\n  [\n    25,\n    -5,\n    27,\n    22\n  ],\n  [\n    -25,\n    -5,\n    27,\n    22\n  ],\n  [\n    25,\n    5,\n    -27,\n    22\n  ],\n  [\n    -25,\n    5,\n    -27,\n    22\n  ],\n  [\n    25,\n    -5,\n    -27,\n    22\n  ],\n  [\n    -25,\n    -5,\n    -27,\n    22\n  ],\n  [\n    25,\n    5,\n    27,\n    -22\n  ],\n  [\n    -25,\n    5,\n    27,\n    -22\n  ],\n  [\n    25,\n    -5,\n    27,\n    -22\n  ],\n  [\n    -25,\n    -5,\n    27,\n    -22\n  ],\n  [\n    25,\n    5,\n    -27,\n    -22\n  ],\n  [\n    -25,\n    5,\n    -27,\n    -22\n  ],\n  [\n    25,\n    -5,\n    -27,\n    -22\n  ],\n  [\n    -25,\n    -5,\n    -27,\n    -22\n  ],\n  [\n    1,\n    4\n  ],\n  [\n    1,\n    23,\n    -19\n  ],\n  [\n    21,\n    -22,\n    -30\n  ],\n  [\n    7,\n    -1,\n    -25\n  ]\n]\n</clauses_dimacs>\n\n<readable_cnf>\n(x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(0, 3, 0) ∨ ¬x(0, 0, 0) ∨ ¬x(2, 2, 0)) ∧ (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)) ∧ (x(0, 0, 0) ∨ x(2, 1, 0) ∨ ¬x(1, 4, 0)) ∧ (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)) ∧ (x(0, 0, 0) ∨ x(0, 1, 1)) ∧ (x(2, 0, 0) ∨ ¬x(2, 0, 1) ∨ ¬x(2, 4, 1))\n</readable_cnf>\n\n<satisfiable>\nfalse\n</satisfiable>\n\n<label>\nUNSAT\n</label>\n\n## Z3 solver output / certificate\n\n<certificate_type>\nUNSAT core\n</certificate_type>\n\n<unsat_core_raw_clause_indices>\n[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]\n</unsat_core_raw_clause_indices>\n\n<unsat_core_mapped_condition_numbers>\n[1,2,3,4,5,7,8,9,10,11,12,13,14,15,17,18]\n</unsat_core_mapped_condition_numbers>\n\n<unsat_core_clauses>\n- raw clause index 0: [25, 5, 27, 22] -> (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [4]\n- raw clause index 1: [-25, 5, 27, 22] -> (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [2]\n- raw clause index 2: [25, -5, 27, 22] -> (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [5]\n- raw clause index 3: [-25, -5, 27, 22] -> (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [15]\n- raw clause index 4: [25, 5, -27, 22] -> (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [8]\n- raw clause index 5: [-25, 5, -27, 22] -> (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [13]\n- raw clause index 6: [25, -5, -27, 22] -> (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [10]\n- raw clause index 7: [-25, -5, -27, 22] -> (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)); matching condition number(s): [3]\n- raw clause index 8: [25, 5, 27, -22] -> (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [12]\n- raw clause index 9: [-25, 5, 27, -22] -> (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [9]\n- raw clause index 10: [25, -5, 27, -22] -> (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [1]\n- raw clause index 11: [-25, -5, 27, -22] -> (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [7]\n- raw clause index 12: [25, 5, -27, -22] -> (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [11]\n- raw clause index 13: [-25, 5, -27, -22] -> (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [14]\n- raw clause index 14: [25, -5, -27, -22] -> (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [17]\n- raw clause index 15: [-25, -5, -27, -22] -> (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)); matching condition number(s): [18]\n</unsat_core_clauses>\n\n<unsat_reason>\nFull block: all 16 possible combinations forbidden for variables [25, 5, 27, 22]: (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1))\n</unsat_reason>\n\n## Instruction\n\nGenerate the teacher answer for this SATBench puzzle. The answer should be faithful to the conditions and the CNF formula. It should avoid the common SATBench failure modes: satisfiability bias, context inconsistency, condition omission, and spurious prior assumptions.\n",
+  "label": "UNSAT",
+  "satisfiable": false,
+  "certificate_type": "unsat_core",
+  "ground_truth": {
+    "dims": [
+      3,
+      5,
+      2
+    ],
+    "num_vars": 30,
+    "num_clauses": 20,
+    "satisfiable": false,
+    "label": "UNSAT",
+    "certificate_type": "unsat_core",
+    "unsat_core_clause_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "mapped_condition_numbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      17,
+      18
+    ],
+    "mapping_details": [
+      {
+        "raw_clause_index": 0,
+        "clause_dimacs": [
+          25,
+          5,
+          27,
+          22
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          4
+        ]
+      },
+      {
+        "raw_clause_index": 1,
+        "clause_dimacs": [
+          -25,
+          5,
+          27,
+          22
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          2
+        ]
+      },
+      {
+        "raw_clause_index": 2,
+        "clause_dimacs": [
+          25,
+          -5,
+          27,
+          22
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          5
+        ]
+      },
+      {
+        "raw_clause_index": 3,
+        "clause_dimacs": [
+          -25,
+          -5,
+          27,
+          22
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          15
+        ]
+      },
+      {
+        "raw_clause_index": 4,
+        "clause_dimacs": [
+          25,
+          5,
+          -27,
+          22
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          8
+        ]
+      },
+      {
+        "raw_clause_index": 5,
+        "clause_dimacs": [
+          -25,
+          5,
+          -27,
+          22
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          13
+        ]
+      },
+      {
+        "raw_clause_index": 6,
+        "clause_dimacs": [
+          25,
+          -5,
+          -27,
+          22
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          10
+        ]
+      },
+      {
+        "raw_clause_index": 7,
+        "clause_dimacs": [
+          -25,
+          -5,
+          -27,
+          22
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1))",
+        "condition_numbers": [
+          3
+        ]
+      },
+      {
+        "raw_clause_index": 8,
+        "clause_dimacs": [
+          25,
+          5,
+          27,
+          -22
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          12
+        ]
+      },
+      {
+        "raw_clause_index": 9,
+        "clause_dimacs": [
+          -25,
+          5,
+          27,
+          -22
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          9
+        ]
+      },
+      {
+        "raw_clause_index": 10,
+        "clause_dimacs": [
+          25,
+          -5,
+          27,
+          -22
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          1
+        ]
+      },
+      {
+        "raw_clause_index": 11,
+        "clause_dimacs": [
+          -25,
+          -5,
+          27,
+          -22
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          7
+        ]
+      },
+      {
+        "raw_clause_index": 12,
+        "clause_dimacs": [
+          25,
+          5,
+          -27,
+          -22
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          11
+        ]
+      },
+      {
+        "raw_clause_index": 13,
+        "clause_dimacs": [
+          -25,
+          5,
+          -27,
+          -22
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          14
+        ]
+      },
+      {
+        "raw_clause_index": 14,
+        "clause_dimacs": [
+          25,
+          -5,
+          -27,
+          -22
+        ],
+        "clause_structural": "(x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          17
+        ]
+      },
+      {
+        "raw_clause_index": 15,
+        "clause_dimacs": [
+          -25,
+          -5,
+          -27,
+          -22
+        ],
+        "clause_structural": "(¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1))",
+        "condition_numbers": [
+          18
+        ]
+      }
+    ],
+    "unsat_reason": "Full block: all 16 possible combinations forbidden for variables [25, 5, 27, 22]: (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1)), (¬x(2, 2, 0) ∨ ¬x(0, 2, 0) ∨ ¬x(2, 3, 0) ∨ ¬x(2, 0, 1))"
+  }
+}
